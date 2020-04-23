@@ -1,0 +1,10 @@
+*
+!.gitattributes
+!.gitignore
+!readme.md
+!.gitkeep
+!*.nim
+!*.nims
+!*.nimble
+!*.h
+!*/
