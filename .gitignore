@@ -7,4 +7,6 @@
 !*.nims
 !*.nimble
 !*.h
+!*.css
+!*.html
 !*/
