@@ -1848,14 +1848,6 @@ static void make_nav_policy_decision(id self, SEL cmd, id webView, id response,
   }
 }
 
-static id KeyboardEventHandler( SEL _cmd,id event){
-  objc_msgSend(objc_msgSend((id)objc_getClass("NSApplication"),
-                            sel_registerName("sharedApplication")),
-               sel_registerName("sendEvent:"),
-               event);
-  return event;
-}
-
 
 WEBVIEW_API int webview_init(struct webview *w) {
   w->priv.pool = objc_msgSend((id)objc_getClass("NSAutoreleasePool"),
