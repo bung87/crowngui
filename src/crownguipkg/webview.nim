@@ -32,12 +32,6 @@ type
 const
   dataUriHtmlHeader* = proc (s:string):string = "data:text/html;charset=utf-8;base64," & base64.encode s  ## Data URI for HTML UTF-8 header string
   fileLocalHeader* = "file:///"  ## Use Local File as URL
-
-  CSS_INJECT_FUNCTION = "(function(e){var "                                                          &
-  "t=document.createElement('style'),d=document.head||document."               &
-  "getElementsByTagName('head')[0];t.setAttribute('type','text/"               &
-  "css'),t.styleSheet?t.styleSheet.cssText=e:t.appendChild(document."          &
-  "createTextNode(e)),d.appendChild(t)})"
   jsTemplate = """
     if (typeof $2 === 'undefined') {
       $2 = {};
