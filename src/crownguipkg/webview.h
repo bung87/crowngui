@@ -1848,15 +1848,6 @@ static void make_nav_policy_decision(id self, SEL cmd, id webView, id response,
   }
 }
 
-static void applicationRun(id self, SEL _cmd){
-  objc_msgSend((id)objc_getClass("NSApplication"),
-               sel_registerName("sharedApplication"));
-  objc_msgSend(objc_getClass("NSApp"),
-               sel_registerName("activateIgnoringOtherApps:"), 1);
-  objc_msgSend(objc_getClass("NSApp"),
-               sel_registerName("run"));
-}
-
 static id KeyboardEventHandler( SEL _cmd,id event){
   objc_msgSend(objc_msgSend((id)objc_getClass("NSApplication"),
                             sel_registerName("sharedApplication")),
