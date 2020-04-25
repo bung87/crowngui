@@ -2231,10 +2231,10 @@ WEBVIEW_API int webview_loop(struct webview *w, int blocking) {
 
 
 WEBVIEW_API int webview_eval(struct webview *w, const char *js) {
-  id windowExternalOverrideScript = objc_msgSend(
+  id userScript = objc_msgSend(
       (id)objc_getClass("WKUserScript"), sel_registerName("alloc"));
   objc_msgSend(
-      windowExternalOverrideScript,
+      userScript,
       sel_registerName("initWithSource:injectionTime:forMainFrameOnly:"),
       get_nsstring(js),
       WKUserScriptInjectionTimeAtDocumentEnd, 0);  
@@ -2243,7 +2243,7 @@ WEBVIEW_API int webview_eval(struct webview *w, const char *js) {
   id config = objc_msgSend(w->priv.webview, sel_registerName("valueForKey:"), get_nsstring("configuration"));
   id userContentController = objc_msgSend(config, sel_registerName("valueForKey:"), get_nsstring("userContentController"));
   objc_msgSend(userContentController, sel_registerName("addUserScript:"),
-               windowExternalOverrideScript);
+               userScript);
 
   return 0;
 }
