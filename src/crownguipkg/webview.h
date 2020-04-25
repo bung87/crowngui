@@ -1714,6 +1714,7 @@ WEBVIEW_API void webview_print_log(const char *s) { OutputDebugString(s); }
 #define WKNavigationActionPolicyDownload 2
 #define WKNavigationResponsePolicyAllow 1
 #define WKUserScriptInjectionTimeAtDocumentStart 0
+#define WKUserScriptInjectionTimeAtDocumentEnd 1
 #define NSApplicationActivationPolicyRegular 0
 
 static id get_nsstring(const char *c_str) {
@@ -1874,31 +1875,31 @@ WEBVIEW_API int webview_init(struct webview *w) {
     {
       if (isX)
       {
-        BOOL cut = objc_msgSend(objc_getClass("NSApp"),sel_registerName("sendAction:"),sel_registerName("cut:"),sel_registerName("to:"),nil,sel_registerName("from:"),app);
+        BOOL cut = objc_msgSend(objc_getClass("NSApp"),sel_registerName("sendAction:"),sel_registerName("cut:"),sel_registerName("to:"),nil,sel_registerName("from:"),objc_getClass("NSApp"));
         if (cut)
           return NULL ;
       }
       else if (isC)
       {
-        BOOL copy = objc_msgSend(objc_getClass("NSApp"),sel_registerName("sendAction:"),sel_registerName("copy:"),sel_registerName("to:"),nil,sel_registerName("from:"),app);
+        BOOL copy = objc_msgSend(objc_getClass("NSApp"),sel_registerName("sendAction:"),sel_registerName("copy:"),sel_registerName("to:"),nil,sel_registerName("from:"),objc_getClass("NSApp"));
         if (copy)
           return NULL ;
       }
       else if (isV)
       {
-        BOOL paste = objc_msgSend(objc_getClass("NSApp"),sel_registerName("sendAction:"),sel_registerName("paste:"),sel_registerName("to:"),nil,sel_registerName("from:"),app);
+        BOOL paste = objc_msgSend(objc_getClass("NSApp"),sel_registerName("sendAction:"),sel_registerName("paste:"),sel_registerName("to:"),nil,sel_registerName("from:"),objc_getClass("NSApp"));
         if (paste)
           return NULL ;
       }
       else if (isZ)
       {
-        BOOL undo = objc_msgSend(objc_getClass("NSApp"),sel_registerName("sendAction:"),sel_registerName("undo:"),sel_registerName("to:"),nil,sel_registerName("from:"),app);
+        BOOL undo = objc_msgSend(objc_getClass("NSApp"),sel_registerName("sendAction:"),sel_registerName("undo:"),sel_registerName("to:"),nil,sel_registerName("from:"),objc_getClass("NSApp"));
         if (undo)
           return NULL ;
       }
       else if (isA)
       {
-        BOOL selectAll = objc_msgSend(objc_getClass("NSApp"),sel_registerName("sendAction:"),sel_registerName("selectAll:"),sel_registerName("to:"),responder,sel_registerName("from:"),objc_getClass("NSApp"));
+        BOOL selectAll = objc_msgSend(objc_getClass("NSApp"),sel_registerName("sendAction:"),sel_registerName("selectAll:"),sel_registerName("to:"),nil,sel_registerName("from:"),objc_getClass("NSApp"));
         if (selectAll)
           return NULL ;
       }
@@ -1908,7 +1909,7 @@ WEBVIEW_API int webview_init(struct webview *w) {
       BOOL isY = objc_msgSend(charactersIgnoringModifiers,sel_registerName("isEqualToString:"),@"y");
       if (isY)
       {
-        BOOL redo = objc_msgSend(objc_getClass("NSApp"),sel_registerName("sendAction:"),sel_registerName("redo:"),sel_registerName("to:"),nil,sel_registerName("from:"),app);
+        BOOL redo = objc_msgSend(objc_getClass("NSApp"),sel_registerName("sendAction:"),sel_registerName("redo:"),sel_registerName("to:"),nil,sel_registerName("from:"),objc_getClass("NSApp"));
         if (redo)
           return NULL ;
       }
@@ -2228,10 +2229,21 @@ WEBVIEW_API int webview_loop(struct webview *w, int blocking) {
   return w->priv.should_exit;
 }
 
+
 WEBVIEW_API int webview_eval(struct webview *w, const char *js) {
-  objc_msgSend(w->priv.webview,
-               sel_registerName("evaluateJavaScript:completionHandler:"),
-               get_nsstring(js), NULL);
+  id windowExternalOverrideScript = objc_msgSend(
+      (id)objc_getClass("WKUserScript"), sel_registerName("alloc"));
+  objc_msgSend(
+      windowExternalOverrideScript,
+      sel_registerName("initWithSource:injectionTime:forMainFrameOnly:"),
+      get_nsstring(js),
+      WKUserScriptInjectionTimeAtDocumentEnd, 0);  
+      // should Inject the script after the document finishes loading, but before other subresources finish loading.
+      // this also ensure webview give full html structure(html>head+body) in case content only has body inner part.
+  id config = objc_msgSend(w->priv.webview, sel_registerName("valueForKey:"), get_nsstring("configuration"));
+  id userContentController = objc_msgSend(config, sel_registerName("valueForKey:"), get_nsstring("userContentController"));
+  objc_msgSend(userContentController, sel_registerName("addUserScript:"),
+               windowExternalOverrideScript);
 
   return 0;
 }

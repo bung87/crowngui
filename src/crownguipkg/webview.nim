@@ -83,10 +83,7 @@ var
 func init(w: Webview): cint {.importc: "webview_init", header: headerC.}
 func loop(w: Webview; blocking: cint): cint {.importc: "webview_loop", header: headerC.}
 func js*(w: Webview; javascript: cstring): cint {.importc: "webview_eval", header: headerC, discardable.} ## Evaluate a JavaScript cstring, runs the javascript string on the window
-# func css*(w: Webview; css: cstring): cint {.importc: "webview_inject_css", header: headerC, discardable.} ## Set a CSS cstring, inject the CSS on the Window
-func css*(w:Webview; css: cstring):cint{.discardable.} = 
-    w.js( fmt"console.log(1);document.addEventListener('DOMContentLoaded', () => {CSS_INJECT_FUNCTION}({$css}));".cstring )
-    
+func css*(w: Webview; css: cstring): cint {.importc: "webview_inject_css", header: headerC, discardable.} ## Set a CSS cstring, inject the CSS on the Window
 func setTitle*(w: Webview; title: cstring) {.importc: "webview_set_title", header: headerC.} ## Set Title of window
 func setColor*(w: Webview; red, green, blue, alpha: uint8) {.importc: "webview_set_color", header: headerC.} ## Set background color of the Window
 func setFullscreen*(w: Webview; fullscreen: bool) {.importc: "webview_set_fullscreen", header: headerC.}     ## Set fullscreen
