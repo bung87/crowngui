@@ -6,11 +6,13 @@ description   = "A new awesome nimble package"
 license       = "MIT"
 srcDir        = "src"
 installExt    = @["nim"]
-bin           = @["crowngui"]
+bin           = @["cli"]
 
 
 
 # Dependencies
 
 requires "nim >= 1.1.1"
-requires "https://github.com/mjendrusch/objc"
+requires "plists"
+requires "cligen"
+# requires "https://github.com/mjendrusch/objc"
