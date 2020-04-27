@@ -1,15 +1,28 @@
 
 import os,strutils,crownguipkg/webview
-
+import nimhttpd,mimetypes,net,asyncdispatch
 
 type 
   EntryType =  enum
-    url,file,html
+    url,file,html,dir
   Application* = object
     entry:string
     entryType:EntryType
     webview:Webview
   ApplicationRef* = ref Application
+
+
+proc server() {.thread.} = 
+    var settings: NimHttpSettings
+    settings.directory = currentSourcePath().parentDir() / "docs"
+    settings.mimes = newMimeTypes()
+    settings.mimes.register("html", "text/html")
+    settings.mimes.register("css", "text/css")
+    settings.address = ""
+    settings.port = Port(8000)
+    serve(settings)
+    runForever()
+    quit(0)
 
 proc newApplication*(entry:static[string]):ApplicationRef =
   result = new ApplicationRef
@@ -23,9 +36,16 @@ proc newApplication*(entry:static[string]):ApplicationRef =
     elif entry.endsWith".js" or entry.endsWith".nim":
       const url = dataUriHtmlHeader "<!DOCTYPE html><html><head><meta content='width=device-width,initial-scale=1' name=viewport></head><body id=body ><div id=ROOT ><div></body></html>"  # Copied from Karax
       EntryType.file
+    elif defined(bundle):
+      const bundle {.strdefine.} = ""
+      const url = "localhost"
+      discard staticRead bundle
+      EntryType.url
     else: 
       const url = dataUriHtmlHeader entry.strip
       EntryType.html
+  var serverthr:Thread[void]
+  createThread(serverthr,server)
   result.entryType = entryType
   result.webview = newWebView( url )
 
