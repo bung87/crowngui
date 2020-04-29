@@ -115,11 +115,13 @@ proc runMacos(wwwroot="",flags: seq[string]) =
 proc build(target:string,wwwroot="",flags: seq[string]):int = 
     case target:
         of "macos":
+            # nim c -r -f src/crownguipkg/cli.nim build --target macos --wwwroot ./docs 
             buildMacos(wwwroot,flags)
 
 proc run(target:string,wwwroot="",flags: seq[string]):int = 
     case target:
         of "macos":
+            # nim c -r -f src/crownguipkg/cli.nim run --target macos --wwwroot ./docs 
             runMacos(wwwroot,flags)
 
 dispatchMulti([build],[run])
