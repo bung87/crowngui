@@ -101,12 +101,12 @@ proc runMacos(wwwroot="",flags: seq[string]) =
         debugEcho path
         zip = zipBundle(path)
         debugEcho zip
-    debugEcho flags
-    let cmd = ["nimble","run",pkgInfo.name].map((x: string) => x.quoteShell).join(" ")
+    let cmd = ["nimble"].map((x: string) => x.quoteShell).join(" ")
     var rcmd = cmd & " " &  flags.join(" ") 
     let rrcmd = if len(wwwroot) > 0: rcmd & fmt" -d:bundle='{zip}' --threads:on " else:rcmd
     debugEcho rrcmd
-    let (output,exitCode) = execCmdEx( rrcmd  )
+    let opts = when not defined(release):" --verbose --debug " else:""
+    let (output,exitCode) = execCmdEx( rrcmd & opts & " run " & pkgInfo.name   )
     if exitCode == 0:
         debugEcho output
     else:

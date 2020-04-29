@@ -15,5 +15,5 @@ bin           = @["crowngui"]
 requires "nim >= 1.1.1"
 requires "plists"
 requires "cligen"
-requires "https://github.com/bung87/nimhttpd#c13b08e"
+requires "https://github.com/bung87/nimhttpd#c5e20a9"
 # requires "https://github.com/mjendrusch/objc"
