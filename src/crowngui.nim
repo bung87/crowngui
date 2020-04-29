@@ -1,6 +1,7 @@
 
 import os,strutils,crownguipkg/webview
-import nimhttpd,mimetypes,net,asyncdispatch
+import nimhttpd,mimetypes,asyncdispatch
+import finder
 
 type 
   EntryType =  enum
@@ -12,22 +13,28 @@ type
   ApplicationRef* = ref Application
 
 
-proc server() {.thread.} = 
+proc server(data:string) {.thread.} = 
     var settings: NimHttpSettings
-    settings.directory = currentSourcePath().parentDir() / "docs"
+    var finder = Finder(fType:FinderType.zip2mem)
+    initFinder(finder,data)
+    when not defined(release):
+      settings.logging = true
+    settings.finder = finder
     settings.mimes = newMimeTypes()
-    settings.mimes.register("html", "text/html")
-    settings.mimes.register("css", "text/css")
     settings.address = ""
     settings.port = Port(8000)
     serve(settings)
     runForever()
     quit(0)
 
+const bundle {.strdefine.} = ""
 proc newApplication*(entry:static[string]):ApplicationRef =
   result = new ApplicationRef
   const entryType =
-    when entry.startsWith"http": 
+    when defined(bundle):
+      const url = "http://localhost:8000"
+      EntryType.url
+    elif entry.startsWith"http": 
       const url = entry
       EntryType.url
     elif entry.endsWith".html" and not entry.startsWith"http": 
@@ -36,16 +43,13 @@ proc newApplication*(entry:static[string]):ApplicationRef =
     elif entry.endsWith".js" or entry.endsWith".nim":
       const url = dataUriHtmlHeader "<!DOCTYPE html><html><head><meta content='width=device-width,initial-scale=1' name=viewport></head><body id=body ><div id=ROOT ><div></body></html>"  # Copied from Karax
       EntryType.file
-    elif defined(bundle):
-      const bundle {.strdefine.} = ""
-      const url = "localhost"
-      discard staticRead bundle
-      EntryType.url
     else: 
       const url = dataUriHtmlHeader entry.strip
       EntryType.html
-  var serverthr:Thread[void]
-  createThread(serverthr,server)
+  when defined(bundle):
+    const data = staticRead bundle
+    var serverthr:Thread[string]
+    createThread(serverthr,server,data)
   result.entryType = entryType
   result.webview = newWebView( url )
 
