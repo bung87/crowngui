@@ -8,6 +8,8 @@ import sequtils,sugar
 import zip/zipfiles
 import strformat
 
+const DEBUG_OPTS = " --verbose --debug "
+const RELEASE_OPTS = " -d:release -d:noSignalHandler --exceptions:quirky"
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/AboutInformationPropertyListFiles.html#//apple_ref/doc/uid/TP40009254-SW4
 type
   CocoaAppInfo = object
@@ -31,7 +33,7 @@ proc zipBundle(dir:string):string =
     zip.close()
     return p
 
-proc buildMacos(wwwroot="",flags: seq[string]) =
+proc buildMacos(wwwroot="",release=false,flags: seq[string]) =
     let pwd:string = getCurrentDir()
     var nimbleFile = ""
     try:
@@ -46,7 +48,7 @@ proc buildMacos(wwwroot="",flags: seq[string]) =
     let pkgInfo = getPkgInfoFromFile(nimbleFile, options)
     let buildDir = pwd / "build" / "macos"
     discard existsOrCreateDir(buildDir)
-    let subDir = if "-d:release" in flags: "Release" else: "Debug"
+    let subDir = if release: "Release" else: "Debug"
     removeDir( buildDir )
     let appDir = buildDir / subDir / pkgInfo.name & ".app"
     createDir(appDir)
@@ -70,17 +72,18 @@ proc buildMacos(wwwroot="",flags: seq[string]) =
         debugEcho zip
     let cmd = ["nimble","build"].map((x: string) => x.quoteShell).join(" ")
     var rcmd = cmd & " " &  flags.join(" ") 
-    let rrcmd = if len(wwwroot) > 0: rcmd & fmt" -d:bundle='{zip}' --threads:on " else:rcmd
-    debugEcho rrcmd
-    
-    let (output,exitCode) = execCmdEx( rrcmd )
+    let rrcmd = if len(wwwroot) > 0: rcmd & fmt" -d:bundle='{zip}' --threads:on " else: rcmd
+    let opts = if not release: DEBUG_OPTS  else: RELEASE_OPTS
+    let finalCMD = rrcmd & opts
+    debugEcho finalCMD
+    let (output,exitCode) = execCmdEx( finalCMD )
     if exitCode == 0:
         debugEcho output
         moveFile(pwd / pkgInfo.name,appDir / pkgInfo.name  )
     else:
         debugEcho output
 
-proc runMacos(wwwroot="",flags: seq[string]) =
+proc runMacos(wwwroot="",release=false,flags: seq[string]) =
     var nimbleFile = ""
     try:
         nimbleFile = findNimbleFile(getCurrentDir(), true)
@@ -104,24 +107,26 @@ proc runMacos(wwwroot="",flags: seq[string]) =
     let cmd = ["nimble"].map((x: string) => x.quoteShell).join(" ")
     var rcmd = cmd & " " &  flags.join(" ") 
     let rrcmd = if len(wwwroot) > 0: rcmd & fmt" -d:bundle='{zip}' --threads:on " else:rcmd
-    debugEcho rrcmd
-    let opts = when not defined(release):" --verbose --debug " else:""
-    let (output,exitCode) = execCmdEx( rrcmd & opts & " run " & pkgInfo.name   )
+    
+    let opts = if not release: DEBUG_OPTS  else: RELEASE_OPTS
+    let finalCMD = rrcmd & opts & " run " & pkgInfo.name
+    debugEcho finalCMD
+    let (output,exitCode) = execCmdEx( finalCMD )
     if exitCode == 0:
         debugEcho output
     else:
         debugEcho output
    
-proc build(target:string,wwwroot="",flags: seq[string]):int = 
+proc build(target:string,wwwroot="",release=false,flags: seq[string]):int = 
     case target:
         of "macos":
             # nim c -r -f src/crownguipkg/cli.nim build --target macos --wwwroot ./docs 
-            buildMacos(wwwroot,flags)
+            buildMacos(wwwroot,release,flags)
 
-proc run(target:string,wwwroot="",flags: seq[string]):int = 
+proc run(target:string,wwwroot="",release=false,flags: seq[string]):int = 
     case target:
         of "macos":
             # nim c -r -f src/crownguipkg/cli.nim run --target macos --wwwroot ./docs 
-            runMacos(wwwroot,flags)
+            runMacos(wwwroot,release,flags)
 
 dispatchMulti([build],[run])

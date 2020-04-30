@@ -310,7 +310,7 @@ func exit*(w: Webview) {.inline.} =
   w.webview_terminate()
   w.webview_exit()
 
-proc webView(title = ""; url = ""; width: Positive = 640; height: Positive = 480; resizable: static[bool] = true; debug: static[bool] = not defined(release); callback: ExternalInvokeCb = nil): Webview {.inline.} =
+proc webView(title = ""; url = ""; width: Positive = 1000; height: Positive = 700; resizable: static[bool] = true; debug: static[bool] = not defined(release); callback: ExternalInvokeCb = nil): Webview {.inline.} =
   result = cast[Webview](alloc0(sizeof(WebviewObj)))
   result.title = title
   result.url = url
@@ -322,7 +322,7 @@ proc webView(title = ""; url = ""; width: Positive = 640; height: Positive = 480
   if callback != nil: result.externalInvokeCB = callback
   if result.init() != 0: return nil
 
-proc newWebView*(path: static[string] = ""; title = ""; width: Positive = 640; height: Positive = 480; resizable: static[bool] = true; debug: static[bool] = not defined(release); callback: ExternalInvokeCb = nil,
+proc newWebView*(path: static[string] = ""; title = ""; width: Positive = 1000; height: Positive = 700; resizable: static[bool] = true; debug: static[bool] = not defined(release); callback: ExternalInvokeCb = nil,
     skipTaskbar: static[bool] = false, windowBorders: static[bool] = true, focus: static[bool] = false, keepOnTop: static[bool] = false,
     minimized: static[bool] = false, cssPath: static[string] = "", trayIcon: static[cstring] = "", fullscreen: static[bool] = false): Webview =
   ## Create a new Window with given attributes, all arguments are optional.
