@@ -7,6 +7,7 @@ import osproc
 import sequtils,sugar
 import zip/zipfiles
 import strformat
+import icon
 
 const DEBUG_OPTS = " --verbose --debug "
 const RELEASE_OPTS = " -d:release -d:noSignalHandler --exceptions:quirky"
@@ -19,6 +20,20 @@ type
     # CFBundleIdentifier:string
     NSAppTransportSecurity:JsonNode
     NSHighResolutionCapable:string
+
+proc getPkgInfo():PackageInfo = 
+    var nimbleFile = ""
+    try:
+        nimbleFile = findNimbleFile(getCurrentDir(), true)
+    except: discard
+    # PackageInfos are cached so we can read them as many times as we want.
+    let options = Options(
+        action: Action(typ: actionNil),
+        pkgInfoCache: newTable[string, PackageInfo](),
+        verbosity: HighPriority
+    )
+    let pkgInfo = getPkgInfoFromFile(nimbleFile, options)
+    return pkgInfo
 
 proc zipBundle(dir:string):string = 
     var zip:ZipArchive
@@ -33,19 +48,30 @@ proc zipBundle(dir:string):string =
     zip.close()
     return p
 
+proc handleBundle(wwwroot:string):string = 
+    var zip:string
+    if len(wwwroot) > 0:
+        let path = absolutePath wwwroot
+        if not dirExists(path):
+            raise newException(OSError,fmt"dir {path} not existed.")
+        debugEcho path
+        zip = zipBundle(path)
+        debugEcho zip
+    return zip
+
+proc baseCmd(base:seq[string],wwwroot:string,release:bool,flags:seq[string]):seq[string] = 
+    let zip = handleBundle(wwwroot)
+    if len(wwwroot) > 0:
+        result.add fmt" -d:bundle='{zip}'"
+    result.add "--threads:on"
+    discard result.concat flags
+    let opts = if not release: DEBUG_OPTS  else: RELEASE_OPTS
+    result.add opts
+
 proc buildMacos(wwwroot="",release=false,flags: seq[string]) =
     let pwd:string = getCurrentDir()
-    var nimbleFile = ""
-    try:
-        nimbleFile = findNimbleFile(getCurrentDir(), true)
-    except: discard
-    # PackageInfos are cached so we can read them as many times as we want.
-    let options = Options(
-        action: Action(typ: actionNil),
-        pkgInfoCache: newTable[string, PackageInfo](),
-        verbosity: HighPriority
-    )
-    let pkgInfo = getPkgInfoFromFile(nimbleFile, options)
+   
+    let pkgInfo = getPkgInfo()
     let buildDir = pwd / "build" / "macos"
     discard existsOrCreateDir(buildDir)
     let subDir = if release: "Release" else: "Debug"
@@ -62,19 +88,8 @@ proc buildMacos(wwwroot="",release=false,flags: seq[string]) =
     if len(wwwroot) > 0:
         plist["NSAppTransportSecurity"] = NSAppTransportSecurity
     writePlist(plist,appDir / "Info.plist")
-    var zip:string
-    if len(wwwroot) > 0:
-        let path = absolutePath wwwroot
-        if not dirExists(path):
-            raise newException(OSError,fmt"dir {path} not existed.")
-        debugEcho path
-        zip = zipBundle(path)
-        debugEcho zip
-    let cmd = ["nimble","build"].map((x: string) => x.quoteShell).join(" ")
-    var rcmd = cmd & " " &  flags.join(" ") 
-    let rrcmd = if len(wwwroot) > 0: rcmd & fmt" -d:bundle='{zip}' --threads:on " else: rcmd
-    let opts = if not release: DEBUG_OPTS  else: RELEASE_OPTS
-    let finalCMD = rrcmd & opts
+    var cmd = baseCmd(@["nimble","build"],wwwroot,release,flags)
+    let finalCMD = cmd.join(" ")
     debugEcho finalCMD
     let (output,exitCode) = execCmdEx( finalCMD )
     if exitCode == 0:
@@ -84,44 +99,38 @@ proc buildMacos(wwwroot="",release=false,flags: seq[string]) =
         debugEcho output
 
 proc runMacos(wwwroot="",release=false,flags: seq[string]) =
-    var nimbleFile = ""
-    try:
-        nimbleFile = findNimbleFile(getCurrentDir(), true)
-    except: discard
-    # PackageInfos are cached so we can read them as many times as we want.
-    let options = Options(
-        action: Action(typ: actionNil),
-        pkgInfoCache: newTable[string, PackageInfo](),
-        verbosity: HighPriority
-    )
-    let pkgInfo = getPkgInfoFromFile(nimbleFile, options)
-   
-    var zip:string
-    if len(wwwroot) > 0:
-        let path = absolutePath wwwroot
-        if not dirExists(path):
-            raise newException(OSError,&"dir {path} not existed.")
-        debugEcho path
-        zip = zipBundle(path)
-        debugEcho zip
-    let cmd = ["nimble"].map((x: string) => x.quoteShell).join(" ")
-    var rcmd = cmd & " " &  flags.join(" ") 
-    let rrcmd = if len(wwwroot) > 0: rcmd & fmt" -d:bundle='{zip}' --threads:on " else:rcmd
-    
-    let opts = if not release: DEBUG_OPTS  else: RELEASE_OPTS
-    let finalCMD = rrcmd & opts & " run " & pkgInfo.name
+    let pkgInfo = getPkgInfo()
+    var cmd = baseCmd(@["nimble"],wwwroot,release,flags)
+    let finalCMD = cmd.concat(@["run",pkgInfo.name]).join(" ")
     debugEcho finalCMD
     let (output,exitCode) = execCmdEx( finalCMD )
     if exitCode == 0:
         debugEcho output
     else:
         debugEcho output
-   
+
+proc buildWindows(wwwroot="",release=false,flags: seq[string]) = 
+    let app_logo = ""
+    let img = loadPNG32(app_logo)
+    let opts = ICOOptions()
+    let path = generateICOSync(@[img],getTempDir(),opts)
+    let content = &"id ICON \"{path}\""
+    let rc = getTempDir() / "my.rc"
+    writeFile(rc,content)
+    let res = getTempDir() / "my.res"
+    let resCmd = &"windres {rc} -O coff -o {res}"
+    var myflags = @["-d:mingw"]
+    var cmd = baseCmd(@["nimble","build"],wwwroot,release,myflags.concat flags)
+    let finalCMD = cmd.join(" ")
+    debugEcho finalCMD
+
 proc build(target:string,wwwroot="",release=false,flags: seq[string]):int = 
     case target:
         of "macos":
             # nim c -r -f src/crownguipkg/cli.nim build --target macos --wwwroot ./docs 
             buildMacos(wwwroot,release,flags)
+        of "windows":
+            buildWindows(wwwroot,release,flags)
 
 proc run(target:string,wwwroot="",release=false,flags: seq[string]):int = 
     case target:
