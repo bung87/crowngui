@@ -4,7 +4,7 @@ import json
 import plists
 import tables
 import osproc
-import sequtils,sugar
+import sequtils
 import zip/zipfiles
 import strformat
 import icon
@@ -70,7 +70,6 @@ proc baseCmd(base:seq[string],wwwroot:string,release:bool,flags:seq[string]):seq
 
 proc buildMacos(wwwroot="",release=false,flags: seq[string]) =
     let pwd:string = getCurrentDir()
-   
     let pkgInfo = getPkgInfo()
     let buildDir = pwd / "build" / "macos"
     discard existsOrCreateDir(buildDir)
@@ -84,9 +83,15 @@ proc buildMacos(wwwroot="",release=false,flags: seq[string]) =
             {"localhost":{"NSExceptionAllowsInsecureHTTPLoads":true}}
             ]
         }
-    let plist = %* CocoaAppInfo(NSHighResolutionCapable:"True",CFBundleExecutable:pkgInfo.name,CFBundleDisplayName:pkgInfo.name,CFBundleVersion:pkgInfo.version)
+    var plist = %* CocoaAppInfo(NSHighResolutionCapable:"True",CFBundleExecutable:pkgInfo.name,CFBundleDisplayName:pkgInfo.name,CFBundleVersion:pkgInfo.version)
     if len(wwwroot) > 0:
         plist["NSAppTransportSecurity"] = NSAppTransportSecurity
+    let app_logo = getCurrentDir() / "logo.png"
+    if existsFile(app_logo):
+        let img = ImageInfo(size:32,filePath:app_logo)
+        let opts = ICNSOptions()
+        let path = generateICNS(@[img],appDir,opts)
+        plist["CFBundleIconFile"] =  newJString(extractFilename path)
     writePlist(plist,appDir / "Info.plist")
     var cmd = baseCmd(@["nimble","build"],wwwroot,release,flags)
     let finalCMD = cmd.join(" ")
@@ -110,19 +115,36 @@ proc runMacos(wwwroot="",release=false,flags: seq[string]) =
         debugEcho output
 
 proc buildWindows(wwwroot="",release=false,flags: seq[string]) = 
-    let app_logo = ""
-    let img = loadPNG32(app_logo)
-    let opts = ICOOptions()
-    let path = generateICOSync(@[img],getTempDir(),opts)
-    let content = &"id ICON \"{path}\""
-    let rc = getTempDir() / "my.rc"
-    writeFile(rc,content)
-    let res = getTempDir() / "my.res"
-    let resCmd = &"windres {rc} -O coff -o {res}"
+    let app_logo = getCurrentDir() / "logo.png"
+    let logoExists = existsFile(app_logo)
+    var res:string
+    var output:string
+    var exitCode:int
+    if logoExists:
+        let img = ImageInfo(size:32,filePath:app_logo)
+        let opts = ICOOptions()
+        let path = generateICO(@[img],getTempDir(),opts)
+        let content = &"id ICON \"{path}\""
+        let rc = getTempDir() / "my.rc"
+        writeFile(rc,content)
+        res = getTempDir() / "my.res"
+        let resCmd = &"windres {rc} -O coff -o {res}"
+        (output,exitCode) = execCmdEx( resCmd )
     var myflags = @["-d:mingw"]
     var cmd = baseCmd(@["nimble","build"],wwwroot,release,myflags.concat flags)
+    if logoExists and exitCode == 0:
+        discard cmd.concat @[&"--passL:{res}"]
+        debugEcho output
+    else:
+        debugEcho output
+    
     let finalCMD = cmd.join(" ")
     debugEcho finalCMD
+    let (o,e) = execCmdEx( finalCMD )
+    if e == 0:
+        debugEcho o
+    else:
+        debugEcho o
 
 proc build(target:string,wwwroot="",release=false,flags: seq[string]):int = 
     case target:
