@@ -28,6 +28,6 @@ task ghpage,"gh page":
   exec "git add ."
   exec "git config user.name \"bung87\""
   exec "git config user.email \"crc32@qq.com\""
-  exec "git commit -m \"docs(docs): update gh-pages\""
-  let url = "\"https://bung87@github.com/bung87/amysql.git\""
+  exec "git commit -m \"docs(docs): update gh-pages\" -n"
+  let url = "\"https://bung87@github.com/bung87/crowngui.git\""
   exec "git push --force --quiet " & url & " master:gh-pages"
