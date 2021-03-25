@@ -1,8 +1,8 @@
 # Package
 
-version       = "0.1.0"
+version       = "0.2.0"
 author        = "bung87"
-description   = "A new awesome nimble package"
+description   = "Web Technologies based Crossplatform GUI Framework"
 license       = "MIT"
 srcDir        = "src"
 installExt    = @["nim"]
@@ -18,4 +18,3 @@ requires "plists"
 requires "cligen"
 requires "https://github.com/bung87/nimhttpd#c5e20a9"
 requires "https://github.com/bung87/icon"
-# requires "https://github.com/mjendrusch/objc"
