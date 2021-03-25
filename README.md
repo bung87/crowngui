@@ -2,6 +2,25 @@
 
 Web Technologies based Crossplatform GUI Framework  
 
+## Usage  
+
+``` nim
+import crowngui
+
+when isMainModule:
+  const   
+    cssDark = staticRead"assets/dark.css".strip.unindent.cstring
+    cssLight = staticRead"assets/light.css".strip.unindent.cstring
+
+  let app = newApplication( staticRead("assets/demo.html") )
+  when not defined(bundle):
+    let theme = if "--light-theme" in commandLineParams(): cssLight else: cssDark
+    app.css(theme)
+  app.run()
+  app.exit()
+```
+
+
 ## Development  
 
 run  

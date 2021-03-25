@@ -29,6 +29,9 @@ proc server(data:string) {.thread.} =
 
 const bundle {.strdefine.} = ""
 proc newApplication*(entry:static[string]):ApplicationRef =
+  ## entry could be `html` file, `url` , `js` file or `nim` file
+  ## when entry specific to nim file it will compile to js as script of bootstrap html
+  ## when run command specific `--wwwroot` parameter it will bundle directory as http server root
   result = new ApplicationRef
   const entryType =
     when defined(bundle):
