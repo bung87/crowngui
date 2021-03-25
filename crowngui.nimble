@@ -21,6 +21,7 @@ requires "https://github.com/bung87/icon"
 
 task docs,"a":
   exec "nim doc --project src/crowngui.nim"
+  exec "mv src/htmldocs/theindex.html src/htmldocs/index.html"
 
 task ghpage,"gh page":
   cd "src/htmldocs" 
