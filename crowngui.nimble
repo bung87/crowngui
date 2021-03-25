@@ -13,6 +13,7 @@ bin           = @["crowngui"]
 # Dependencies
 
 requires "nim >= 1.1.1"
+requires "nimble >= 0.11.4"
 requires "plists"
 requires "cligen"
 requires "https://github.com/bung87/nimhttpd#c5e20a9"

@@ -1,5 +1,4 @@
 import cligen,os
-import nimblepkg/[packageinfo,packageparser,options,common,cli]
 import json
 import plists
 import tables
@@ -8,6 +7,7 @@ import sequtils
 import zip/zipfiles
 import strformat
 import icon
+import packageinfo
 
 const DEBUG_OPTS = " --verbose --debug "
 const RELEASE_OPTS = " -d:release -d:noSignalHandler --exceptions:quirky"
@@ -22,18 +22,9 @@ type
     NSHighResolutionCapable:string
 
 proc getPkgInfo():PackageInfo = 
-    var nimbleFile = ""
-    try:
-        nimbleFile = findNimbleFile(getCurrentDir(), true)
-    except: discard
-    # PackageInfos are cached so we can read them as many times as we want.
-    let options = Options(
-        action: Action(typ: actionNil),
-        pkgInfoCache: newTable[string, PackageInfo](),
-        verbosity: HighPriority
-    )
-    let pkgInfo = getPkgInfoFromFile(nimbleFile, options)
-    return pkgInfo
+    let r = execCmdEx(fmt"nimble dump --json {getCurrentDir()}")
+    let jsonNode = parseJson(r.output)
+    result = to(jsonNode, PackageInfo)
 
 proc zipBundle(dir:string):string = 
     var zip:ZipArchive
@@ -60,6 +51,7 @@ proc handleBundle(wwwroot:string):string =
     return zip
 
 proc baseCmd(base:seq[string],wwwroot:string,release:bool,flags:seq[string]):seq[string] = 
+    result = base
     let zip = handleBundle(wwwroot)
     if len(wwwroot) > 0:
         result.add fmt" -d:bundle='{zip}'"
@@ -87,7 +79,7 @@ proc buildMacos(wwwroot="",release=false,flags: seq[string]) =
     if len(wwwroot) > 0:
         plist["NSAppTransportSecurity"] = NSAppTransportSecurity
     let app_logo = getCurrentDir() / "logo.png"
-    if existsFile(app_logo):
+    if fileExists(app_logo):
         let img = ImageInfo(size:32,filePath:app_logo)
         let opts = ICNSOptions()
         let path = generateICNS(@[img],appDir,opts)
@@ -116,7 +108,7 @@ proc runMacos(wwwroot="",release=false,flags: seq[string]) =
 
 proc buildWindows(wwwroot="",release=false,flags: seq[string]) = 
     let app_logo = getCurrentDir() / "logo.png"
-    let logoExists = existsFile(app_logo)
+    let logoExists = fileExists(app_logo)
     var res:string
     var output:string
     var exitCode:int
