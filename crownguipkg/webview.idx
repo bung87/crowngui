@@ -1,0 +1,39 @@
+ExternalInvokeCb	crownguipkg/webview.html#ExternalInvokeCb	webview: ExternalInvokeCb	
+WebviewObj	crownguipkg/webview.html#WebviewObj	webview: WebviewObj	
+Webview	crownguipkg/webview.html#Webview	webview: Webview	
+DispatchFn	crownguipkg/webview.html#DispatchFn	webview: DispatchFn	
+dataUriHtmlHeader	crownguipkg/webview.html#dataUriHtmlHeader	webview: dataUriHtmlHeader	
+fileLocalHeader	crownguipkg/webview.html#fileLocalHeader	webview: fileLocalHeader	
+js	crownguipkg/webview.html#js,Webview,cstring	webview: js(w: Webview; javascript: cstring): cint	
+css	crownguipkg/webview.html#css,Webview,cstring	webview: css(w: Webview; css: cstring): cint	
+setTitle	crownguipkg/webview.html#setTitle,Webview,cstring	webview: setTitle(w: Webview; title: cstring)	
+setColor	crownguipkg/webview.html#setColor,Webview,uint8,uint8,uint8,uint8	webview: setColor(w: Webview; red, green, blue, alpha: uint8)	
+setFullscreen	crownguipkg/webview.html#setFullscreen,Webview,bool	webview: setFullscreen(w: Webview; fullscreen: bool)	
+jsDebug	crownguipkg/webview.html#jsDebug,cstring	webview: jsDebug(format: cstring)	
+jsLog	crownguipkg/webview.html#jsLog,cstring	webview: jsLog(s: cstring)	
+setUrl	crownguipkg/webview.html#setUrl,Webview,cstring	webview: setUrl(w: Webview; url: cstring)	
+setIconify	crownguipkg/webview.html#setIconify,Webview,bool	webview: setIconify(w: Webview; mustBeIconified: bool)	
+setBorderless	crownguipkg/webview.html#setBorderless,Webview,bool	webview: setBorderless(w: Webview; decorated: bool)	
+setSkipTaskbar	crownguipkg/webview.html#setSkipTaskbar,Webview,bool	webview: setSkipTaskbar(w: Webview; hint: bool)	
+setSize	crownguipkg/webview.html#setSize,Webview,Positive,Positive	webview: setSize(w: Webview; width: Positive; height: Positive)	
+setFocus	crownguipkg/webview.html#setFocus,Webview	webview: setFocus(w: Webview)	
+setOnTop	crownguipkg/webview.html#setOnTop,Webview,bool	webview: setOnTop(w: Webview; mustBeOnTop: bool)	
+setClipboard	crownguipkg/webview.html#setClipboard,Webview,cstring	webview: setClipboard(w: Webview; text: cstring)	
+setTrayIcon	crownguipkg/webview.html#setTrayIcon,Webview,cstring,cstring	webview: setTrayIcon(w: Webview; path, tooltip: cstring; visible = true)	
+msg	crownguipkg/webview.html#msg.t,Webview,string,string	webview: msg(w: Webview; title, msg: string)	
+info	crownguipkg/webview.html#info.t,Webview,string,string	webview: info(w: Webview; title, msg: string)	
+warn	crownguipkg/webview.html#warn.t,Webview,string,string	webview: warn(w: Webview; title, msg: string)	
+error	crownguipkg/webview.html#error.t,Webview,string,string	webview: error(w: Webview; title, msg: string)	
+dialogOpen	crownguipkg/webview.html#dialogOpen.t,Webview,string	webview: dialogOpen(w: Webview; title = &quot;&quot;): string	
+dialogSave	crownguipkg/webview.html#dialogSave.t,Webview,string	webview: dialogSave(w: Webview; title = &quot;&quot;): string	
+dialogOpenDir	crownguipkg/webview.html#dialogOpenDir.t,Webview,string	webview: dialogOpenDir(w: Webview; title = &quot;&quot;): string	
+externalInvokeCB=	crownguipkg/webview.html#externalInvokeCB=,Webview,ExternalInvokeCb	webview: externalInvokeCB=(w: Webview; callback: ExternalInvokeCb)	
+dispatch	crownguipkg/webview.html#dispatch,Webview,DispatchFn	webview: dispatch(w: Webview; fn: DispatchFn)	
+bindProc	crownguipkg/webview.html#bindProc,Webview,string,string,	webview: bindProc[P, R](w: Webview; scope, name: string; p: (proc (param: P): R))	
+bindProcNoArg	crownguipkg/webview.html#bindProcNoArg,Webview,string,string,proc)	webview: bindProcNoArg(w: Webview; scope, name: string; p: proc ())	
+bindProc	crownguipkg/webview.html#bindProc,Webview,string,string,proc(P)	webview: bindProc[P](w: Webview; scope, name: string; p: proc (arg: P))	
+bindProcs	crownguipkg/webview.html#bindProcs.m,Webview,string,untyped	webview: bindProcs(w: Webview; scope: string; n: untyped): untyped	
+run	crownguipkg/webview.html#run,Webview	webview: run(w: Webview)	
+run	crownguipkg/webview.html#run,Webview,proc),proc),static[bool]	webview: run(w: Webview; quitProc: proc () {.noconv.}; controlCProc: proc () {.noconv.};\n    autoClose: static[bool] = true)	
+exit	crownguipkg/webview.html#exit,Webview	webview: exit(w: Webview)	
+newWebView	crownguipkg/webview.html#newWebView,static[string],string,Positive,Positive,static[bool],static[bool],ExternalInvokeCb,static[bool],static[bool],static[bool],static[bool],static[bool],static[string],static[cstring],static[bool]	webview: newWebView(path: static[string] = &quot;&quot;; title = &quot;&quot;; width: Positive = 1000;\n           height: Positive = 700; resizable: static[bool] = true;\n           debug: static[bool] = not false; callback: ExternalInvokeCb = nil;\n           skipTaskbar: static[bool] = false;\n           windowBorders: static[bool] = true; focus: static[bool] = false;\n           keepOnTop: static[bool] = false; minimized: static[bool] = false;\n           cssPath: static[string] = &quot;&quot;; trayIcon: static[cstring] = &quot;&quot;;\n           fullscreen: static[bool] = false): Webview	

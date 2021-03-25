@@ -1,0 +1,3 @@
+Application	crowngui.html#Application	crowngui: Application	
+ApplicationRef	crowngui.html#ApplicationRef	crowngui: ApplicationRef	
+newApplication	crowngui.html#newApplication,static[string]	crowngui: newApplication(entry: static[string]): ApplicationRef	
