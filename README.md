@@ -3,7 +3,7 @@
 Web Technologies based Crossplatform GUI Framework  
 
 ## Usage  
-
+file: yourexecutable.nim  
 ``` nim
 import crowngui
 
@@ -19,8 +19,14 @@ when isMainModule:
   app.run()
   app.exit()
 ```
+Your project `.nimble` file  
+``` nim
+bin           = @["yourexecutable"]
+```
 
+crowngui cli will bundle your executable to `exe` on windows, `.app` on mac  
 
+Your project root can have `"logo.png"` which will generate as icon of application.  
 ## Development  
 
 run  
