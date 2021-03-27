@@ -18,7 +18,7 @@ type
     CFBundleVersion: string
     CFBundleExecutable: string
     # CFBundleIdentifier:string
-    CFBundlePackageType:string
+    CFBundlePackageType: string
     NSAppTransportSecurity: JsonNode
     NSHighResolutionCapable: string
     # CFBundleIconName: string
@@ -78,8 +78,9 @@ proc buildMacos(wwwroot = "", release = false, flags: seq[string]) =
           {"localhost": {"NSExceptionAllowsInsecureHTTPLoads": true}}
           ]
       }
-  let appInfo = CocoaAppInfo(NSHighResolutionCapable: "True",CFBundlePackageType:"APPL",CFBundleExecutable: pkgInfo.name,
-      CFBundleDisplayName: pkgInfo.name, CFBundleVersion: pkgInfo.version,NSAppTransportSecurity: %* {})
+  let appInfo = CocoaAppInfo(NSHighResolutionCapable: "True", CFBundlePackageType: "APPL",
+      CFBundleExecutable: pkgInfo.name, CFBundleDisplayName: pkgInfo.name, CFBundleVersion: pkgInfo.version,
+          NSAppTransportSecurity: %* {})
   var plist = %* appInfo
   if len(wwwroot) > 0:
     plist["NSAppTransportSecurity"] = NSAppTransportSecurity
