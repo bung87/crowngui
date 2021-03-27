@@ -1,4 +1,4 @@
-import tables, strutils, macros, json, os, base64,strformat
+import tables, strutils, macros, json, os, base64,strformat,std/exitprocs
 
 const headerC = currentSourcePath().substr(0, high(currentSourcePath()) - 11) & "webview.h"
 {.passc: "-DWEBVIEW_STATIC -DWEBVIEW_IMPLEMENTATION -I" & headerC.}
@@ -298,7 +298,7 @@ proc run*(w: Webview, quitProc: proc () {.noconv.}, controlCProc: proc () {.noco
   ## * `quitProc` is a function to run at exit, needs `{.noconv.}` pragma.
   ## * `controlCProc` is a function to run at CTRL+C, needs `{.noconv.}` pragma.
   ## * `autoClose` set to `true` to automatically run `exit()` at exit.
-  system.addQuitProc(quitProc)
+  exitprocs.addExitProc(quitProc)
   system.setControlCHook(controlCProc)
   while w.loop(1) == 0: discard
   when autoClose:
