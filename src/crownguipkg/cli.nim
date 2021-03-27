@@ -9,6 +9,7 @@ import strformat
 import icon
 import packageinfo
 import imageman
+import zopflipng
 
 const DEBUG_OPTS = " --verbose --debug "
 const RELEASE_OPTS = " -d:release -d:noSignalHandler --exceptions:quirky"
@@ -91,10 +92,12 @@ proc buildMacos(wwwroot = "", release = false, flags: seq[string]) =
     if not dirExists(outDir):
       createDir(outDir)
     let img = loadImage[ColorRGBAU](app_logo)
+    var data:seq[byte]
     let images = REQUIRED_IMAGE_SIZES.map(proc (size: int): ImageInfo{.closure.} =
       let tmpName = getTempDir() & pkgInfo.name & $size & ".png"
       let img2 = img.resizedBicubic(size, size)
-      img2.savePNG(tmpName)
+      data = img2.writePNG()
+      optimizePNGData(data, tmpName)
       result = ImageInfo(size: size, filePath: tmpName)
     )
     let path = generateICNS(images, outDir)

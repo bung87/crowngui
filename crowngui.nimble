@@ -17,8 +17,9 @@ requires "nimble >= 0.11.4"
 requires "plists"
 requires "cligen"
 requires "imageman"
+requires "zopflipng"
 requires "https://github.com/bung87/nimhttpd#c5e20a9"
-requires "icon >= 0.1.2"
+requires "https://github.com/bung87/icon >= 0.1.2"
 
 task docs,"a":
   exec "nim doc --project src/crowngui.nim"
