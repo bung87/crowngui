@@ -92,7 +92,7 @@ proc buildMacos(wwwroot = "", release = false, flags: seq[string]) =
     if not dirExists(outDir):
       createDir(outDir)
     let img = loadImage[ColorRGBAU](app_logo)
-    var data:seq[byte]
+    var data: seq[byte]
     let images = REQUIRED_IMAGE_SIZES.map(proc (size: int): ImageInfo{.closure.} =
       let tmpName = getTempDir() & pkgInfo.name & $size & ".png"
       let img2 = img.resizedBicubic(size, size)
