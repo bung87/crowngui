@@ -1,6 +1,6 @@
 # Package
 
-version       = "0.2.0"
+version       = "0.2.1"
 author        = "bung87"
 description   = "Web Technologies based Crossplatform GUI Framework"
 license       = "MIT"
@@ -16,8 +16,9 @@ requires "nim >= 1.1.1"
 requires "nimble >= 0.11.4"
 requires "plists"
 requires "cligen"
+requires "imageman"
 requires "https://github.com/bung87/nimhttpd#c5e20a9"
-requires "https://github.com/bung87/icon"
+requires "icon >= 0.1.2"
 
 task docs,"a":
   exec "nim doc --project src/crowngui.nim"

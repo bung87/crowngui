@@ -27,13 +27,32 @@ bin           = @["yourexecutable"]
 crowngui cli will bundle your executable to `exe` on windows, `.app` on mac  
 
 Your project root can have `"logo.png"` which will generate as icon of application.  
+
+### CLI usage  
+`crowngui [build,run] --help`  
+
+```
+Usage:
+  [build,run] [required&optional-params] [flags: string...]
+Options:
+  -h, --help                         print this cligen-erated help
+  --help-syntax                      advanced: prepend,plurals,..
+  -t=, --target=   string  REQUIRED  set target
+  -w=, --wwwroot=  string  ""        set wwwroot
+  -r, --release    bool    false     set release
+
+```
+## Prerequires  
+
+`imageman` for image resize requires `libpng`    
+
 ## Development  
 
 run  
-`nim c -r -f src/crownguipkg/cli.nim run --target macos --wwwroot ./docs`  
+`nim c -r -f src/crownguipkg/cli.nim run --target macos`  
 
 build  
-`nim c -r -f src/crownguipkg/cli.nim build --target macos --wwwroot ./docs`
+`nim c -r -f src/crownguipkg/cli.nim build --target macos`
 
 
 ## Cross compilation for Windows  

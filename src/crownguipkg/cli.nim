@@ -8,6 +8,7 @@ import zip/zipfiles
 import strformat
 import icon
 import packageinfo
+import imageman
 
 const DEBUG_OPTS = " --verbose --debug "
 const RELEASE_OPTS = " -d:release -d:noSignalHandler --exceptions:quirky"
@@ -86,12 +87,17 @@ proc buildMacos(wwwroot = "", release = false, flags: seq[string]) =
     plist["NSAppTransportSecurity"] = NSAppTransportSecurity
   let app_logo = getCurrentDir() / "logo.png"
   if fileExists(app_logo):
-    let img = ImageInfo(size: 1024, filePath: app_logo)
-    let opts = ICNSOptions()
     let outDir = appDir / "Contents" / "Resources"
     if not dirExists(outDir):
       createDir(outDir)
-    let path = generateICNS(@[img], outDir, opts)
+    let img = loadImage[ColorRGBAU](app_logo)
+    let images = REQUIRED_IMAGE_SIZES.map(proc (size: int): ImageInfo{.closure.} =
+      let tmpName = getTempDir() & pkgInfo.name & $size & ".png"
+      let img2 = img.resizedBicubic(size, size)
+      img2.savePNG(tmpName)
+      result = ImageInfo(size: size, filePath: tmpName)
+    )
+    let path = generateICNS(images, outDir)
     plist["CFBundleIconFile"] = newJString(extractFilename path)
   writePlist(plist, appDir / "Contents" / "Info.plist")
   var cmd = baseCmd(@["nimble", "build"], wwwroot, release, flags)

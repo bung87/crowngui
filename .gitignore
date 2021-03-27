@@ -1,4 +1,7 @@
 *
+!**/
+!*.*
+.DS_Store
 !.gitattributes
 !.gitignore
 !readme.md
@@ -11,3 +14,4 @@
 !*.html
 !*/
 src/htmldocs
+build/

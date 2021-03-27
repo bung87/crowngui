@@ -20,3 +20,9 @@ type PackageInfo* = object
   # srcDir*: string
   # backend*: string
   # foreignDeps*: seq[string]
+
+
+when isMainModule:
+  when defined(macosx):
+    echo 11
+
