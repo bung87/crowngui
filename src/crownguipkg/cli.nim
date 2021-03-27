@@ -18,8 +18,10 @@ type
     CFBundleVersion: string
     CFBundleExecutable: string
     # CFBundleIdentifier:string
+    CFBundlePackageType:string
     NSAppTransportSecurity: JsonNode
     NSHighResolutionCapable: string
+    # CFBundleIconName: string
 
 proc getPkgInfo(): PackageInfo =
   let r = execCmdEx(fmt"nimble dump --json {getCurrentDir()}")
@@ -64,7 +66,8 @@ proc buildMacos(wwwroot = "", release = false, flags: seq[string]) =
   let pwd: string = getCurrentDir()
   let pkgInfo = getPkgInfo()
   let buildDir = pwd / "build" / "macos"
-  discard existsOrCreateDir(buildDir)
+  if not dirExists(buildDir):
+    createDir(buildDir)
   let subDir = if release: "Release" else: "Debug"
   removeDir(buildDir)
   let appDir = buildDir / subDir / pkgInfo.name & ".app"
@@ -75,24 +78,31 @@ proc buildMacos(wwwroot = "", release = false, flags: seq[string]) =
           {"localhost": {"NSExceptionAllowsInsecureHTTPLoads": true}}
           ]
       }
-  var plist = %* CocoaAppInfo(NSHighResolutionCapable: "True", CFBundleExecutable: pkgInfo.name,
-      CFBundleDisplayName: pkgInfo.name, CFBundleVersion: pkgInfo.version)
+  let appInfo = CocoaAppInfo(NSHighResolutionCapable: "True",CFBundlePackageType:"APPL",CFBundleExecutable: pkgInfo.name,
+      CFBundleDisplayName: pkgInfo.name, CFBundleVersion: pkgInfo.version,NSAppTransportSecurity: %* {})
+  var plist = %* appInfo
   if len(wwwroot) > 0:
     plist["NSAppTransportSecurity"] = NSAppTransportSecurity
   let app_logo = getCurrentDir() / "logo.png"
   if fileExists(app_logo):
-    let img = ImageInfo(size: 32, filePath: app_logo)
+    let img = ImageInfo(size: 1024, filePath: app_logo)
     let opts = ICNSOptions()
-    let path = generateICNS(@[img], appDir, opts)
+    let outDir = appDir / "Contents" / "Resources"
+    if not dirExists(outDir):
+      createDir(outDir)
+    let path = generateICNS(@[img], outDir, opts)
     plist["CFBundleIconFile"] = newJString(extractFilename path)
-  writePlist(plist, appDir / "Info.plist")
+  writePlist(plist, appDir / "Contents" / "Info.plist")
   var cmd = baseCmd(@["nimble", "build"], wwwroot, release, flags)
   let finalCMD = cmd.join(" ")
   debugEcho finalCMD
   let (output, exitCode) = execCmdEx(finalCMD)
   if exitCode == 0:
     debugEcho output
-    moveFile(pwd / pkgInfo.name, appDir / pkgInfo.name)
+    let binOutDir = appDir / "Contents" / "MacOS"
+    if not dirExists(binOutDir):
+      createDir(binOutDir)
+    moveFile(pwd / pkgInfo.name, binOutDir / pkgInfo.name)
   else:
     debugEcho output
 
