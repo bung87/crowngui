@@ -69,7 +69,7 @@ type
 
 const
   YES* = cchar(1)
-  NO*  = cchar(0)
+  NO* = cchar(0)
 
 proc isNil*(a: Class): bool =
   result = a.pointer == nil
@@ -84,7 +84,7 @@ proc getName*(cls: Class): string =
   result = $class_getName(cls)
 
 proc `$`*(cls: Class): string =
-    getName(cls)
+  getName(cls)
 
 proc class_getSuperclass(cls: Class): Class {.objcimport.}
 template getSuperclass*(cls: Class): untyped =
@@ -129,7 +129,7 @@ proc class_setWeakIvarLayout*(cls: Class; layout: ptr uint8) {.objcimport.}
 proc class_getProperty(cls: Class; name: cstring): Property {.objcimport.}
 template getProperty*(cls: Class; name: string): untyped =
   class_getProperty(cls, name.cstring)
-proc get_nsstring*(v :cstring): ID {.objcimport,discardable.}
+proc get_nsstring*(v: cstring): ID {.objcimport, discardable.}
 proc class_copyPropertyList*(cls: Class, outCount: var cuint): ptr Property {.objcimport.}
 proc propertyList*(cls: Class): seq[Property] =
   var
@@ -163,7 +163,7 @@ proc methodList*(cls: Class): seq[Method] =
     result = @[]
     return result
   result = newSeq[Method](count)
-  copyMem(result[0].addr,  procs, sizeof(Method) * count.int)
+  copyMem(result[0].addr, procs, sizeof(Method) * count.int)
   c_free(procs)
 
 proc class_replaceMethod(cls: Class; name: SEL; imp: IMP; types: cstring): IMP {.objcimport.}
@@ -212,7 +212,7 @@ proc protocolList*(cls: Class): seq[Protocol] =
     result = @[]
     return result
   result = newSeq[Protocol](count)
-  copyMem(result[0].addr,  prots, sizeof(Protocol) * count.int)
+  copyMem(result[0].addr, prots, sizeof(Protocol) * count.int)
   c_free(prots)
 
 proc class_getVersion(cls: Class): cint {.objcimport.}
@@ -314,7 +314,7 @@ proc copyClassList*(): seq[Class] =
     result = @[]
     return result
   result = newSeq[Class](count)
-  copyMem(result[0].addr,  classes, sizeof(Class) * count.int)
+  copyMem(result[0].addr, classes, sizeof(Class) * count.int)
   c_free(classes)
 
 proc objc_lookUpClass(name: cstring): Class {.objcimport.}
@@ -360,13 +360,13 @@ proc objc_removeAssociatedObjects(obj: ID) {.objcimport.}
 template removeAssociatedObjects*(obj: ID) =
   objc_removeAssociatedObjects(obj)
 
-proc objc_msgSend*(self: ID; op: SEL): ID {.objcimport,discardable,varargs.}
-proc objc_msgSend_fpret*(self: ID; op: SEL): cdouble {.objcimport,varargs.}
-proc objc_msgSend_stret*(self: ID; op: SEL) {.objcimport,varargs.}
-proc objc_msgSendSuper*(super: var ObjcSuper; op: SEL): ID {.objcimport,varargs.}
-proc objc_msgSendSuper_stret*(super: var ObjcSuper; op: SEL) {.objcimport,varargs.}
-proc method_invoke*(receiver: ID; m: Method): ID {.objcimport,varargs.}
-proc method_invoke_stret*(receiver: ID; m: Method) {.objcimport,varargs.}
+proc objc_msgSend*(self: ID; op: SEL): ID {.objcimport, discardable, varargs.}
+proc objc_msgSend_fpret*(self: ID; op: SEL): cdouble {.objcimport, varargs.}
+proc objc_msgSend_stret*(self: ID; op: SEL) {.objcimport, varargs.}
+proc objc_msgSendSuper*(super: var ObjcSuper; op: SEL): ID {.objcimport, varargs.}
+proc objc_msgSendSuper_stret*(super: var ObjcSuper; op: SEL) {.objcimport, varargs.}
+proc method_invoke*(receiver: ID; m: Method): ID {.objcimport, varargs.}
+proc method_invoke_stret*(receiver: ID; m: Method) {.objcimport, varargs.}
 
 proc sel_getName*(sel: SEL): cstring {.objcimport.}
 template getName*(sel: SEL): untyped =
@@ -548,7 +548,7 @@ proc methodDescriptionList*(p: Protocol; isRequiredMethod, isInstanceMethod: BOO
     DescT = array[0..0, objc_method_description]
   var
     count = 0.cuint
-    raw   = protocol_copyMethodDescriptionList(p, isRequiredMethod, isInstanceMethod, count)
+    raw = protocol_copyMethodDescriptionList(p, isRequiredMethod, isInstanceMethod, count)
     descs = cast[DescT](raw)
   if count == 0:
     result = @[]
@@ -612,7 +612,7 @@ proc attributeList*(property: Property): seq[PropertyAttribute] =
   type AttrT = array[0..0, objc_property_attribute_t]
   var
     count = 0.cuint
-    raw   = property_copyAttributeList(property, count)
+    raw = property_copyAttributeList(property, count)
     attrs = cast[AttrT](raw)
   if count == 0:
     result = @[]
@@ -659,5 +659,5 @@ proc objc_storeWeak(location: var ID; obj: ID): ID {.objcimport.}
 template storeWeak*(location: var ID; obj: ID): untyped =
   objc_storeWeak(location, obj)
 
-func get_nsstring*(c_str:string): ID =
-  return objc_msgSend(getClass("NSString").ID,registerName("stringWithUTF8String:"), c_str.cstring)
+func get_nsstring*(c_str: string): ID =
+  return objc_msgSend(getClass("NSString").ID, registerName("stringWithUTF8String:"), c_str.cstring)

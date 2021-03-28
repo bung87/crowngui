@@ -73,6 +73,6 @@ when isMainModule:
   when not defined(bundle):
     let theme = if "--light-theme" in commandLineParams(): cssLight else: cssDark
     app.css(theme)
-  
+
   app.run()
   app.exit()
