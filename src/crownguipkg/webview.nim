@@ -179,7 +179,7 @@ template dialogOpenDir*(w: Webview; title = ""): string =
 
 proc generalExternalInvokeCallback(w: Webview; arg: cstring) {.exportc.} =
   # assign to webview.invokeCb using eps,cbs store user defined proc
-var handled = false
+  var handled = false
   if eps.hasKey(w):
     try:
       var mi = parseJson($arg).to(MethodInfo)

@@ -7,9 +7,12 @@ import sequtils
 import zip/zipfiles
 import strformat
 import icon
+import icon/icns
+import icon/ico
 import packageinfo
 import imageman
 import zopflipng
+import rcedit,options
 
 const DEBUG_OPTS = " --verbose --debug "
 const RELEASE_OPTS = " -d:release -d:noSignalHandler --exceptions:quirky"
@@ -60,7 +63,7 @@ proc baseCmd(base: seq[string], wwwroot: string, release: bool, flags: seq[strin
   if len(wwwroot) > 0:
     result.add fmt" -d:bundle='{zip}'"
   result.add "--threads:on"
-  discard result.concat flags
+  result.add flags
   let opts = if not release: DEBUG_OPTS else: RELEASE_OPTS
   result.add opts
 
@@ -93,8 +96,9 @@ proc buildMacos(wwwroot = "", release = false, flags: seq[string]) =
       createDir(outDir)
     let img = loadImage[ColorRGBAU](app_logo)
     var data: seq[byte]
-    let images = REQUIRED_IMAGE_SIZES.map(proc (size: int): ImageInfo{.closure.} =
-      let tmpName = getTempDir() & pkgInfo.name & $size & ".png"
+    let tempDir = getTempDir()
+    let images = icns.REQUIRED_IMAGE_SIZES.map(proc (size: int): ImageInfo{.closure.} =
+      let tmpName = tempDir & pkgInfo.name & $size & ".png"
       let img2 = img.resizedBicubic(size, size)
       data = img2.writePNG()
       optimizePNGData(data, tmpName)
@@ -128,34 +132,60 @@ proc runMacos(wwwroot = "", release = false, flags: seq[string]) =
     debugEcho output
 
 proc buildWindows(wwwroot = "", release = false, flags: seq[string]) =
+  let pwd: string = getCurrentDir()
+  let pkgInfo = getPkgInfo()
+  let buildDir = pwd / "build" / "macos"
+  if not dirExists(buildDir):
+    createDir(buildDir)
+  let subDir = if release: "Release" else: "Debug"
+  removeDir(buildDir)
+  let appDir = buildDir / subDir
+  createDir(appDir)
   let app_logo = getCurrentDir() / "logo.png"
   let logoExists = fileExists(app_logo)
   var res: string
   var output: string
   var exitCode: int
+  var icoPath:string
   if logoExists:
-    let img = ImageInfo(size: 32, filePath: app_logo)
-    let opts = ICOOptions()
-    let path = generateICO(@[img], getTempDir(), opts)
-    let content = &"id ICON \"{path}\""
-    let rc = getTempDir() / "my.rc"
-    writeFile(rc, content)
-    res = getTempDir() / "my.res"
-    let resCmd = &"windres {rc} -O coff -o {res}"
-    (output, exitCode) = execCmdEx(resCmd)
-  var myflags = @["-d:mingw"]
+    let img = loadImage[ColorRGBAU](app_logo)
+    var data: seq[byte]
+    let tempDir = getTempDir()
+    let images = ico.REQUIRED_IMAGE_SIZES.map(proc (size: int): ImageInfo{.closure.} =
+      let tmpName = tempDir & pkgInfo.name & $size & ".png"
+      let img2 = img.resizedBicubic(size, size)
+      data = img2.writePNG()
+      optimizePNGData(data, tmpName)
+      result = ImageInfo(size: size, filePath: tmpName)
+    )
+    icoPath = generateICO(images, tempDir)
+    # for windres
+    # let content = &"id ICON \"{path}\""
+    # let rc = getTempDir() / "my.rc"
+    # writeFile(rc, content)
+    # res = getTempDir() / "my.res"
+    # let resCmd = &"windres {rc} -O coff -o {res}"
+    # (output, exitCode) = execCmdEx(resCmd)
+  var myflags:seq[string]
+  when not defined(windows):
+    myflags.add "-d:mingw"
   var cmd = baseCmd(@["nimble", "build"], wwwroot, release, myflags.concat flags)
-  if logoExists and exitCode == 0:
-    discard cmd.concat @[&"--passL:{res}"]
-    debugEcho output
-  else:
-    debugEcho output
+  # for windres
+  # if logoExists and exitCode == 0:
+  #   discard cmd.concat @[&"--passL:{res}"]
+  #   debugEcho output
+  # else:
+  #   debugEcho output
 
   let finalCMD = cmd.join(" ")
   debugEcho finalCMD
   let (o, e) = execCmdEx(finalCMD)
+  
   if e == 0:
     debugEcho o
+    let exePath = pwd / pkgInfo.name & ".exe"
+    rcedit(none(string), exePath, {"icon": icoPath}.toTable())
+    moveFile(exePath, appDir / pkgInfo.name & ".exe")
   else:
     debugEcho o
 

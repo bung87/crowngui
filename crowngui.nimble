@@ -18,8 +18,9 @@ requires "plists"
 requires "cligen"
 requires "imageman"
 requires "zopflipng"
+requires "rcedit"
 requires "https://github.com/bung87/nimhttpd#c5e20a9"
-requires "https://github.com/bung87/icon >= 0.1.2"
+requires "https://github.com/bung87/icon >= 0.2.0"
 
 task docs,"a":
   exec "nim doc --project src/crowngui.nim"
