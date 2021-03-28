@@ -1,6 +1,6 @@
 # Package
 
-version       = "0.2.2"
+version       = "0.2.3"
 author        = "bung87"
 description   = "Web Technologies based Crossplatform GUI Framework"
 license       = "MIT"
