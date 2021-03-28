@@ -2108,6 +2108,7 @@ WEBVIEW_API int webview_init(struct webview *w) {
   objc_msgSend(objc_msgSend((id)objc_getClass("NSApplication"),
                             sel_registerName("sharedApplication")),
                sel_registerName("activateIgnoringOtherApps:"), YES);
+
   
   w->priv.should_exit = 0;
   return 0;

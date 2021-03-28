@@ -1,6 +1,6 @@
 
 import os, strutils, crownguipkg/webview
-import nimhttpd, mimetypes, asyncdispatch
+import static_server, mimetypes, asyncdispatch
 import finder
 
 type
@@ -59,8 +59,6 @@ proc newApplication*(entry: static[string]): ApplicationRef =
 proc run(app: ApplicationRef) = app.webview.run
 proc css(app: ApplicationRef, css: cstring) = app.webview.css(css)
 proc exit(app: ApplicationRef) = app.webview.exit
-
-
 
 
 when isMainModule:

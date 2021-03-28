@@ -8,6 +8,7 @@ when defined(linux):
 elif defined(windows):
   {.passc: "-DWEBVIEW_WINAPI=1", passl: "-lole32 -lcomctl32 -loleaut32 -luuid -lgdi32".}
 elif defined(macosx):
+  import platforms/macos/objc
   import platforms/macos/menu
   {.passc: "-DOBJC_OLD_DISPATCH_PROTOTYPES=1 -DWEBVIEW_COCOA=1 -x objective-c",
       passl: "-framework Cocoa -framework WebKit".}
@@ -364,6 +365,7 @@ proc newWebView*(path: static[string] = ""; title = ""; width: Positive = 1000; 
   result = webView(title, path, width, height, resizable, debug, callback)
   when defined(macosx):
     createMenu()
+
   when skipTaskbar: result.setSkipTaskbar(skipTaskbar)
   when not windowBorders: result.setBorderlessWindow(windowBorders)
   when focus: result.setFocus()
