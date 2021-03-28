@@ -60,7 +60,11 @@ proc run(app: ApplicationRef) = app.webview.run
 proc css(app: ApplicationRef, css: cstring) = app.webview.css(css)
 proc exit(app: ApplicationRef) = app.webview.exit
 
+
+
+
 when isMainModule:
+
   const
     cssDark = staticRead"assets/dark.css".strip.unindent.cstring
     cssLight = staticRead"assets/light.css".strip.unindent.cstring
@@ -69,5 +73,6 @@ when isMainModule:
   when not defined(bundle):
     let theme = if "--light-theme" in commandLineParams(): cssLight else: cssDark
     app.css(theme)
+  
   app.run()
   app.exit()
