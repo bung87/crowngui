@@ -21,7 +21,7 @@ const RELEASE_OPTS = " -d:release -d:noSignalHandler --exceptions:quirky"
 proc getPkgInfo(): PackageInfo =
   let r = execCmdEx(fmt"nimble dump --json {getCurrentDir()}")
   let jsonNode = parseJson(r.output)
-  result = to(jsonNode, PackageInfo )
+  result = to(jsonNode, PackageInfo)
 
 proc zipBundle(dir: string): string =
   var zip: ZipArchive
@@ -69,17 +69,17 @@ proc buildMacos(wwwroot = "", release = false, flags: seq[string]) =
   createDir(appDir)
   let nSAppTransportSecurityJson = create(NSAppTransportSecurity,
     NSAllowsArbitraryLoads = some(true),
-      NSAllowsLocalNetworking= some(true),
-      NSExceptionDomains= some(%* @[
+      NSAllowsLocalNetworking = some(true),
+      NSExceptionDomains = some( %* @[
           {"localhost": {"NSExceptionAllowsInsecureHTTPLoads": true}.toTable}.toTable
           ])
   )
-  let sec = if len(wwwroot) > 0: some(nSAppTransportSecurityJson): else:none(NSAppTransportSecurity)
+  let sec = if len(wwwroot) > 0: some(nSAppTransportSecurityJson): else: none(NSAppTransportSecurity)
   let appInfo = create(CocoaAppInfo,
-    NSHighResolutionCapable = some(true), 
+    NSHighResolutionCapable = some(true),
     CFBundlePackageType = some("APPL"),
     CFBundleExecutable = pkgInfo.name,
-    CFBundleDisplayName = pkgInfo.name, 
+    CFBundleDisplayName = pkgInfo.name,
     CFBundleVersion = pkgInfo.version,
     CFBundleIdentifier = none(string),
     NSAppTransportSecurity = sec,

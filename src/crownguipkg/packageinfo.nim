@@ -7,7 +7,7 @@ type PackageInfo* = object
   author: string
   desc: string
   license: string
-jsonSchema: 
+jsonSchema:
   PackageInfoSchema:
     name: string
     version: string
