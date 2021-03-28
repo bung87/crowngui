@@ -142,7 +142,7 @@ proc runWindows(wwwroot = "", release = false, flags: seq[string]) =
 proc buildWindows(wwwroot = "", release = false, flags: seq[string]) =
   let pwd: string = getCurrentDir()
   let pkgInfo = getPkgInfo()
-  let buildDir = pwd / "build" / "macos"
+  let buildDir = pwd / "build" / "windows"
   if not dirExists(buildDir):
     createDir(buildDir)
   let subDir = if release: "Release" else: "Debug"
