@@ -12,7 +12,7 @@ import icon/ico
 import packageinfo
 import imageman
 import zopflipng
-import rcedit,options
+import rcedit, options
 
 const DEBUG_OPTS = " --verbose --debug "
 const RELEASE_OPTS = " -d:release -d:noSignalHandler --exceptions:quirky"
@@ -146,7 +146,7 @@ proc buildWindows(wwwroot = "", release = false, flags: seq[string]) =
   var res: string
   var output: string
   var exitCode: int
-  var icoPath:string
+  var icoPath: string
   if logoExists:
     let img = loadImage[ColorRGBAU](app_logo)
     var data: seq[byte]
@@ -166,7 +166,7 @@ proc buildWindows(wwwroot = "", release = false, flags: seq[string]) =
     # res = getTempDir() / "my.res"
     # let resCmd = &"windres {rc} -O coff -o {res}"
     # (output, exitCode) = execCmdEx(resCmd)
-  var myflags:seq[string]
+  var myflags: seq[string]
   when not defined(windows):
     myflags.add "-d:mingw"
   var cmd = baseCmd(@["nimble", "build"], wwwroot, release, myflags.concat flags)
@@ -180,7 +180,7 @@ proc buildWindows(wwwroot = "", release = false, flags: seq[string]) =
   let finalCMD = cmd.join(" ")
   debugEcho finalCMD
   let (o, e) = execCmdEx(finalCMD)
-  
+
   if e == 0:
     debugEcho o
     let exePath = pwd / pkgInfo.name & ".exe"

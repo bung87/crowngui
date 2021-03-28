@@ -335,8 +335,9 @@ proc webView(title = ""; url = ""; width: Positive = 1000; height: Positive = 70
   if result.init() != 0: return nil
 
 proc newWebView*(path: static[string] = ""; title = ""; width: Positive = 1000; height: Positive = 700;
-    resizable: static[bool] = true; debug: static[bool] = not defined(release); callback: ExternalInvokeCb = nil;skipTaskbar: static[bool] = false; windowBorders: static[
-        bool] = true; focus: static[bool] = false; keepOnTop: static[bool] = false;
+    resizable: static[bool] = true; debug: static[bool] = not defined(release); callback: ExternalInvokeCb = nil;
+        skipTaskbar: static[bool] = false; windowBorders: static[bool] = true; focus: static[bool] = false; keepOnTop: static[
+            bool] = false;
     minimized: static[bool] = false; cssPath: static[string] = ""; trayIcon: static[cstring] = ""; fullscreen: static[
         bool] = false): Webview =
   ## Create a new Window with given attributes, all arguments are optional.
