@@ -21,6 +21,7 @@ requires "zopflipng"
 requires "rcedit"
 requires "https://github.com/bung87/nimhttpd#c5e20a9"
 requires "https://github.com/bung87/icon >= 0.2.0"
+requires "jsonschema"
 
 task docs,"a":
   exec "nim doc --project src/crowngui.nim"

@@ -9,29 +9,19 @@ import strformat
 import icon
 import icon/icns
 import icon/ico
-import packageinfo
+include packageinfo
 import imageman
 import zopflipng
 import rcedit, options
+include cocoaappinfo
 
 const DEBUG_OPTS = " --verbose --debug "
 const RELEASE_OPTS = " -d:release -d:noSignalHandler --exceptions:quirky"
-# https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/AboutInformationPropertyListFiles.html#//apple_ref/doc/uid/TP40009254-SW4
-type
-  CocoaAppInfo = object
-    CFBundleDisplayName: string
-    CFBundleVersion: string
-    CFBundleExecutable: string
-    # CFBundleIdentifier:string
-    CFBundlePackageType: string
-    NSAppTransportSecurity: JsonNode
-    NSHighResolutionCapable: string
-    # CFBundleIconName: string
 
 proc getPkgInfo(): PackageInfo =
   let r = execCmdEx(fmt"nimble dump --json {getCurrentDir()}")
   let jsonNode = parseJson(r.output)
-  result = to(jsonNode, PackageInfo)
+  result = to(jsonNode, PackageInfo )
 
 proc zipBundle(dir: string): string =
   var zip: ZipArchive
@@ -77,18 +67,25 @@ proc buildMacos(wwwroot = "", release = false, flags: seq[string]) =
   removeDir(buildDir)
   let appDir = buildDir / subDir / pkgInfo.name & ".app"
   createDir(appDir)
-  let NSAppTransportSecurity = %* {"NSAllowsArbitraryLoads": true,
-      "NSAllowsLocalNetworking": true,
-      "NSExceptionDomains": [
-          {"localhost": {"NSExceptionAllowsInsecureHTTPLoads": true}}
-          ]
-      }
-  let appInfo = CocoaAppInfo(NSHighResolutionCapable: "True", CFBundlePackageType: "APPL",
-      CFBundleExecutable: pkgInfo.name, CFBundleDisplayName: pkgInfo.name, CFBundleVersion: pkgInfo.version,
-          NSAppTransportSecurity: %* {})
-  var plist = %* appInfo
-  if len(wwwroot) > 0:
-    plist["NSAppTransportSecurity"] = NSAppTransportSecurity
+  let nSAppTransportSecurityJson = create(NSAppTransportSecurity,
+    NSAllowsArbitraryLoads = some(true),
+      NSAllowsLocalNetworking= some(true),
+      NSExceptionDomains= some(%* @[
+          {"localhost": {"NSExceptionAllowsInsecureHTTPLoads": true}.toTable}.toTable
+          ])
+  )
+  let sec = if len(wwwroot) > 0: some(nSAppTransportSecurityJson): else:none(NSAppTransportSecurity)
+  let appInfo = create(CocoaAppInfo,
+    NSHighResolutionCapable = some(true), 
+    CFBundlePackageType = some("APPL"),
+    CFBundleExecutable = pkgInfo.name,
+    CFBundleDisplayName = pkgInfo.name, 
+    CFBundleVersion = pkgInfo.version,
+    CFBundleIdentifier = none(string),
+    NSAppTransportSecurity = sec,
+    CFBundleIconName = none(string)
+    )
+  var plist = appInfo.JsonNode
   let app_logo = getCurrentDir() / "logo.png"
   if fileExists(app_logo):
     let outDir = appDir / "Contents" / "Resources"
@@ -121,6 +118,17 @@ proc buildMacos(wwwroot = "", release = false, flags: seq[string]) =
     debugEcho output
 
 proc runMacos(wwwroot = "", release = false, flags: seq[string]) =
+  let pkgInfo = getPkgInfo()
+  var cmd = baseCmd(@["nimble"], wwwroot, release, flags)
+  let finalCMD = cmd.concat(@["run", pkgInfo.name]).join(" ")
+  debugEcho finalCMD
+  let (output, exitCode) = execCmdEx(finalCMD)
+  if exitCode == 0:
+    debugEcho output
+  else:
+    debugEcho output
+
+proc runWindows(wwwroot = "", release = false, flags: seq[string]) =
   let pkgInfo = getPkgInfo()
   var cmd = baseCmd(@["nimble"], wwwroot, release, flags)
   let finalCMD = cmd.concat(@["run", pkgInfo.name]).join(" ")
@@ -202,5 +210,7 @@ proc run(target: string, wwwroot = "", release = false, flags: seq[string]): int
     of "macos":
       # nim c -r -f src/crownguipkg/cli.nim run --target macos --wwwroot ./docs
       runMacos(wwwroot, release, flags)
+    of "windows":
+      runWindows(wwwroot, release, flags)
 
 dispatchMulti([build], [run])
