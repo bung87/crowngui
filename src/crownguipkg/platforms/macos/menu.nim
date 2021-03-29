@@ -1,6 +1,5 @@
 import objc
 const NSEventModifierFlagCommand = (1 shl 20)
-const NSEventModifierFlagShift = (1 shl 17)
 const NSEventModifierFlagOption = (1 shl 19)
 func create_menu_item(title: ID, action: string, key: string): ID =
   result = objc_msgSend(getClass("NSMenuItem").ID, registerName("alloc"))

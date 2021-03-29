@@ -94,8 +94,8 @@ proc class_isMetaClass(cls: Class): BOOL {.objcimport.}
 template isMetaClass*(cls: Class): untyped =
   class_isMetaClass(cls)
 
-proc class_getInstanceSize(cls: Class): csize {.objcimport.}
-proc getInstanceSize*(cls: Class): int = class_getInstanceSize(cls)
+proc class_getInstanceSize(cls: Class): csize_t {.objcimport.}
+proc getInstanceSize*(cls: Class): int = class_getInstanceSize(cls).int
 
 proc class_getInstanceVariable(cls: Class; name: cstring): Ivar {.objcimport.}
 template getIvar*(cls: Class, name: string): untyped =
@@ -105,9 +105,9 @@ proc class_getClassVariable(cls: Class; name: cstring): Ivar {.objcimport.}
 template getClassVariable*(cls: Class; name: string): untyped =
   class_getClassVariable(cls, name.cstring)
 
-proc class_addIvar(cls: Class; name: cstring; size: csize; alignment: uint8; types: cstring): BOOL {.objcimport.}
+proc class_addIvar(cls: Class; name: cstring; size: csize_t; alignment: uint8; types: cstring): BOOL {.objcimport.}
 proc addIvar*(cls: Class; name: string; size: int; alignment: int; types: string): bool =
-  class_addIvar(cls, name.cstring, size.csize, alignment.uint8, types.cstring) == YES
+  class_addIvar(cls, name.cstring, size.csize_t, alignment.uint8, types.cstring) == YES
 
 proc class_copyIvarList(cls: Class; outCount: var cuint): ptr Ivar {.objcimport.}
 proc ivarList*(cls: Class): seq[Ivar] =
@@ -227,9 +227,9 @@ proc objc_getFutureClass(name: cstring): Class {.objcimport.}
 template getFutureClass*(name: string): untyped =
   objc_getFutureClass(name.cstring)
 
-proc objc_allocateClassPair(superclass: Class, name: cstring, extraBytes: csize): Class {.objcimport.}
+proc objc_allocateClassPair(superclass: Class, name: cstring, extraBytes: csize_t): Class {.objcimport.}
 template allocateClassPair*(superclass: Class, name: string, extraBytes: int): untyped =
-  objc_allocateClassPair(superclass, name.cstring, extrabytes.csize)
+  objc_allocateClassPair(superclass, name.cstring, extrabytes.csize_t)
 
 proc objc_disposeClassPair(cls: Class) {.objcimport.}
 template disposeClassPair*(cls: Class) =
@@ -239,13 +239,13 @@ proc objc_registerClassPair(cls: Class) {.objcimport.}
 template registerClassPair*(cls: Class) =
   objc_registerClassPair(cls)
 
-proc objc_duplicateClass(original: Class; name: cstring; extraBytes: csize): Class {.objcimport.}
+proc objc_duplicateClass(original: Class; name: cstring; extraBytes: csize_t): Class {.objcimport.}
 template duplicateClass*(original: Class; name: string; extraBytes: int): untyped =
-  objc_duplicateClass(original, name.cstring, extraBytes.csize)
+  objc_duplicateClass(original, name.cstring, extraBytes.csize_t)
 
-proc class_createInstance(cls: Class; extraBytes: csize): ID {.objcimport.}
-template createInstance*(cls: Class; extraBytes: csize): untyped =
-  class_createInstance(cls, extraBytes.csize)
+proc class_createInstance(cls: Class; extraBytes: csize_t): ID {.objcimport.}
+template createInstance*(cls: Class; extraBytes: csize_t): untyped =
+  class_createInstance(cls, extraBytes.csize_t)
 
 proc objc_constructInstance(cls: Class; bytes: pointer): ID {.objcimport.}
 template constructInstance*(cls: Class; bytes: pointer): untyped =
@@ -255,9 +255,9 @@ proc objc_destructInstance(obj: ID): pointer {.objcimport.}
 template destructInstance*(obj: ID): untyped =
   objc_destructInstance(obj)
 
-proc object_copy(obj: ID; size: csize): ID {.objcimport.}
-template copy*(obj: ID; size: csize): untyped =
-  object_copy(obj, size.csize)
+proc object_copy(obj: ID; size: csize_t): ID {.objcimport.}
+template copy*(obj: ID; size: csize_t): untyped =
+  object_copy(obj, size.csize_t)
 
 proc object_dispose(obj: ID): ID {.objcimport.}
 template dispose*(obj: ID): untyped =
@@ -417,20 +417,20 @@ proc copyArgumentType*(m: Method; index: int): string =
   result = $ret
   c_free(ret)
 
-proc method_getReturnType(m: Method; dst: cstring; dst_len: csize) {.objcimport.}
+proc method_getReturnType(m: Method; dst: cstring; dst_len: csize_t) {.objcimport.}
 proc getReturnType*(m: Method): string =
   var ret: array[100, char]
-  method_getReturnType(m, cast[cstring](ret[0].addr), sizeof(ret))
+  method_getReturnType(m, cast[cstring](ret[0].addr), sizeof(ret).csize_t)
   result = $(cast[cstring](ret[0].addr))
 
 proc method_getNumberOfArguments(m: Method): cuint {.objcimport.}
 template getNumberOfArguments*(m: Method): untyped =
   method_getNumberOfArguments(m).int
 
-proc method_getArgumentType(m: Method; index: cuint; dst: cstring; dst_len: csize) {.objcimport.}
+proc method_getArgumentType(m: Method; index: cuint; dst: cstring; dst_len: csize_t) {.objcimport.}
 proc getArgumentType*(m: Method; index: int): string =
   var ret: array[100, char]
-  method_getArgumentType(m, index.cuint, cast[cstring](ret[0].addr), sizeof(ret))
+  method_getArgumentType(m, index.cuint, cast[cstring](ret[0].addr), sizeof(ret).csize_t)
   result = $(cast[cstring](ret[0].addr))
 
 proc argumentTypes*(m: Method): seq[string] =

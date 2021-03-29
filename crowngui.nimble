@@ -1,6 +1,6 @@
 # Package
 
-version       = "0.2.3"
+version       = "0.2.4"
 author        = "bung87"
 description   = "Web Technologies based Crossplatform GUI Framework"
 license       = "MIT"
@@ -19,7 +19,7 @@ requires "cligen >= 1.5"
 requires "imageman"
 requires "zopflipng"
 requires "rcedit"
-requires "https://github.com/bung87/static_server >= 2.0.2"
+requires "https://github.com/bung87/static_server >= 2.0.3"
 requires "https://github.com/bung87/icon >= 0.2.0"
 requires "jsonschema"
 
