@@ -43,8 +43,7 @@ Options:
 
 ```
 ## Prerequires  
-
-`imageman` for image resize requires `libpng`   
+  
 `rcedit` for windows exe icon on non-windows platform requires `wine`  
 
 ## Development  

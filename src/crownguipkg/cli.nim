@@ -14,6 +14,10 @@ import imageman
 import zopflipng
 import rcedit, options
 include cocoaappinfo
+import nimPNG
+
+type
+   MyImage = ref Image[ColorRGBAU]
 
 const DEBUG_OPTS = " --verbose --debug "
 const RELEASE_OPTS = " -d:release -d:noSignalHandler --exceptions:quirky"
@@ -91,12 +95,13 @@ proc buildMacos(wwwroot = "", release = false, flags: seq[string]) =
     let outDir = appDir / "Contents" / "Resources"
     if not dirExists(outDir):
       createDir(outDir)
-    let img = loadImage[ColorRGBAU](app_logo)
+    let png = nimPNG.loadPNG32(app_logo)
     var data: seq[byte]
     let tempDir = getTempDir()
     let images = icns.REQUIRED_IMAGE_SIZES.map(proc (size: int): ImageInfo{.closure.} =
       let tmpName = tempDir & pkgInfo.name & $size & ".png"
-      let img2 = img.resizedBicubic(size, size)
+      let img = cast[MyImage](png)
+      let img2 = img[].resizedBicubic(size, size)
       data = img2.writePNG()
       optimizePNGData(data, tmpName)
       result = ImageInfo(size: size, filePath: tmpName)
@@ -156,12 +161,13 @@ proc buildWindows(wwwroot = "", release = false, flags: seq[string]) =
   var exitCode: int
   var icoPath: string
   if logoExists:
-    let img = loadImage[ColorRGBAU](app_logo)
+    let png = nimPNG.loadPNG32(app_logo)
     var data: seq[byte]
     let tempDir = getTempDir()
     let images = ico.REQUIRED_IMAGE_SIZES.map(proc (size: int): ImageInfo{.closure.} =
       let tmpName = tempDir & pkgInfo.name & $size & ".png"
-      let img2 = img.resizedBicubic(size, size)
+      let img = cast[MyImage](png)
+      let img2 = img[].resizedBicubic(size, size)
       data = img2.writePNG()
       optimizePNGData(data, tmpName)
       result = ImageInfo(size: size, filePath: tmpName)
