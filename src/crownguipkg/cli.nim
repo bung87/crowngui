@@ -17,7 +17,7 @@ include cocoaappinfo
 import nimPNG
 
 type
-   MyImage = ref Image[ColorRGBAU]
+  MyImage = ref Image[ColorRGBAU]
 
 const DEBUG_OPTS = " --verbose --debug "
 const RELEASE_OPTS = " -d:release -d:noSignalHandler --exceptions:quirky"
