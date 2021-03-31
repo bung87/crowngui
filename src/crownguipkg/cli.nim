@@ -4,17 +4,19 @@ import plists
 import tables
 import osproc
 import sequtils
-import zip/zipfiles
+import zippy/ziparchives
 import strformat
 import icon
 import icon/icns
 import icon/ico
 include packageinfo
-import imageman
+import imageman/images
+import imageman/colors
+import imageman/resize
 import zopflipng
 import rcedit, options
 include cocoaappinfo
-import nimPNG
+# import nimPNG
 
 type
   MyImage = ref Image[ColorRGBAU]
@@ -28,16 +30,8 @@ proc getPkgInfo(): PackageInfo =
   result = to(jsonNode, PackageInfo)
 
 proc zipBundle(dir: string): string =
-  var zip: ZipArchive
   let p = getTempDir() / "zipBundle.zip"
-  let openSuccess = zip.open(p, fmWrite)
-  if not openSuccess:
-    raise newException(OSError, fmt"can't open {p}")
-  if not dirExists(dir):
-    raise newException(OSError, fmt"dir {dir} not existed.")
-  for path in os.walkDirRec(dir):
-    zip.addFile(relativePath(path, dir), path)
-  zip.close()
+  createZipArchive(dir,p)
   return p
 
 proc handleBundle(wwwroot: string): string =
@@ -95,15 +89,15 @@ proc buildMacos(wwwroot = "", release = false, flags: seq[string]) =
     let outDir = appDir / "Contents" / "Resources"
     if not dirExists(outDir):
       createDir(outDir)
-    let png = nimPNG.loadPNG32(app_logo)
-    var data: seq[byte]
+    let png =  zopflipng.loadPNG32(app_logo)
+    var data: zopflipng.PNG[seq[byte]]
     let tempDir = getTempDir()
     let images = icns.REQUIRED_IMAGE_SIZES.map(proc (size: int): ImageInfo{.closure.} =
       let tmpName = tempDir & pkgInfo.name & $size & ".png"
       let img = cast[MyImage](png)
       let img2 = img[].resizedBicubic(size, size)
-      data = img2.writePNG()
-      optimizePNGData(data, tmpName)
+      data =  zopflipng.encodePNG( cast[seq[byte]](img2.data) ,size,size)
+      optimizePNGData(data.pixels, tmpName)
       result = ImageInfo(size: size, filePath: tmpName)
     )
     let path = generateICNS(images, outDir)
@@ -161,15 +155,15 @@ proc buildWindows(wwwroot = "", release = false, flags: seq[string]) =
   var exitCode: int
   var icoPath: string
   if logoExists:
-    let png = nimPNG.loadPNG32(app_logo)
-    var data: seq[byte]
+    let png = zopflipng.loadPNG32(app_logo)
+    var data:zopflipng.PNG[ seq[byte]]
     let tempDir = getTempDir()
     let images = ico.REQUIRED_IMAGE_SIZES.map(proc (size: int): ImageInfo{.closure.} =
       let tmpName = tempDir & pkgInfo.name & $size & ".png"
       let img = cast[MyImage](png)
       let img2 = img[].resizedBicubic(size, size)
-      data = img2.writePNG()
-      optimizePNGData(data, tmpName)
+      data = zopflipng.encodePNG(cast[seq[byte]](img2.data),size,size)
+      optimizePNGData(data.pixels, tmpName)
       result = ImageInfo(size: size, filePath: tmpName)
     )
     icoPath = generateICO(images, tempDir)

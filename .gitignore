@@ -12,6 +12,7 @@
 !*.h
 !*.css
 !*.html
+*.exe
 !*/
 src/htmldocs
 build/
