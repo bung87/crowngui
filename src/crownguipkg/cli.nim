@@ -32,7 +32,7 @@ proc getPkgInfo(): PackageInfo =
 
 proc zipBundle(dir: string): string =
   let p = getTempDir() / "zipBundle.zip"
-  createZipArchive(dir,p)
+  createZipArchive(dir, p)
   return p
 
 proc handleBundle(wwwroot: string): string =
@@ -56,23 +56,23 @@ proc baseCmd(base: seq[string], wwwroot: string, release: bool, flags: seq[strin
   let opts = if not release: DEBUG_OPTS else: RELEASE_OPTS
   result.add opts
 
-proc genImages[T](png:zopflipng.PNGResult[T],sizes:seq[int]):seq[ImageInfo] =
+proc genImages[T](png: zopflipng.PNGResult[T], sizes: seq[int]): seq[ImageInfo] =
   let tempDir = getTempDir()
   let id = $genOid()
   result = sizes.map(proc (size: int): ImageInfo{.closure.} =
-      let tmpName = tempDir & id & $size & ".png"
-      let optName = tempDir & id & $size & "opt" & ".png"
-      let img = cast[MyImage](png)
-      let img2 = img[].resizedBicubic(size, size)
-      let ad = cast[ptr UnCheckedArray[byte]](img2.data[0].unsafeAddr)
-      discard zopflipng.savePNG32(tmpName,toOpenArray(ad,0,img2.data.len * 4 - 1), img2.width, img2.height)
-      try:
-        optimizePNG(tmpName, optName)
-      except Exception as e:
-        stderr.write(e.msg & "\n")
-        return ImageInfo(size: size, filePath: tmpName)
-      result = ImageInfo(size: size, filePath: optName)
-    )
+    let tmpName = tempDir & id & $size & ".png"
+    let optName = tempDir & id & $size & "opt" & ".png"
+    let img = cast[MyImage](png)
+    let img2 = img[].resizedBicubic(size, size)
+    let ad = cast[ptr UnCheckedArray[byte]](img2.data[0].unsafeAddr)
+    discard zopflipng.savePNG32(tmpName, toOpenArray(ad, 0, img2.data.len * 4 - 1), img2.width, img2.height)
+    try:
+      optimizePNG(tmpName, optName)
+    except Exception as e:
+      stderr.write(e.msg & "\n")
+      return ImageInfo(size: size, filePath: tmpName)
+    result = ImageInfo(size: size, filePath: optName)
+  )
 
 proc buildMacos(wwwroot = "", release = false, flags: seq[string]) =
   let pwd: string = getCurrentDir()
@@ -108,16 +108,16 @@ proc buildMacos(wwwroot = "", release = false, flags: seq[string]) =
     let outDir = appDir / "Contents" / "Resources"
     if not dirExists(outDir):
       createDir(outDir)
-    let png =  zopflipng.loadPNG32(app_logo)
-    let images = genImages(png,@(icns.REQUIRED_IMAGE_SIZES))
-    let path = generateICNS(images.filterIt( it != default(ImageInfo)), outDir)
-    discard images.mapIt( tryRemoveFile(it.filePath) )
+    let png = zopflipng.loadPNG32(app_logo)
+    let images = genImages(png, @(icns.REQUIRED_IMAGE_SIZES))
+    let path = generateICNS(images.filterIt(it != default(ImageInfo)), outDir)
+    discard images.mapIt(tryRemoveFile(it.filePath))
     plist["CFBundleIconFile"] = newJString(extractFilename path)
   writePlist(plist, appDir / "Contents" / "Info.plist")
-  var cmd = baseCmd(@["nimble", "build","--silent","-y"], wwwroot, release, flags)
+  var cmd = baseCmd(@["nimble", "build", "--silent", "-y"], wwwroot, release, flags)
   let finalCMD = cmd.join(" ")
   debugEcho finalCMD
-  let (output, exitCode) = execCmdEx(finalCMD,options={poUsePath})
+  let (output, exitCode) = execCmdEx(finalCMD, options = {poUsePath})
   if exitCode == 0:
     debugEcho output
     let binOutDir = appDir / "Contents" / "MacOS"
@@ -168,9 +168,9 @@ proc buildWindows(wwwroot = "", release = false, flags: seq[string]) =
   if logoExists:
     let png = zopflipng.loadPNG32(app_logo)
     let tempDir = getTempDir()
-    let images = genImages(png,@(ico.REQUIRED_IMAGE_SIZES))
-    icoPath = generateICO(images.filterIt( it != default(ImageInfo)), tempDir)
-    discard images.mapIt( tryRemoveFile(it.filePath) )
+    let images = genImages(png, @(ico.REQUIRED_IMAGE_SIZES))
+    icoPath = generateICO(images.filterIt(it != default(ImageInfo)), tempDir)
+    discard images.mapIt(tryRemoveFile(it.filePath))
     # for windres
     # let content = &"id ICON \"{path}\""
     # let rc = getTempDir() / "my.rc"
@@ -181,7 +181,7 @@ proc buildWindows(wwwroot = "", release = false, flags: seq[string]) =
   var myflags: seq[string]
   when not defined(windows):
     myflags.add "-d:mingw"
-  var cmd = baseCmd(@["nimble", "build","--silent","-y"], wwwroot, release, myflags.concat flags)
+  var cmd = baseCmd(@["nimble", "build", "--silent", "-y"], wwwroot, release, myflags.concat flags)
   # for windres
   # if logoExists and exitCode == 0:
   #   discard cmd.concat @[&"--passL:{res}"]
