@@ -13,7 +13,7 @@ bin           = @["crowngui"]
 # Dependencies
 
 requires "nim >= 1.1.1"
-requires "nimble >= 0.11.4"
+# requires "nimble >= 0.11.4"
 requires "plists"
 requires "cligen >= 1.5"
 requires "imageman"

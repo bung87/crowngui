@@ -16,7 +16,7 @@ import imageman/resize
 import zopflipng
 import rcedit, options
 include cocoaappinfo
-# import nimPNG
+import oids
 
 type
   MyImage = ref Image[ColorRGBAU]
@@ -25,7 +25,8 @@ const DEBUG_OPTS = " --verbose --debug "
 const RELEASE_OPTS = " -d:release -d:noSignalHandler --exceptions:quirky"
 
 proc getPkgInfo(): PackageInfo =
-  let r = execCmdEx(fmt"nimble dump --json {getCurrentDir()}")
+  # let r = execProcess(fmt"nimble",args=["dump", "--json", getCurrentDir()],options={poUsePath})
+  let r = execCmdEx("nimble dump --json -l --silent " & getCurrentDir())
   let jsonNode = parseJson(r.output)
   result = to(jsonNode, PackageInfo)
 
@@ -54,6 +55,24 @@ proc baseCmd(base: seq[string], wwwroot: string, release: bool, flags: seq[strin
   result.add flags
   let opts = if not release: DEBUG_OPTS else: RELEASE_OPTS
   result.add opts
+
+proc genImages[T](png:zopflipng.PNGResult[T],sizes:seq[int]):seq[ImageInfo] =
+  let tempDir = getTempDir()
+  let id = $genOid()
+  result = sizes.map(proc (size: int): ImageInfo{.closure.} =
+      let tmpName = tempDir & id & $size & ".png"
+      let optName = tempDir & id & $size & "opt" & ".png"
+      let img = cast[MyImage](png)
+      let img2 = img[].resizedBicubic(size, size)
+      let ad = cast[ptr UnCheckedArray[byte]](img2.data[0].unsafeAddr)
+      discard zopflipng.savePNG32(tmpName,toOpenArray(ad,0,img2.data.len * 4 - 1), img2.width, img2.height)
+      try:
+        optimizePNG(tmpName, optName)
+      except Exception as e:
+        stderr.write(e.msg & "\n")
+        return ImageInfo(size: size, filePath: tmpName)
+      result = ImageInfo(size: size, filePath: optName)
+    )
 
 proc buildMacos(wwwroot = "", release = false, flags: seq[string]) =
   let pwd: string = getCurrentDir()
@@ -90,23 +109,15 @@ proc buildMacos(wwwroot = "", release = false, flags: seq[string]) =
     if not dirExists(outDir):
       createDir(outDir)
     let png =  zopflipng.loadPNG32(app_logo)
-    var data: zopflipng.PNG[seq[byte]]
-    let tempDir = getTempDir()
-    let images = icns.REQUIRED_IMAGE_SIZES.map(proc (size: int): ImageInfo{.closure.} =
-      let tmpName = tempDir & pkgInfo.name & $size & ".png"
-      let img = cast[MyImage](png)
-      let img2 = img[].resizedBicubic(size, size)
-      data =  zopflipng.encodePNG( cast[seq[byte]](img2.data) ,size,size)
-      optimizePNGData(data.pixels, tmpName)
-      result = ImageInfo(size: size, filePath: tmpName)
-    )
-    let path = generateICNS(images, outDir)
+    let images = genImages(png,@(icns.REQUIRED_IMAGE_SIZES))
+    let path = generateICNS(images.filterIt( it != default(ImageInfo)), outDir)
+    discard images.mapIt( tryRemoveFile(it.filePath) )
     plist["CFBundleIconFile"] = newJString(extractFilename path)
   writePlist(plist, appDir / "Contents" / "Info.plist")
-  var cmd = baseCmd(@["nimble", "build"], wwwroot, release, flags)
+  var cmd = baseCmd(@["nimble", "build","--silent","-y"], wwwroot, release, flags)
   let finalCMD = cmd.join(" ")
   debugEcho finalCMD
-  let (output, exitCode) = execCmdEx(finalCMD)
+  let (output, exitCode) = execCmdEx(finalCMD,options={poUsePath})
   if exitCode == 0:
     debugEcho output
     let binOutDir = appDir / "Contents" / "MacOS"
@@ -150,23 +161,16 @@ proc buildWindows(wwwroot = "", release = false, flags: seq[string]) =
   createDir(appDir)
   let app_logo = getCurrentDir() / "logo.png"
   let logoExists = fileExists(app_logo)
-  var res: string
-  var output: string
-  var exitCode: int
+  # var res: string
+  # var output: string
+  # var exitCode: int
   var icoPath: string
   if logoExists:
     let png = zopflipng.loadPNG32(app_logo)
-    var data:zopflipng.PNG[ seq[byte]]
     let tempDir = getTempDir()
-    let images = ico.REQUIRED_IMAGE_SIZES.map(proc (size: int): ImageInfo{.closure.} =
-      let tmpName = tempDir & pkgInfo.name & $size & ".png"
-      let img = cast[MyImage](png)
-      let img2 = img[].resizedBicubic(size, size)
-      data = zopflipng.encodePNG(cast[seq[byte]](img2.data),size,size)
-      optimizePNGData(data.pixels, tmpName)
-      result = ImageInfo(size: size, filePath: tmpName)
-    )
-    icoPath = generateICO(images, tempDir)
+    let images = genImages(png,@(ico.REQUIRED_IMAGE_SIZES))
+    icoPath = generateICO(images.filterIt( it != default(ImageInfo)), tempDir)
+    discard images.mapIt( tryRemoveFile(it.filePath) )
     # for windres
     # let content = &"id ICON \"{path}\""
     # let rc = getTempDir() / "my.rc"
@@ -177,7 +181,7 @@ proc buildWindows(wwwroot = "", release = false, flags: seq[string]) =
   var myflags: seq[string]
   when not defined(windows):
     myflags.add "-d:mingw"
-  var cmd = baseCmd(@["nimble", "build"], wwwroot, release, myflags.concat flags)
+  var cmd = baseCmd(@["nimble", "build","--silent","-y"], wwwroot, release, myflags.concat flags)
   # for windres
   # if logoExists and exitCode == 0:
   #   discard cmd.concat @[&"--passL:{res}"]
