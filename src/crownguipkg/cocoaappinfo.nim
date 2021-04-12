@@ -16,7 +16,10 @@ jsonSchema:
     NSAllowsArbitraryLoads?:bool
     NSAllowsLocalNetworking?:bool
     NSExceptionDomains ?: any
-
+  DocumentType:
+    CFBundleTypeExtensions?:string[]
+    CFBundleTypeMIMETypes?:string[]
+    CFBundleTypeRole?:string
   CocoaAppInfo:
     CFBundleDisplayName: string
     CFBundleVersion: string
@@ -26,3 +29,4 @@ jsonSchema:
     NSAppTransportSecurity ?: NSAppTransportSecurity
     NSHighResolutionCapable ?: bool
     CFBundleIconName ?: string
+    CFBundleDocumentTypes ?: DocumentType[]
