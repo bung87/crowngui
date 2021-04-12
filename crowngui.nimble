@@ -8,8 +8,6 @@ srcDir        = "src"
 installExt    = @["nim"]
 bin           = @["crowngui"]
 
-
-
 # Dependencies
 
 requires "nim >= 1.1.1"

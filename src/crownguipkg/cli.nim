@@ -26,7 +26,7 @@ const RELEASE_OPTS = " -d:release -d:noSignalHandler --exceptions:quirky"
 
 proc getPkgInfo(): PackageInfo =
   # let r = execProcess(fmt"nimble",args=["dump", "--json", getCurrentDir()],options={poUsePath})
-  let r = execCmdEx("nimble dump --json -l --silent " & getCurrentDir())
+  let r = execCmdEx("nimble dump --json --silent " & getCurrentDir())
   let jsonNode = parseJson(r.output)
   result = to(jsonNode, PackageInfo)
 
@@ -91,6 +91,18 @@ proc buildMacos(wwwroot = "", release = false, flags: seq[string]) =
           {"localhost": {"NSExceptionAllowsInsecureHTTPLoads": true}.toTable}.toTable
           ])
   )
+  var documentTypes:seq[DocumentType] = @[]
+  if fileExists("app.json"):
+    let data = parseJson(readFile("app.json"))
+    if data.hasKey("fileAssociations"):
+      let ass = getElems(data["fileAssociations"])
+      for a in ass:
+        documentTypes.add create(DocumentType,
+          CFBundleTypeExtensions=some(@[a["ext"].getStr()]),
+          CFBundleTypeMIMETypes=some(@[a["mimeType"].getStr()]),
+          CFBundleTypeRole=some(a["role"].getStr())
+        )
+  let dt = if len(documentTypes) > 0: some(documentTypes) else: none(seq[DocumentType])
   let sec = if len(wwwroot) > 0: some(nSAppTransportSecurityJson): else: none(NSAppTransportSecurity)
   let appInfo = create(CocoaAppInfo,
     NSHighResolutionCapable = some(true),
@@ -100,7 +112,8 @@ proc buildMacos(wwwroot = "", release = false, flags: seq[string]) =
     CFBundleVersion = pkgInfo.version,
     CFBundleIdentifier = none(string),
     NSAppTransportSecurity = sec,
-    CFBundleIconName = none(string)
+    CFBundleIconName = none(string),
+    CFBundleDocumentTypes = dt
     )
   var plist = appInfo.JsonNode
   let app_logo = getCurrentDir() / "logo.png"

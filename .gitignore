@@ -17,3 +17,4 @@
 nimbledeps
 src/htmldocs
 build/
+app.json
