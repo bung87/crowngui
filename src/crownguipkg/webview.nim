@@ -9,7 +9,9 @@ elif defined(windows):
   {.passc: "-DWEBVIEW_WINAPI=1", passl: "-lole32 -lcomctl32 -loleaut32 -luuid -lgdi32".}
 elif defined(macosx):
   import platforms/macos/objc
+  import platforms/macos/cocoa
   import platforms/macos/menu
+  var NSApp {.importc.}: ID
   {.passc: "-DOBJC_OLD_DISPATCH_PROTOTYPES=1 -DWEBVIEW_COCOA=1 -x objective-c",
       passl: "-framework Cocoa -framework WebKit".}
 
@@ -364,7 +366,30 @@ proc newWebView*(path: static[string] = ""; title = ""; width: Positive = 1000; 
 
   result = webView(title, path, width, height, resizable, debug, callback)
   when defined(macosx):
+    let delegate = allocateClassPair(getClass("NSObject"), "AppDelegate", 0)
+    proc application(self: ID, cmd: SEL,sender: NSApplication, openFile: NSString): Bool {.cdecl.} =
+      let path = cast[cstring](objc_msgSend(cast[ID](openFile.unsafeAddr),$$"UTF8String"))
+      return No
+    proc applicationDidFinishLaunching(self: ID, cmd: SEL, notification: ID): void {.cdecl.} =
+      echo "applicationDidFinishLaunching"
+    proc applicationWillBecomeActive(self: ID, cmd: SEL, notification: ID): void {.cdecl.} =
+      echo "applicationWillBecomeActive"
+    proc applicationWillFinishLaunching(self: ID, cmd: SEL, notification: ID): void {.cdecl.} =
+      echo "applicationWillFinishLaunching"
+    
+    discard delegate.addMethod($$"applicationWillFinishLaunching:", cast[IMP](applicationWillFinishLaunching), "v@:@")
+    discard delegate.addMethod($$"application:openFile:", cast[IMP](application), "B@:@@")
+    discard delegate.addMethod($$"applicationDidFinishLaunching:", cast[IMP](applicationDidFinishLaunching), "v@:@")
+    discard delegate.addMethod($$"applicationWillBecomeActive:", cast[IMP](applicationWillBecomeActive), "v@:@")
+    delegate.registerClassPair()
+    var appDel = objc_msgSend(cast[ID](getClass("AppDelegate")), $$"alloc")
+    appDel = objc_msgSend(appDel, $$"init")
+    discard objc_msgSend(cast[ID](getClass("NSApplication")), $$("sharedApplication"))
+    objc_msgSend(NSApp, $$("setDelegate:"), appDel)
     createMenu()
+    objc_msgSend(NSApp,$$("finishLaunching"));
+    objc_msgSend(NSApp, $$("activateIgnoringOtherApps:"), true)
+    
 
   when skipTaskbar: result.setSkipTaskbar(skipTaskbar)
   when not windowBorders: result.setBorderlessWindow(windowBorders)

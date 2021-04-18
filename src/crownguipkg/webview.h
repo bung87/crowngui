@@ -2101,13 +2101,13 @@ WEBVIEW_API int webview_init(struct webview *w) {
                sel_registerName("setActivationPolicy:"),
                NSApplicationActivationPolicyRegular);
 
-  objc_msgSend(objc_msgSend((id)objc_getClass("NSApplication"),
-                            sel_registerName("sharedApplication")),
-               sel_registerName("finishLaunching"));
+  // objc_msgSend(objc_msgSend((id)objc_getClass("NSApplication"),
+  //                           sel_registerName("sharedApplication")),
+  //              sel_registerName("finishLaunching"));
 
-  objc_msgSend(objc_msgSend((id)objc_getClass("NSApplication"),
-                            sel_registerName("sharedApplication")),
-               sel_registerName("activateIgnoringOtherApps:"), YES);
+  // objc_msgSend(objc_msgSend((id)objc_getClass("NSApplication"),
+  //                           sel_registerName("sharedApplication")),
+  //              sel_registerName("activateIgnoringOtherApps:"), YES);
 
   
   w->priv.should_exit = 0;

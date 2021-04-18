@@ -17,6 +17,7 @@ import zopflipng
 import rcedit, options
 include cocoaappinfo
 import oids
+import std/sha1
 
 type
   MyImage = ref Image[ColorRGBAU]
@@ -121,10 +122,20 @@ proc buildMacos(wwwroot = "", release = false, flags: seq[string]) =
     let outDir = appDir / "Contents" / "Resources"
     if not dirExists(outDir):
       createDir(outDir)
-    let png = zopflipng.loadPNG32(app_logo)
-    let images = genImages(png, @(icns.REQUIRED_IMAGE_SIZES))
-    let path = generateICNS(images.filterIt(it != default(ImageInfo)), outDir)
-    discard images.mapIt(tryRemoveFile(it.filePath))
+    if not dirExists(getCurrentDir() / ".crowngui_cache"):
+      createDir(getCurrentDir() / ".crowngui_cache")
+    let hash = secureHashFile(app_logo)
+    let cachePath = getCurrentDir() / ".crowngui_cache" / fmt"app.{hash}.icns"
+    var path:string
+    if fileExists(cachePath):
+      path = outDir / "app.icns"
+      copyFile(cachePath,path)
+    else:
+      let png = zopflipng.loadPNG32(app_logo)
+      let images = genImages(png, @(icns.REQUIRED_IMAGE_SIZES))
+      path = generateICNS(images.filterIt(it != default(ImageInfo)), outDir)
+      copyFile(path,cachePath)
+      discard images.mapIt(tryRemoveFile(it.filePath))
     plist["CFBundleIconFile"] = newJString(extractFilename path)
   writePlist(plist, appDir / "Contents" / "Info.plist")
   var cmd = baseCmd(@["nimble", "build", "--silent", "-y"], wwwroot, release, flags)
