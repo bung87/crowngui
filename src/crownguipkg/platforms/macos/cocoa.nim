@@ -117,7 +117,7 @@ proc newClass(cls: string): ID =
   objc_msgSend(objc_msgSend(getClass(cls).ID, $$"alloc"), $$"init")
 
 # proc main() =
-  
+
 #   var pool = newClass("NSAutoReleasePool")
 #   NSApplication.call $$"sharedApplication"
 

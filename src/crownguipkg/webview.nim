@@ -1,5 +1,5 @@
 import tables, strutils, macros, json, os, base64, strformat, std/exitprocs
-import xlsx,tables,math
+import xlsx, tables, math
 
 const headerC = currentSourcePath().substr(0, high(currentSourcePath()) - 11) & "webview.h"
 {.passc: "-DWEBVIEW_STATIC -DWEBVIEW_IMPLEMENTATION -I" & headerC.}
@@ -19,11 +19,11 @@ elif defined(macosx):
 type
   ExternalInvokeCb* = proc (w: Webview; arg: string) ## External CallBack Proc
   WebviewPrivObj {.importc: "struct webview_priv", header: headerC, bycopy.} = object
-    pool:ID
-    window:ID
-    webview:ID
-    windowDelegate:ID
-    should_exit:int
+    pool: ID
+    window: ID
+    webview: ID
+    windowDelegate: ID
+    should_exit: int
   WebviewObj* {.importc: "struct webview", header: headerC, bycopy.} = object ## WebView Type
     url* {.importc: "url".}: cstring                                          ## Current URL
     title* {.importc: "title".}: cstring                                      ## Window Title
@@ -345,7 +345,7 @@ proc webView(title = ""; url = ""; width: Positive = 1000; height: Positive = 70
   if callback != nil: result.externalInvokeCB = callback
   if result.init() != 0: return nil
 
-proc escapeHtml*( val: string, escapeQuotes = false): string =
+proc escapeHtml*(val: string; escapeQuotes = false): string =
   ## translates the characters `&`, `<` and `>` to their corresponding
   ## HTML entities. if `escapeQuotes` is `true`, also translates
   ## `"` and `'`.
@@ -356,11 +356,11 @@ proc escapeHtml*( val: string, escapeQuotes = false): string =
     of '<': result &= "&lt;"
     of '>': result &= "&gt;"
     of '"':
-        if escapeQuotes: result &= "&quot;"
-        else: result &= "\""
+      if escapeQuotes: result &= "&quot;"
+      else: result &= "\""
     of '\'':
-        if escapeQuotes: result &= "&#39;"
-        else: result &= "'"
+      if escapeQuotes: result &= "&#39;"
+      else: result &= "'"
     else:
       result &= c
 
@@ -400,8 +400,8 @@ proc newWebView*(path: static[string] = ""; title = ""; width: Positive = 1000; 
       let path = cast[cstring](objc_msgSend(cast[ID](openFile.unsafeAddr), $$"UTF8String"))
       jsDebug(fmt"open with file {file}")
       let table = parseExcel($path)
-      var content:string = ""
-      for k,v in table.data.pairs:
+      var content: string = ""
+      for k, v in table.data.pairs:
         let d = $v
         content.add fmt"<h3>{k}</h3>"
         content.add "<table>"
@@ -409,7 +409,7 @@ proc newWebView*(path: static[string] = ""; title = ""; width: Positive = 1000; 
         for row in rows:
           content.add "<tr>"
           for col in row:
-            content.add fmt"<td>{escapeHtml(col)}</td>" 
+            content.add fmt"<td>{escapeHtml(col)}</td>"
           content.add "</tr>"
         content.add "</table>"
         # content.add fmt"<pre>{escapeHtml(d)}</pre>"
@@ -417,7 +417,7 @@ proc newWebView*(path: static[string] = ""; title = ""; width: Positive = 1000; 
       var cls = self.getClass()
       var ivar = cls.getIvar("webview")
       var wv = cast[Webview](self.getIvar(ivar))
-      let nsURL:ID = objc_msgSend((ID)getClass("NSURL"),
+      let nsURL: ID = objc_msgSend((ID)getClass("NSURL"),
                           $$("URLWithString:"),
                           get_nsstring(html))
       objc_msgSend(wv.priv.webview, $$("loadRequest:"),
@@ -437,14 +437,14 @@ proc newWebView*(path: static[string] = ""; title = ""; width: Positive = 1000; 
     discard Delegate.addMethod($$"application:openFile:", cast[IMP](application), "B@:@@")
     discard Delegate.addMethod($$"applicationDidFinishLaunching:", cast[IMP](applicationDidFinishLaunching), "v@:@")
     discard Delegate.addMethod($$"applicationWillBecomeActive:", cast[IMP](applicationWillBecomeActive), "v@:@")
-    discard addIvar(Delegate,"webview", sizeof(Webview), log2(sizeof(Webview).float64).int, "@")
-    let ivar:Ivar = getIvar(Delegate,"webview")
+    discard addIvar(Delegate, "webview", sizeof(Webview), log2(sizeof(Webview).float64).int, "@")
+    let ivar: Ivar = getIvar(Delegate, "webview")
     Delegate.registerClassPair()
     var appDel = objc_msgSend(cast[ID](getClass("AppDelegate")), $$"alloc")
     appDel = objc_msgSend(appDel, $$"init")
     discard objc_msgSend(cast[ID](getClass("NSApplication")), $$("sharedApplication"))
     objc_msgSend(NSApp, $$("setDelegate:"), appDel)
-    setIvar(appDel,ivar,cast[ID](webview))
+    setIvar(appDel, ivar, cast[ID](webview))
     createMenu()
     objc_msgSend(NSApp, $$("finishLaunching"));
     objc_msgSend(NSApp, $$("activateIgnoringOtherApps:"), true)
