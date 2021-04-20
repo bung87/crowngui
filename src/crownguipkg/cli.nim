@@ -92,16 +92,16 @@ proc buildMacos(wwwroot = "", release = false, flags: seq[string]) =
           {"localhost": {"NSExceptionAllowsInsecureHTTPLoads": true}.toTable}.toTable
           ])
   )
-  var documentTypes:seq[DocumentType] = @[]
+  var documentTypes: seq[DocumentType] = @[]
   if fileExists("app.json"):
     let data = parseJson(readFile("app.json"))
     if data.hasKey("fileAssociations"):
       let ass = getElems(data["fileAssociations"])
       for a in ass:
         documentTypes.add create(DocumentType,
-          CFBundleTypeExtensions=some(@[a["ext"].getStr()]),
-          CFBundleTypeMIMETypes=some(@[a["mimeType"].getStr()]),
-          CFBundleTypeRole=some(a["role"].getStr())
+          CFBundleTypeExtensions = some(@[a["ext"].getStr()]),
+          CFBundleTypeMIMETypes = some(@[a["mimeType"].getStr()]),
+          CFBundleTypeRole = some(a["role"].getStr())
         )
   let dt = if len(documentTypes) > 0: some(documentTypes) else: none(seq[DocumentType])
   let sec = if len(wwwroot) > 0: some(nSAppTransportSecurityJson): else: none(NSAppTransportSecurity)
@@ -126,15 +126,15 @@ proc buildMacos(wwwroot = "", release = false, flags: seq[string]) =
       createDir(getCurrentDir() / ".crowngui_cache")
     let hash = secureHashFile(app_logo)
     let cachePath = getCurrentDir() / ".crowngui_cache" / fmt"app.{hash}.icns"
-    var path:string
+    var path: string
     if fileExists(cachePath):
       path = outDir / "app.icns"
-      copyFile(cachePath,path)
+      copyFile(cachePath, path)
     else:
       let png = zopflipng.loadPNG32(app_logo)
       let images = genImages(png, @(icns.REQUIRED_IMAGE_SIZES))
       path = generateICNS(images.filterIt(it != default(ImageInfo)), outDir)
-      copyFile(path,cachePath)
+      copyFile(path, cachePath)
       discard images.mapIt(tryRemoveFile(it.filePath))
     plist["CFBundleIconFile"] = newJString(extractFilename path)
   writePlist(plist, appDir / "Contents" / "Info.plist")

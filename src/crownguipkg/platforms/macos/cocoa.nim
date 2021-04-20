@@ -1,4 +1,4 @@
-import objc, foundation,strutils, macros, typetraits, math
+import objc, foundation, strutils, macros, typetraits, math, sequtils
 
 type
   NSObject* = object of RootObj
@@ -50,7 +50,7 @@ proc call(cls: typedesc, cmd: SEL) =
 proc `[]`(obj: NSObject, cmd: SEL) =
   discard objc_msgSend(obj.id, cmd)
 
-macro `[]`(id: ID, cmd: SEL, args: varargs[untyped]): untyped =
+macro `[]`(id: ID, cmd: SEL, args: varargs[untyped]): ID =
   if args.len > 0:
     let p = "discard objc_msgSend($1, $2, $3)"
     var z = ""
@@ -69,7 +69,7 @@ type
     window: ID
 
 proc shouldTerminate(self: ID, cmd: SEL, notification: ID): BOOL {.cdecl.} =
-  var cls  = self.getClass()
+  var cls = self.getClass()
   var ivar = cls.getIvar("apple")
   var res = cast[int](self.getIvar(ivar))
   echo res
@@ -83,13 +83,13 @@ proc makeDelegate(): Class =
   result.registerClassPair()
 
 proc getSuperMethod(id: ID, sel: SEL): Method =
-  var superClass  = getSuperClass(id.getClass)
+  var superClass = getSuperClass(id.getClass)
   result = getInstanceMethod(superClass, sel)
 
 macro callSuper(id: ID, cmd: SEL, args: varargs[untyped]): untyped =
-  let sid  = id.toStrLit().strVal
+  let sid = id.toStrLit().strVal
   let scmd = cmd.toStrLit().strVal
-  let mm   = "getSuperMethod($1, $2)" % [sid, scmd]
+  let mm = "getSuperMethod($1, $2)" % [sid, scmd]
 
   if args.len > 0:
     let p = "discard method_invoke($1, $2, $3)"
@@ -97,7 +97,6 @@ macro callSuper(id: ID, cmd: SEL, args: varargs[untyped]): untyped =
     for a in args:
       z.add(a.toStrLit().strVal)
     var w = p % [sid, mm, z]
-    echo w
     result = parseStmt(w)
   else:
     let p = "discard method_invoke($1, $2)"
@@ -110,6 +109,46 @@ proc canBe(self: ID, cmd: SEL): BOOL {.cdecl.} =
 proc canBecome(id: ID) =
   var cls = getClass(id)
   var sel = $$"showsResizeIndicator"
-  var im  = getInstanceMethod(cls, sel)
+  var im = getInstanceMethod(cls, sel)
   var types = getTypeEncoding(im)
   discard replaceMethod(cls, sel, cast[IMP](canBe), types)
+
+proc newClass(cls: string): ID =
+  objc_msgSend(objc_msgSend(getClass(cls).ID, $$"alloc"), $$"init")
+
+# proc main() =
+  
+#   var pool = newClass("NSAutoReleasePool")
+#   NSApplication.call $$"sharedApplication"
+
+#   if NSApp.isNil:
+#     echo "Failed to initialized NSApplication...  terminating..."
+#     return
+
+#   NSApp[$$"setActivationPolicy:", NSApplicationActivationPolicyRegular]
+
+#   var windowStyle = NSTitledWindowMask or NSClosableWindowMask or
+#     NSMiniaturizableWindowMask or NSResizableWindowMask
+
+#   var windowRect = NSMakeRect(100,100,400,400)
+#   var window = NSWindow.init(windowRect, windowStyle, NSBackingStoreBuffered, NO)
+#   window.autorelease()
+
+#   discard window.id[$$"setTitle:", @"Hello".id]
+
+#   var AppDelegate = makeDelegate()
+#   var appDel = newClass("AppDelegate")
+
+#   var ivar = AppDelegate.getIvar("apple")
+
+#   setIvar(appDel, ivar, cast[ID](123))
+#   NSApp[$$"setDelegate:", appDel]
+
+#   window.id[$$"display"]
+#   window.id[$$"orderFrontRegardless"]
+#   NSApp[$$"run"]
+#   pool[$$"drain"]
+#   AppDelegate.disposeClassPair()
+
+# when isMainModule:
+#   main()

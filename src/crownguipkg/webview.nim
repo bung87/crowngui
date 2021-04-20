@@ -1,4 +1,5 @@
 import tables, strutils, macros, json, os, base64, strformat, std/exitprocs
+import xlsx,tables,math
 
 const headerC = currentSourcePath().substr(0, high(currentSourcePath()) - 11) & "webview.h"
 {.passc: "-DWEBVIEW_STATIC -DWEBVIEW_IMPLEMENTATION -I" & headerC.}
@@ -18,6 +19,11 @@ elif defined(macosx):
 type
   ExternalInvokeCb* = proc (w: Webview; arg: string) ## External CallBack Proc
   WebviewPrivObj {.importc: "struct webview_priv", header: headerC, bycopy.} = object
+    pool:ID
+    window:ID
+    webview:ID
+    windowDelegate:ID
+    should_exit:int
   WebviewObj* {.importc: "struct webview", header: headerC, bycopy.} = object ## WebView Type
     url* {.importc: "url".}: cstring                                          ## Current URL
     title* {.importc: "title".}: cstring                                      ## Window Title
@@ -308,7 +314,8 @@ func run*(w: Webview) {.inline.} =
   ## `run` starts the main UI loop until the user closes the window or `exit()` is called.
   while w.loop(1) == 0: discard
 
-proc run*(w: Webview; quitProc: proc () {.noconv.}; controlCProc: proc () {.noconv.}; autoClose: static[bool] = true) {.inline.} =
+proc run*(w: Webview; quitProc: proc () {.noconv.}; controlCProc: proc () {.noconv.}; autoClose: static[
+    bool] = true) {.inline.} =
   ## `run` starts the main UI loop until the user closes the window. Same as `run` but with extras.
   ## * `quitProc` is a function to run at exit, needs `{.noconv.}` pragma.
   ## * `controlCProc` is a function to run at CTRL+C, needs `{.noconv.}` pragma.
@@ -338,6 +345,25 @@ proc webView(title = ""; url = ""; width: Positive = 1000; height: Positive = 70
   if callback != nil: result.externalInvokeCB = callback
   if result.init() != 0: return nil
 
+proc escapeHtml*( val: string, escapeQuotes = false): string =
+  ## translates the characters `&`, `<` and `>` to their corresponding
+  ## HTML entities. if `escapeQuotes` is `true`, also translates
+  ## `"` and `'`.
+
+  for c in val:
+    case c:
+    of '&': result &= "&amp;"
+    of '<': result &= "&lt;"
+    of '>': result &= "&gt;"
+    of '"':
+        if escapeQuotes: result &= "&quot;"
+        else: result &= "\""
+    of '\'':
+        if escapeQuotes: result &= "&#39;"
+        else: result &= "'"
+    else:
+      result &= c
+
 proc newWebView*(path: static[string] = ""; title = ""; width: Positive = 1000; height: Positive = 700;
     resizable: static[bool] = true; debug: static[bool] = not defined(release); callback: ExternalInvokeCb = nil;
         skipTaskbar: static[bool] = false; windowBorders: static[bool] = true; focus: static[bool] = false;
@@ -366,30 +392,63 @@ proc newWebView*(path: static[string] = ""; title = ""; width: Positive = 1000; 
 
   result = webView(title, path, width, height, resizable, debug, callback)
   when defined(macosx):
-    let delegate = allocateClassPair(getClass("NSObject"), "AppDelegate", 0)
-    proc application(self: ID, cmd: SEL,sender: NSApplication, openFile: NSString): Bool {.cdecl.} =
-      let path = cast[cstring](objc_msgSend(cast[ID](openFile.unsafeAddr),$$"UTF8String"))
-      return No
-    proc applicationDidFinishLaunching(self: ID, cmd: SEL, notification: ID): void {.cdecl.} =
+    let webview = result
+    webview.bindProcs("api"):
+      proc jsSetUrl(url: string) = webview.setUrl(url)
+    let Delegate = allocateClassPair(getClass("NSObject"), "AppDelegate", 0)
+    proc application(self: ID; cmd: SEL; sender: NSApplication; openFile: NSString): Bool {.cdecl.} =
+      let path = cast[cstring](objc_msgSend(cast[ID](openFile.unsafeAddr), $$"UTF8String"))
+      jsDebug(fmt"open with file {file}")
+      let table = parseExcel($path)
+      var content:string = ""
+      for k,v in table.data.pairs:
+        let d = $v
+        content.add fmt"<h3>{k}</h3>"
+        content.add "<table>"
+        let rows = v.toSeq(false)
+        for row in rows:
+          content.add "<tr>"
+          for col in row:
+            content.add fmt"<td>{escapeHtml(col)}</td>" 
+          content.add "</tr>"
+        content.add "</table>"
+        # content.add fmt"<pre>{escapeHtml(d)}</pre>"
+      let html = dataUriHtmlHeader fmt"""<!DOCTYPE html><html><head><meta charset="utf-8"><meta content='width=device-width,initial-scale=1' name=viewport></head><body>{content}</body></html>"""
+      var cls = self.getClass()
+      var ivar = cls.getIvar("webview")
+      var wv = cast[Webview](self.getIvar(ivar))
+      let nsURL:ID = objc_msgSend((ID)getClass("NSURL"),
+                          $$("URLWithString:"),
+                          get_nsstring(html))
+      objc_msgSend(wv.priv.webview, $$("loadRequest:"),
+                  objc_msgSend((ID)getClass("NSURLRequest"),
+                                $$("requestWithURL:"), nsURL));
+      # webview.setUrl(html)
+      # webview.js(fmt"""window.api.jsSetUrl("{html}")""".cstring)
+      return Yes
+    proc applicationDidFinishLaunching(self: ID; cmd: SEL; notification: ID): void {.cdecl.} =
       echo "applicationDidFinishLaunching"
-    proc applicationWillBecomeActive(self: ID, cmd: SEL, notification: ID): void {.cdecl.} =
+    proc applicationWillBecomeActive(self: ID; cmd: SEL; notification: ID): void {.cdecl.} =
       echo "applicationWillBecomeActive"
-    proc applicationWillFinishLaunching(self: ID, cmd: SEL, notification: ID): void {.cdecl.} =
+    proc applicationWillFinishLaunching(self: ID; cmd: SEL; notification: ID): void {.cdecl.} =
       echo "applicationWillFinishLaunching"
-    
-    discard delegate.addMethod($$"applicationWillFinishLaunching:", cast[IMP](applicationWillFinishLaunching), "v@:@")
-    discard delegate.addMethod($$"application:openFile:", cast[IMP](application), "B@:@@")
-    discard delegate.addMethod($$"applicationDidFinishLaunching:", cast[IMP](applicationDidFinishLaunching), "v@:@")
-    discard delegate.addMethod($$"applicationWillBecomeActive:", cast[IMP](applicationWillBecomeActive), "v@:@")
-    delegate.registerClassPair()
+
+    discard Delegate.addMethod($$"applicationWillFinishLaunching:", cast[IMP](applicationWillFinishLaunching), "v@:@")
+    discard Delegate.addMethod($$"application:openFile:", cast[IMP](application), "B@:@@")
+    discard Delegate.addMethod($$"applicationDidFinishLaunching:", cast[IMP](applicationDidFinishLaunching), "v@:@")
+    discard Delegate.addMethod($$"applicationWillBecomeActive:", cast[IMP](applicationWillBecomeActive), "v@:@")
+    discard addIvar(Delegate,"webview", sizeof(Webview), log2(sizeof(Webview).float64).int, "@")
+    let ivar:Ivar = getIvar(Delegate,"webview")
+    Delegate.registerClassPair()
     var appDel = objc_msgSend(cast[ID](getClass("AppDelegate")), $$"alloc")
     appDel = objc_msgSend(appDel, $$"init")
     discard objc_msgSend(cast[ID](getClass("NSApplication")), $$("sharedApplication"))
     objc_msgSend(NSApp, $$("setDelegate:"), appDel)
+    setIvar(appDel,ivar,cast[ID](webview))
     createMenu()
-    objc_msgSend(NSApp,$$("finishLaunching"));
+    objc_msgSend(NSApp, $$("finishLaunching"));
     objc_msgSend(NSApp, $$("activateIgnoringOtherApps:"), true)
-    
+
 
   when skipTaskbar: result.setSkipTaskbar(skipTaskbar)
   when not windowBorders: result.setBorderlessWindow(windowBorders)
