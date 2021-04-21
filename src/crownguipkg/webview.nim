@@ -404,7 +404,7 @@ proc newWebView*(path: static[string] = ""; title = ""; width: Positive = 1000; 
       for k, v in table.data.pairs:
         let d = $v
         content.add fmt"<h3>{k}</h3>"
-        content.add "<table>"
+        content.add """<table class="SpreadsheetJs">"""
         let rows = v.toSeq(false)
         for row in rows:
           content.add "<tr>"

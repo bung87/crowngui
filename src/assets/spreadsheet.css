@@ -1,0 +1,33 @@
+.SpreadsheetJs {
+	border:1px SOLID #DDD;
+	border-spacing:0;
+	border-collapse: collapse;
+}
+
+.SpreadsheetJs-gray {background-color:#EEE;text-align:center !important;font-size:0.8em;border-bottom:1px SOLID #DDD;}
+
+.SpreadsheetJs tr {}
+.SpreadsheetJs td:first-child{border:1px SOLID #DDD;} /* Selects the row counter column */
+.SpreadsheetJs th {
+	background-color:#EEE;
+	border-bottom:1px SOLID #DDD;
+	border-right:1px SOLID #DDD;
+	width:40px;
+	font-size:0.9em;
+	font-weight:normal;
+}
+.SpreadsheetJs td {
+	border:1px SOLID #EEE;
+	text-align:right;
+	padding:2px;
+	cursor:default;
+}
+
+.SpreadsheetJs .cellFocus {
+	border:2px SOLID #41A1F0;
+	padding:1px 2px;
+}
+.SpreadsheetJs td[contentEditable="true"] {
+	border:2px SOLID #1D76BF;
+	cursor:text;
+}

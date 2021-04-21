@@ -63,14 +63,15 @@ proc exit(app: ApplicationRef) = app.webview.exit
 
 when isMainModule:
 
-  const
-    cssDark = staticRead"assets/dark.css".strip.unindent.cstring
-    cssLight = staticRead"assets/light.css".strip.unindent.cstring
+  # const
+  #   cssDark = staticRead"assets/dark.css".strip.unindent.cstring
+  #   cssLight = staticRead"assets/light.css".strip.unindent.cstring
 
   let app = newApplication(staticRead("assets/demo.html"))
-  when not defined(bundle):
-    let theme = if "--light-theme" in commandLineParams(): cssLight else: cssDark
-    app.css(theme)
-
+  # when not defined(bundle):
+  #   let theme = if "--light-theme" in commandLineParams(): cssLight else: cssDark
+  #   app.css(theme)
+  const cssSpreadSheet = staticRead"assets/spreadsheet.css".strip.unindent.cstring
+  app.css cssSpreadSheet
   app.run()
   app.exit()
