@@ -1,4 +1,4 @@
-import objc, strutils
+import objc, cocoa, strutils
 
 {.passL: "-framework Foundation".}
 {.passL: "-framework AppKit".}
@@ -39,12 +39,14 @@ proc newClass(cls: string): ID =
   objc_msgSend(objc_msgSend(getClass(cls).ID, $$"alloc"), $$"init")
 
 proc main() =
-  discard objc_msgSend(getClass("NSApplication").ID, $$"sharedApplication")
+  objcr:
+    [NSApplication sharedApplication]
 
   if NSApp.isNil:
     echo "Failed to initialized NSApplication...  terminating..."
     return
-
+  # objcr:
+    # [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular.cint]
   discard objc_msgSend(NSApp, $$"setActivationPolicy:", NSApplicationActivationPolicyRegular.cint)
 
   # Create the menubar
@@ -70,6 +72,12 @@ proc main() =
   discard mainWindow.objc_msgSend($$"cascadeTopLeftFromPoint:", pos)
   discard mainWindow.objc_msgSend($$"setTitle:", @"Hello")
   discard mainWindow.objc_msgSend($$"makeKeyAndOrderFront:", NSApp)
+  # objcr:
+    # [mainWindow cascadeTopLeftFromPoint: pos]
+    # [mainWindow setTitle: "Hello"]
+    # [mainWindow makeKeyAndOrderFront: NSApp]
+    # [NSApp activateIgnoringOtherApps:true]
+    # [NSApp run]
 
   # Bring the app out
   discard objc_msgSend(NSApp, $$("activateIgnoringOtherApps:"), true)

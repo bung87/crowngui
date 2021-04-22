@@ -1,5 +1,5 @@
 import objc, foundation, strutils, macros, typetraits, math, sequtils
-
+import regex
 type
   NSObject* = object of RootObj
     id*: ID
@@ -16,6 +16,7 @@ type
 
   NSApplication* = object of NSObject
 
+converter toId*(w: NSWindow): ID = cast[ID](w.unsafeAddr)
 proc `@`*(a: string): NSString =
   result.id = objc_msgSend(getClass("NSString").ID, $$"stringWithUTF8String:", a.cstring)
 
@@ -116,16 +117,68 @@ proc canBecome(id: ID) =
 proc newClass(cls: string): ID =
   objc_msgSend(objc_msgSend(getClass(cls).ID, $$"alloc"), $$"init")
 
+proc genCall(args: var NimNode): NimNode =
+  result = newCall(ident"objc_msgSend")
+  for i in 0 ..< args.len:
+    result.add args[i]
+  if args[0].kind == nnkIdent:
+    var m: RegexMatch
+    if args[0].strVal.match(re"^[A-Z]+\w+", m):
+      result[1] = newCall(ident"ID", nnkCall.newTree(ident"getClass", args[0].toStrLit))
+    else:
+      result[1] = newDotExpr(args[0], ident"ID")
+  if args[1].kind == nnkIdent:
+    result[2] = nnkCall.newTree(ident"registerName", args[1].toStrLit)
+  elif args[1].kind == nnkStrLit:
+    echo args[1].strVal
+    result[2] = newCall(ident"get_nsstring", args[1])
+
+proc replaceBracket(node: var NimNode) =
+  var z = 0
+  for s in node:
+    var son = node[z]
+    if son.kind == nnkCommand:
+      node = genCall(son)
+    elif son.kind == nnkExprColonExpr:
+      var tmp = son[0]
+      node = genCall(tmp)
+    else:
+      replaceBracket(son)
+    # if son.kind == nnkReturnStmt:
+    #   let value = if son[0].kind != nnkEmpty and son[0].kind = nnkBracket: genCall()
+    #   node[z] = nnkReturnStmt.newTree(value)
+    # elif son.kind == nnkAsgn and son[0].kind == nnkIdent and $son[0] == "result":
+    #   node[z] = nnkAsgn.newTree(son[0], nnkCall.newTree(jsResolve, son[1]))
+    # else:
+    #   replaceBracket(son)
+    inc z
+
+proc generateOc(arg: NimNode): NimNode =
+  result = arg
+  replaceBracket(result)
+
+
+macro objcr*(arg: untyped): untyped =
+  if arg.kind == nnkStmtList:
+    result = newStmtList()
+    for one in arg:
+      result.add generateOc(one)
+  else:
+    result = generateOc(arg)
+
 # proc main() =
 
 #   var pool = newClass("NSAutoReleasePool")
-#   NSApplication.call $$"sharedApplication"
+#   objcr:
+#     [NSApplication sharedApplication]
+#   # NSApplication.call $$"sharedApplication"
 
 #   if NSApp.isNil:
 #     echo "Failed to initialized NSApplication...  terminating..."
 #     return
-
-#   NSApp[$$"setActivationPolicy:", NSApplicationActivationPolicyRegular]
+#   objcr:
+#     [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular]
+#   # NSApp[$$"setActivationPolicy:", NSApplicationActivationPolicyRegular]
 
 #   var windowStyle = NSTitledWindowMask or NSClosableWindowMask or
 #     NSMiniaturizableWindowMask or NSResizableWindowMask
@@ -133,8 +186,8 @@ proc newClass(cls: string): ID =
 #   var windowRect = NSMakeRect(100,100,400,400)
 #   var window = NSWindow.init(windowRect, windowStyle, NSBackingStoreBuffered, NO)
 #   window.autorelease()
-
-#   discard window.id[$$"setTitle:", @"Hello".id]
+#   objcr:
+#     [window setTitle:"Hello"]
 
 #   var AppDelegate = makeDelegate()
 #   var appDel = newClass("AppDelegate")
@@ -142,12 +195,16 @@ proc newClass(cls: string): ID =
 #   var ivar = AppDelegate.getIvar("apple")
 
 #   setIvar(appDel, ivar, cast[ID](123))
-#   NSApp[$$"setDelegate:", appDel]
-
-#   window.id[$$"display"]
-#   window.id[$$"orderFrontRegardless"]
-#   NSApp[$$"run"]
-#   pool[$$"drain"]
+#   objcr:
+#     [NSApp setDelegate:appDel]
+#     [window display]
+#     [window orderFrontRegardless]
+#     [NSApp run]
+#     [pool drain]
+#   # window.id[$$"display"]
+#   # window.id[$$"orderFrontRegardless"]
+#   # NSApp[$$"run"]
+#   # pool[$$"drain"]
 #   AppDelegate.disposeClassPair()
 
 # when isMainModule:
