@@ -27,7 +27,7 @@ type
 
   CMSize* = object
     w*, h*: float64
-
+  NSURLRequest* = object of NSObject
 const
   NSBackingStoreRetained* = 0
   NSBackingStoreNonRetained* = 1

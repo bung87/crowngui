@@ -11,6 +11,7 @@ elif defined(windows):
 elif defined(macosx):
   import platforms/macos/objc
   import platforms/macos/cocoa
+  import platforms/macos/foundation
   import platforms/macos/menu
   var NSApp {.importc.}: ID
   {.passc: "-DOBJC_OLD_DISPATCH_PROTOTYPES=1 -DWEBVIEW_COCOA=1 -x objective-c",
@@ -417,12 +418,10 @@ proc newWebView*(path: static[string] = ""; title = ""; width: Positive = 1000; 
       var cls = self.getClass()
       var ivar = cls.getIvar("webview")
       var wv = cast[Webview](self.getIvar(ivar))
-      let nsURL: ID = objc_msgSend((ID)getClass("NSURL"),
-                          $$("URLWithString:"),
-                          get_nsstring(html))
-      objc_msgSend(wv.priv.webview, $$("loadRequest:"),
-                  objc_msgSend((ID)getClass("NSURLRequest"),
-                                $$("requestWithURL:"), nsURL));
+      objcr:
+        let nsURL1: ID = [NSURL URLWithString: get_nsstring(html)]
+        let url = [NSURLRequest requestWithURL: nsURL1]
+        [wv.priv.webview loadRequest: url]
       # webview.setUrl(html)
       # webview.js(fmt"""window.api.jsSetUrl("{html}")""".cstring)
       return Yes
@@ -440,14 +439,15 @@ proc newWebView*(path: static[string] = ""; title = ""; width: Positive = 1000; 
     discard addIvar(Delegate, "webview", sizeof(Webview), log2(sizeof(Webview).float64).int, "@")
     let ivar: Ivar = getIvar(Delegate, "webview")
     Delegate.registerClassPair()
-    var appDel = objc_msgSend(cast[ID](getClass("AppDelegate")), $$"alloc")
-    appDel = objc_msgSend(appDel, $$"init")
-    discard objc_msgSend(cast[ID](getClass("NSApplication")), $$("sharedApplication"))
-    objc_msgSend(NSApp, $$("setDelegate:"), appDel)
-    setIvar(appDel, ivar, cast[ID](webview))
-    createMenu()
-    objc_msgSend(NSApp, $$("finishLaunching"));
-    objc_msgSend(NSApp, $$("activateIgnoringOtherApps:"), true)
+    objcr:
+      var appDel = [AppDelegate alloc]
+      [appDel init]
+      [NSApplication sharedApplication]
+      [NSApp setDelegate: appDel]
+      setIvar(appDel, ivar, cast[ID](webview))
+      createMenu()
+      [NSApp finishLaunching]
+      [NSApp activateIgnoringOtherApps: true]
 
 
   when skipTaskbar: result.setSkipTaskbar(skipTaskbar)

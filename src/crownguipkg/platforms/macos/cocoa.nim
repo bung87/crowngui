@@ -1,20 +1,6 @@
 import objc, foundation, strutils, math, sequtils, macros
 
-type
-  NSObject* = object of RootObj
-    id*: ID
 
-  NSWindow = object of NSObject
-
-  NSWindowController = object of NSObject
-
-  NSView = object of NSObject
-
-  NSTextView = object of NSView
-
-  NSString* = object of NSObject
-
-  NSApplication* = object of NSObject
 
 converter toId*(w: NSWindow): ID = cast[ID](w.unsafeAddr)
 converter toId*(w: NSString): ID = cast[ID](w.unsafeAddr)
@@ -66,7 +52,7 @@ macro `[]`(id: ID, cmd: SEL, args: varargs[untyped]): ID =
     result = parseStmt(w)
 
 type
-  AppDelegate = object
+  AppDelegate* = object
     isa: Class
     window: ID
 

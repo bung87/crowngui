@@ -67,6 +67,22 @@ type
     OBJC_ASSOCIATION_RETAIN = 01401
     OBJC_ASSOCIATION_COPY = 01403
 
+type
+  NSObject* = object of RootObj
+    id*: ID
+
+  NSWindow* = object of NSObject
+
+  NSWindowController* = object of NSObject
+
+  NSView* = object of NSObject
+
+  NSTextView* = object of NSView
+
+  NSString* = object of NSObject
+
+  NSApplication* = object of NSObject
+  NSURL* = object of NSObject
 const
   YES* = cchar(1)
   NO* = cchar(0)
@@ -661,6 +677,16 @@ proc objc_storeWeak(location: var ID; obj: ID): ID {.objcimport.}
 template storeWeak*(location: var ID; obj: ID): untyped =
   objc_storeWeak(location, obj)
 
+proc transExprColonExpr(son: NimNode): NimNode =
+  var self = son[0][0]
+  var sel = ident(son[0][1].strVal & ":")
+  var v = son[1]
+  var f = nnkCommand.newTree(self, sel, v)
+  var cc = toSeq(son.children)
+  for v in cc[2 .. ^1]:
+    f.add v
+  return f
+
 proc genCall(e: var NimNode, args: NimNode) =
   var pv = false
   for i in 0 ..< args.len:
@@ -712,14 +738,9 @@ proc replaceBracket(node: NimNode): NimNode =
     if son.kind == nnkCommand:
       genCall(newnode, son)
     elif son.kind == nnkExprColonExpr:
-      var self = son[0][0]
-      var sel = ident(son[0][1].strVal & ":")
-      var v = son[1]
-      var f = nnkCommand.newTree(self, sel, v)
-      var cc = toSeq(son.children)
-      for v in cc[2 .. ^1]:
-        f.add v
-      genCall(newnode, f)
+      genCall(newnode, transExprColonExpr(son))
+    else:
+      newnode.add son
     inc z
   return newnode
 
@@ -730,7 +751,21 @@ macro objcr*(arg: untyped): untyped =
   if arg.kind == nnkStmtList:
     result = newStmtList()
     for one in arg:
-      result.add generateOc(one)
+      case one.kind
+      of nnkLetSection:
+        if one[^1][^1].kind == nnkBracket:
+          var b = nnkLetSection.newTree()
+          copyChildrenTo(one, b)
+          b[^1][^1] = generateOc(one[^1][^1])
+          result.add b
+      of nnkVarSection:
+        if one[^1][^1].kind == nnkBracket:
+          var b = nnkVarSection.newTree()
+          copyChildrenTo(one, b)
+          b[^1][^1] = generateOc(one[^1][^1])
+          result.add b
+      else:
+        result.add generateOc(one)
   else:
     result = generateOc(arg)
 
