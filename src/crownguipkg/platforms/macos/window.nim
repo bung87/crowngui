@@ -31,6 +31,7 @@ type
     x, y: float64
 
 proc main() =
+
   objcr:
     [NSApplication sharedApplication]
 
