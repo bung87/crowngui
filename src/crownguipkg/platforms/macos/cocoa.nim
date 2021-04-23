@@ -1,5 +1,5 @@
-import objc, foundation, strutils, macros, typetraits, math, sequtils
-import regex
+import objc, foundation, strutils, math, sequtils, macros
+
 type
   NSObject* = object of RootObj
     id*: ID
@@ -17,6 +17,7 @@ type
   NSApplication* = object of NSObject
 
 converter toId*(w: NSWindow): ID = cast[ID](w.unsafeAddr)
+converter toId*(w: NSString): ID = cast[ID](w.unsafeAddr)
 proc `@`*(a: string): NSString =
   result.id = objc_msgSend(getClass("NSString").ID, $$"stringWithUTF8String:", a.cstring)
 
@@ -113,123 +114,3 @@ proc canBecome(id: ID) =
   var im = getInstanceMethod(cls, sel)
   var types = getTypeEncoding(im)
   discard replaceMethod(cls, sel, cast[IMP](canBe), types)
-
-proc newClass(cls: string): ID =
-  objc_msgSend(objc_msgSend(getClass(cls).ID, $$"alloc"), $$"init")
-
-proc genCall(e: var NimNode, args: NimNode) =
-  var pv = false
-  for i in 0 ..< args.len:
-    if args[i].kind == nnkIdent:
-      var m: RegexMatch
-      if args[i].strVal.match(re"^[A-Z]+\w+", m) and i == 0:
-        e.add nnkStmtListExpr.newTree(
-          nnkWhenStmt.newTree(
-            nnkElifExpr.newTree(
-              nnkInfix.newTree(
-                ident("is"),
-                args[i],
-                ident("ID")
-          ),
-          args[i]
-        ),
-            nnkElseExpr.newTree(
-              newCall(ident"ID", nnkCall.newTree(ident"getClass", args[i].toStrLit))
-          )
-        )
-        )
-
-      else:
-        if i == 0:
-          pv = false
-          e.add args[i]
-        else:
-          if args[i].strVal().endsWith(":"):
-            pv = true
-            e.add nnkCall.newTree(ident"registerName", args[i].toStrLit)
-          else:
-            if pv == true:
-              e.add args[i]
-              pv = false
-            else:
-              e.add nnkCall.newTree(ident"registerName", args[i].toStrLit)
-    elif args[i].kind == nnkStrLit:
-      e.add newCall(ident"get_nsstring", args[i])
-    else:
-      e.add args[i]
-
-proc replaceBracket(node: NimNode): NimNode =
-  var z = 0
-  if node.kind != nnkBracket:
-    return node
-  var newnode = newCall(ident"objc_msgSend")
-  for s in node:
-    var son = node[z]
-    if son.kind == nnkCommand:
-      genCall(newnode, son)
-    elif son.kind == nnkExprColonExpr:
-      var self = son[0][0]
-      var sel = ident(son[0][1].strVal & ":")
-      var v = son[1]
-      var f = nnkCommand.newTree(self, sel, v)
-      var cc = toSeq(son.children)
-      for v in cc[2 .. ^1]:
-        f.add v
-      genCall(newnode, f)
-    inc z
-  return newnode
-
-proc generateOc(arg: NimNode): NimNode =
-  result = replaceBracket(arg)
-
-macro objcr*(arg: untyped): untyped =
-  if arg.kind == nnkStmtList:
-    result = newStmtList()
-    for one in arg:
-      result.add generateOc(one)
-  else:
-    result = generateOc(arg)
-
-# proc main() =
-
-#   var pool = newClass("NSAutoReleasePool")
-#   objcr:
-#     [NSApplication sharedApplication]
-#   # NSApplication.call $$"sharedApplication"
-
-#   if NSApp.isNil:
-#     echo "Failed to initialized NSApplication...  terminating..."
-#     return
-#   objcr:
-#     [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular]
-#   # NSApp[$$"setActivationPolicy:", NSApplicationActivationPolicyRegular]
-
-#   var windowStyle = NSTitledWindowMask or NSClosableWindowMask or
-#     NSMiniaturizableWindowMask or NSResizableWindowMask
-
-#   var windowRect = NSMakeRect(100,100,400,400)
-#   var window = NSWindow.init(windowRect, windowStyle, NSBackingStoreBuffered, NO)
-#   window.autorelease()
-#   objcr:
-#     [window setTitle:"Hello"]
-
-#   var AppDelegate = makeDelegate()
-#   var appDel = newClass("AppDelegate")
-
-#   var ivar = AppDelegate.getIvar("apple")
-
-#   setIvar(appDel, ivar, cast[ID](123))
-#   objcr:
-#     [NSApp setDelegate:appDel]
-#     [window display]
-#     [window orderFrontRegardless]
-#     [NSApp run]
-#     [pool drain]
-#   # window.id[$$"display"]
-#   # window.id[$$"orderFrontRegardless"]
-#   # NSApp[$$"run"]
-#   # pool[$$"drain"]
-#   AppDelegate.disposeClassPair()
-
-# when isMainModule:
-#   main()

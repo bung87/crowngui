@@ -1,5 +1,5 @@
 const OBJC_LIB_NAME* = "libobjc.A.dylib"
-
+import macros, regex, sequtils, strutils
 {.pragma: objcimport, cdecl, importc, dynlib: OBJC_LIB_NAME.}
 {.pragma: objccallback, cdecl.}
 
@@ -129,7 +129,7 @@ proc class_setWeakIvarLayout*(cls: Class; layout: ptr uint8) {.objcimport.}
 proc class_getProperty(cls: Class; name: cstring): Property {.objcimport.}
 template getProperty*(cls: Class; name: string): untyped =
   class_getProperty(cls, name.cstring)
-proc get_nsstring*(v: cstring): ID {.objcimport, discardable.}
+# proc get_nsstring*(v: cstring): ID {.objcimport, discardable.}
 proc class_copyPropertyList*(cls: Class, outCount: var cuint): ptr Property {.objcimport.}
 proc propertyList*(cls: Class): seq[Property] =
   var
@@ -287,7 +287,7 @@ proc object_getClassName(obj: ID): cstring {.objcimport.}
 proc getClassName*(obj: ID): string =
   result = $object_getClassName(obj)
 
-proc objc_getClass*(name: cstring): Class {.objcimport.}
+proc objc_getClass(name: cstring): Class {.objcimport.}
 template getClass*(name: string): untyped =
   objc_getClass(name.cstring)
 
@@ -660,6 +660,79 @@ template loadWeak*(location: var ID): untyped =
 proc objc_storeWeak(location: var ID; obj: ID): ID {.objcimport.}
 template storeWeak*(location: var ID; obj: ID): untyped =
   objc_storeWeak(location, obj)
+
+proc genCall(e: var NimNode, args: NimNode) =
+  var pv = false
+  for i in 0 ..< args.len:
+    if args[i].kind == nnkIdent:
+      var m: RegexMatch
+      if args[i].strVal.match(re"^[A-Z]+\w+", m) and i == 0:
+        e.add nnkStmtListExpr.newTree(
+          nnkWhenStmt.newTree(
+            nnkElifExpr.newTree(
+              nnkInfix.newTree(
+                ident("is"),
+                args[i],
+                ident("ID")
+          ),
+          args[i]
+        ),
+            nnkElseExpr.newTree(
+              newCall(ident"ID", nnkCall.newTree(ident"getClass", args[i].toStrLit))
+          )
+        )
+        )
+
+      else:
+        if i == 0:
+          pv = false
+          e.add args[i]
+        else:
+          if args[i].strVal().endsWith(":"):
+            pv = true
+            e.add nnkCall.newTree(ident"registerName", args[i].toStrLit)
+          else:
+            if pv == true:
+              e.add args[i]
+              pv = false
+            else:
+              e.add nnkCall.newTree(ident"registerName", args[i].toStrLit)
+    elif args[i].kind == nnkStrLit:
+      e.add newCall(ident"get_nsstring", args[i])
+    else:
+      e.add args[i]
+
+proc replaceBracket(node: NimNode): NimNode =
+  var z = 0
+  if node.kind != nnkBracket:
+    return node
+  var newnode = newCall(ident"objc_msgSend")
+  for s in node:
+    var son = node[z]
+    if son.kind == nnkCommand:
+      genCall(newnode, son)
+    elif son.kind == nnkExprColonExpr:
+      var self = son[0][0]
+      var sel = ident(son[0][1].strVal & ":")
+      var v = son[1]
+      var f = nnkCommand.newTree(self, sel, v)
+      var cc = toSeq(son.children)
+      for v in cc[2 .. ^1]:
+        f.add v
+      genCall(newnode, f)
+    inc z
+  return newnode
+
+proc generateOc(arg: NimNode): NimNode =
+  result = replaceBracket(arg)
+
+macro objcr*(arg: untyped): untyped =
+  if arg.kind == nnkStmtList:
+    result = newStmtList()
+    for one in arg:
+      result.add generateOc(one)
+  else:
+    result = generateOc(arg)
 
 func get_nsstring*(c_str: string): ID =
   return objc_msgSend(getClass("NSString").ID, registerName("stringWithUTF8String:"), c_str.cstring)

@@ -1,4 +1,4 @@
-import objc, cocoa, strutils, macros
+import objc, cocoa, foundation
 
 {.passL: "-framework Foundation".}
 {.passL: "-framework AppKit".}
@@ -30,14 +30,6 @@ type
   CMPoint = object
     x, y: float64
 
-proc `@`(a: string): ID =
-  objc_msgSend(getClass("NSString").ID, $$"stringWithUTF8String:", a.cstring)
-
-let NSBackingStoreBuffered = 2.cuint
-
-proc newClass(cls: string): ID =
-  objc_msgSend(objc_msgSend(getClass(cls).ID, $$"alloc"), $$"init")
-
 proc main() =
   objcr:
     [NSApplication sharedApplication]
@@ -54,16 +46,16 @@ proc main() =
     [NSApp setMainMenu: menuBar]
   # discard NSApp.objc_msgSend($$"setMainMenu:", menuBar)
 
-    var appMenu = newClass("NSMenu")
+    # var appMenu = newClass("NSMenu")
 
-    var quitTitle = @"Quit"
-    var quitMenuItem = create_menu_item(quitTitle, "terminate:", "q")
-    discard appMenu.objc_msgSend($$"addItem:", quitMenuItem)
-    discard appMenuItem.objc_msgSend($$"setSubmenu:", appMenu)
+    # var quitTitle = @"Quit"
+    # var quitMenuItem = create_menu_item(quitTitle, "terminate:", "q")
+    # discard appMenu.objc_msgSend($$"addItem:", quitMenuItem)
+    # discard appMenuItem.objc_msgSend($$"setSubmenu:", appMenu)
 
     var mainWindow = objc_msgSend(getClass("NSWindow").ID, $$"alloc")
     var rect = CMRect(x: 0, y: 0, w: 200, h: 200)
-    # [mainWindow $$"initWithContentRect:styleMask:backing:defer:", NSTitledWindowMask, NSBackingStoreBuffered, false]
+    # [mainWindow $$"initWithContentRect:styleMask:backing:defer:", rect, NSTitledWindowMask, NSBackingStoreBuffered, false]
     discard mainWindow.objc_msgSend($$"initWithContentRect:styleMask:backing:defer:",
       rect, NSTitledWindowMask, NSBackingStoreBuffered, false)
 
