@@ -287,7 +287,7 @@ proc object_getClassName(obj: ID): cstring {.objcimport.}
 proc getClassName*(obj: ID): string =
   result = $object_getClassName(obj)
 
-proc objc_getClass(name: cstring): Class {.objcimport.}
+proc objc_getClass*(name: cstring): Class {.objcimport.}
 template getClass*(name: string): untyped =
   objc_getClass(name.cstring)
 
@@ -377,7 +377,7 @@ template getName*(sel: SEL): untyped =
 proc `$`*(sel: SEL): string =
   getName(sel)
 
-proc sel_registerName(str: cstring): SEL {.objcimport.}
+proc sel_registerName*(str: cstring): SEL {.objcimport.}
 template registerName*(str: string): untyped =
   sel_registerName(str.cstring)
 

@@ -1,4 +1,4 @@
-import objc, cocoa, strutils
+import objc, cocoa, strutils, macros
 
 {.passL: "-framework Foundation".}
 {.passL: "-framework AppKit".}
@@ -42,46 +42,39 @@ proc main() =
   objcr:
     [NSApplication sharedApplication]
 
-  if NSApp.isNil:
-    echo "Failed to initialized NSApplication...  terminating..."
-    return
-  # objcr:
-    # [NSApp setActivationPolicy:NSApplicationActivationPolicyRegular.cint]
-  discard objc_msgSend(NSApp, $$"setActivationPolicy:", NSApplicationActivationPolicyRegular.cint)
+    if NSApp.isNil:
+      echo "Failed to initialized NSApplication...  terminating..."
+      return
+    [NSApp setActivationPolicy: NSApplicationActivationPolicyRegular.cint]
 
-  # Create the menubar
-  var menuBar = newClass("NSMenu")
-  var appMenuItem = newClass("NSMenuItem")
+    var menuBar = newClass("NSMenu")
+    var appMenuItem = newClass("NSMenuItem")
 
-  discard menuBar.objc_msgSend($$"addItem:", appMenuItem)
-  discard NSApp.objc_msgSend($$"setMainMenu:", menuBar)
+    discard menuBar.objc_msgSend($$"addItem:", appMenuItem)
+    [NSApp setMainMenu: menuBar]
+  # discard NSApp.objc_msgSend($$"setMainMenu:", menuBar)
 
-  var appMenu = newClass("NSMenu")
+    var appMenu = newClass("NSMenu")
 
-  var quitTitle = @"Quit"
-  var quitMenuItem = create_menu_item(quitTitle, "terminate:", "q")
-  discard appMenu.objc_msgSend($$"addItem:", quitMenuItem)
-  discard appMenuItem.objc_msgSend($$"setSubmenu:", appMenu)
+    var quitTitle = @"Quit"
+    var quitMenuItem = create_menu_item(quitTitle, "terminate:", "q")
+    discard appMenu.objc_msgSend($$"addItem:", quitMenuItem)
+    discard appMenuItem.objc_msgSend($$"setSubmenu:", appMenu)
 
-  var mainWindow = objc_msgSend(getClass("NSWindow").ID, $$"alloc")
-  var rect = CMRect(x: 0, y: 0, w: 200, h: 200)
-  discard mainWindow.objc_msgSend($$"initWithContentRect:styleMask:backing:defer:",
-    rect, NSTitledWindowMask, NSBackingStoreBuffered, false)
+    var mainWindow = objc_msgSend(getClass("NSWindow").ID, $$"alloc")
+    var rect = CMRect(x: 0, y: 0, w: 200, h: 200)
+    # [mainWindow $$"initWithContentRect:styleMask:backing:defer:", NSTitledWindowMask, NSBackingStoreBuffered, false]
+    discard mainWindow.objc_msgSend($$"initWithContentRect:styleMask:backing:defer:",
+      rect, NSTitledWindowMask, NSBackingStoreBuffered, false)
 
-  var pos = CMPoint(x: 20, y: 20)
-  discard mainWindow.objc_msgSend($$"cascadeTopLeftFromPoint:", pos)
-  discard mainWindow.objc_msgSend($$"setTitle:", @"Hello")
-  discard mainWindow.objc_msgSend($$"makeKeyAndOrderFront:", NSApp)
-  # objcr:
-    # [mainWindow cascadeTopLeftFromPoint: pos]
-    # [mainWindow setTitle: "Hello"]
-    # [mainWindow makeKeyAndOrderFront: NSApp]
-    # [NSApp activateIgnoringOtherApps:true]
-    # [NSApp run]
+    var pos = CMPoint(x: 20, y: 20)
 
-  # Bring the app out
-  discard objc_msgSend(NSApp, $$("activateIgnoringOtherApps:"), true)
-  discard objc_msgSend(NSApp, $$("run"))
+    [mainWindow cascadeTopLeftFromPoint: pos]
+    [mainWindow setTitle: "Hello"]
+    [mainWindow makeKeyAndOrderFront: NSApp]
+    [NSApp activateIgnoringOtherApps: true]
+    [NSApp run]
+
 
 when isMainModule:
   main()

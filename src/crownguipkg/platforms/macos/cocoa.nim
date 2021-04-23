@@ -117,46 +117,70 @@ proc canBecome(id: ID) =
 proc newClass(cls: string): ID =
   objc_msgSend(objc_msgSend(getClass(cls).ID, $$"alloc"), $$"init")
 
-proc genCall(args: var NimNode): NimNode =
-  result = newCall(ident"objc_msgSend")
+proc genCall(e: var NimNode, args: NimNode) =
+  var pv = false
   for i in 0 ..< args.len:
-    result.add args[i]
-  if args[0].kind == nnkIdent:
-    var m: RegexMatch
-    if args[0].strVal.match(re"^[A-Z]+\w+", m):
-      result[1] = newCall(ident"ID", nnkCall.newTree(ident"getClass", args[0].toStrLit))
-    else:
-      result[1] = newDotExpr(args[0], ident"ID")
-  if args[1].kind == nnkIdent:
-    result[2] = nnkCall.newTree(ident"registerName", args[1].toStrLit)
-  elif args[1].kind == nnkStrLit:
-    echo args[1].strVal
-    result[2] = newCall(ident"get_nsstring", args[1])
+    if args[i].kind == nnkIdent:
+      var m: RegexMatch
+      if args[i].strVal.match(re"^[A-Z]+\w+", m) and i == 0:
+        e.add nnkStmtListExpr.newTree(
+          nnkWhenStmt.newTree(
+            nnkElifExpr.newTree(
+              nnkInfix.newTree(
+                ident("is"),
+                args[i],
+                ident("ID")
+          ),
+          args[i]
+        ),
+            nnkElseExpr.newTree(
+              newCall(ident"ID", nnkCall.newTree(ident"getClass", args[i].toStrLit))
+          )
+        )
+        )
 
-proc replaceBracket(node: var NimNode) =
+      else:
+        if i == 0:
+          pv = false
+          e.add args[i]
+        else:
+          if args[i].strVal().endsWith(":"):
+            pv = true
+            e.add nnkCall.newTree(ident"registerName", args[i].toStrLit)
+          else:
+            if pv == true:
+              e.add args[i]
+              pv = false
+            else:
+              e.add nnkCall.newTree(ident"registerName", args[i].toStrLit)
+    elif args[i].kind == nnkStrLit:
+      e.add newCall(ident"get_nsstring", args[i])
+    else:
+      e.add args[i]
+
+proc replaceBracket(node: NimNode): NimNode =
   var z = 0
+  if node.kind != nnkBracket:
+    return node
+  var newnode = newCall(ident"objc_msgSend")
   for s in node:
     var son = node[z]
     if son.kind == nnkCommand:
-      node = genCall(son)
+      genCall(newnode, son)
     elif son.kind == nnkExprColonExpr:
-      var tmp = son[0]
-      node = genCall(tmp)
-    else:
-      replaceBracket(son)
-    # if son.kind == nnkReturnStmt:
-    #   let value = if son[0].kind != nnkEmpty and son[0].kind = nnkBracket: genCall()
-    #   node[z] = nnkReturnStmt.newTree(value)
-    # elif son.kind == nnkAsgn and son[0].kind == nnkIdent and $son[0] == "result":
-    #   node[z] = nnkAsgn.newTree(son[0], nnkCall.newTree(jsResolve, son[1]))
-    # else:
-    #   replaceBracket(son)
+      var self = son[0][0]
+      var sel = ident(son[0][1].strVal & ":")
+      var v = son[1]
+      var f = nnkCommand.newTree(self, sel, v)
+      var cc = toSeq(son.children)
+      for v in cc[2 .. ^1]:
+        f.add v
+      genCall(newnode, f)
     inc z
+  return newnode
 
 proc generateOc(arg: NimNode): NimNode =
-  result = arg
-  replaceBracket(result)
-
+  result = replaceBracket(arg)
 
 macro objcr*(arg: untyped): untyped =
   if arg.kind == nnkStmtList:
