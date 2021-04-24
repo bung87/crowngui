@@ -1849,6 +1849,53 @@ static void make_nav_policy_decision(id self, SEL cmd, id webView, id response,
   }
 }
 
+WEBVIEW_API void webview_load_HTML(struct webview *w,const char *html) {
+    objc_msgSend(w->priv.webview, sel_registerName("loadHTMLString:baseURL:"), get_nsstring(html), nil);
+}
+
+WEBVIEW_API void webview_load_URL(struct webview *w,const char *url) {
+  id requestURL = objc_msgSend((id)objc_getClass("NSURL"), sel_registerName("URLWithString:"), get_nsstring(url));
+  objc_msgSend(requestURL, sel_registerName("autorelease"));
+  id request = objc_msgSend((id)objc_getClass("NSURLRequest"), sel_registerName("requestWithURL:"), requestURL);
+  objc_msgSend(request, sel_registerName("autorelease"));
+  objc_msgSend(w->priv.webview, sel_registerName("loadRequest:"), request);
+}
+
+WEBVIEW_API void webview_reload(struct webview *w) {
+    objc_msgSend(w->priv.webview, sel_registerName("reload"));
+}
+
+WEBVIEW_API void webview_show(struct webview *w) {
+  objc_msgSend(w->priv.window, sel_registerName("reload"));
+  if (objc_msgSend(w->priv.window, sel_registerName("isMiniaturized"))) {
+      objc_msgSend(w->priv.window, sel_registerName("deminiaturize:"), nil);
+  }
+  objc_msgSend(w->priv.window, sel_registerName("makeKeyAndOrderFront:"), nil);
+}
+
+WEBVIEW_API void webview_hide(struct webview *w) {
+  objc_msgSend(w->priv.window, sel_registerName("orderOut:"), nil);
+}
+
+WEBVIEW_API void webview_minimize(struct webview *w) {
+  objc_msgSend(w->priv.window, sel_registerName("miniaturize:"), nil);
+}
+
+WEBVIEW_API void webview_close(struct webview *w) {
+  objc_msgSend(w->priv.window, sel_registerName("close"));
+}
+
+WEBVIEW_API void webview_set_size(struct webview *w,int width, int height) {
+  CGRect* frame = (CGRect *) objc_msgSend(w->priv.window, sel_registerName("frame"));
+  frame->size.width = width;
+  frame->size.height = height;
+  objc_msgSend(w->priv.window, sel_registerName("setFrame:display:"), *frame, true);
+}
+
+WEBVIEW_API void webview_set_developer_tools_enabled(struct webview *w,bool enabled) {
+  objc_msgSend(objc_msgSend(objc_msgSend(w->priv.webview, sel_registerName("configuration")), sel_registerName("preferences")),
+                sel_registerName("_setDeveloperExtrasEnabled:"), enabled);
+}
 
 WEBVIEW_API int webview_init(struct webview *w) {
   w->priv.pool = objc_msgSend((id)objc_getClass("NSAutoreleasePool"),

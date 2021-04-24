@@ -89,6 +89,9 @@ var
   dispatchTable = newTable[int, DispatchFn]()                                   # for dispatch
 
 func init(w: Webview): cint {.importc: "webview_init", header: headerC.}
+func loadHTML*(w: Webview; html: cstring) {.importc: "webview_load_HTML", header: headerC.}
+func loadURL*(w: Webview; url: cstring) {.importc: "webview_load_URL", header: headerC.}
+func reload(w: Webview; url: cstring) {.importc: "webview_reload", header: headerC.}
 func loop(w: Webview; blocking: cint): cint {.importc: "webview_loop", header: headerC.}
 func js*(w: Webview; javascript: cstring): cint {.importc: "webview_eval", header: headerC,
     discardable.} ## Evaluate a JavaScript cstring, runs the javascript string on the window
@@ -109,7 +112,7 @@ func jsDebug*(format: cstring) {.varargs, importc: "webview_debug",
 func jsLog*(s: cstring) {.importc: "webview_print_log", header: headerC.} ## `console.log()` directly inside the JavaScript context.
 func webview(title: cstring; url: cstring; w: cint; h: cint; resizable: cint): cint {.importc: "webview",
     header: headerC, used.}
-func setUrl*(w: Webview; url: cstring) {.importc: "webview_launch_external_URL", header: headerC.} ## Set the current URL
+func launchExternalURL*(w: Webview; url: cstring) {.importc: "webview_launch_external_URL", header: headerC.} ## Set the current URL
 func setIconify*(w: Webview; mustBeIconified: bool) {.importc: "webview_set_iconify",
     header: headerC.} ## Set window to be Minimized Iconified
 
@@ -412,14 +415,16 @@ proc newWebView*(path: static[string] = ""; title = ""; width: Positive = 1000; 
           content.add "</tr>"
         content.add "</table>"
         # content.add fmt"<pre>{escapeHtml(d)}</pre>"
-      let html = dataUriHtmlHeader fmt"""<!DOCTYPE html><html><head><meta charset="utf-8"><meta content='width=device-width,initial-scale=1' name=viewport></head><body>{content}</body></html>"""
+      let html = fmt"""<!DOCTYPE html><html><head><meta charset="utf-8"><meta content='width=device-width,initial-scale=1' name=viewport></head><body>{content}</body></html>"""
+      # html = dataUriHtmlHeader html
       var cls = self.getClass()
       var ivar = cls.getIvar("webview")
       var wv = cast[Webview](self.getIvar(ivar))
-      objcr:
-        let nsURL1: ID = [NSURL URLWithString: get_nsstring(html)]
-        let url = [NSURLRequest requestWithURL: nsURL1]
-        [wv.priv.webview loadRequest: url]
+      wv.loadHTML(html)
+      # objcr:
+      #   let nsURL1: ID = [NSURL URLWithString: get_nsstring(html)]
+      #   let url = [NSURLRequest requestWithURL: nsURL1]
+      #   [wv.priv.webview loadRequest: url]
       # webview.setUrl(html)
       # webview.js(fmt"""window.api.jsSetUrl("{html}")""".cstring)
       return Yes
