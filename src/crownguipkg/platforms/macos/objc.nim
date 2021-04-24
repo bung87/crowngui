@@ -694,6 +694,8 @@ proc transExprColonExpr(son: NimNode): NimNode =
     var f = nnkCommand.newTree(c, son[1])
     return f
 
+proc replaceBracket(node: NimNode): NimNode
+
 proc transformNode(node: NimNode): NimNode =
   if node.kind == nnkIdent:
     var m: RegexMatch
@@ -718,6 +720,8 @@ proc transformNode(node: NimNode): NimNode =
       return node
   elif node.kind == nnkStrLit:
     return newCall(ident"get_nsstring", node)
+  elif node.kind == nnkBracket:
+    return replaceBracket(node)
   else:
     return node
 
