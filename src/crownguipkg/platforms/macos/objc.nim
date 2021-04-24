@@ -700,22 +700,21 @@ proc transformNode(node: NimNode): NimNode =
   if node.kind == nnkIdent:
     var m: RegexMatch
     if node.strVal.match(re"^[A-Z]+\w+", m):
+      let declaredCall = nnkCall.newTree(ident("declared"), node)
+      let isId = nnkInfix.newTree(ident("is"), node, ident("ID"))
       return nnkStmtListExpr.newTree(
         nnkWhenStmt.newTree(
           nnkElifExpr.newTree(
-            nnkInfix.newTree(
-              ident("is"),
-              node,
-              ident("ID")
+          nnkInfix.newTree(
+            ident("and"),
+            declaredCall,
+            isId
         ),
         node
       ),
-          nnkElseExpr.newTree(
-            newCall(ident"ID", nnkCall.newTree(ident"getClass", node.toStrLit))
+          nnkElseExpr.newTree(newCall(ident"ID", nnkCall.newTree(ident"getClass", node.toStrLit)))
         )
       )
-      )
-
     else:
       return node
   elif node.kind == nnkStrLit:
