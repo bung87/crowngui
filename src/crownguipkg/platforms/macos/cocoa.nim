@@ -1,11 +1,11 @@
 import objc, foundation, strutils, math, sequtils, macros
 
+type
+  NSWindow* = object of NSObject # appkit
 
+  NSWindowController* = object of NSObject # appkit
 
-converter toId*(w: NSWindow): ID = cast[ID](w.unsafeAddr)
-converter toId*(w: NSString): ID = cast[ID](w.unsafeAddr)
-proc `@`*(a: string): NSString =
-  result.id = objc_msgSend(getClass("NSString").ID, $$"stringWithUTF8String:", a.cstring)
+converter toId*(w: NSWindow): ID = w.id
 
 proc objc_alloc(cls: string): ID =
   objc_msgSend(getClass(cls).ID, $$"alloc")

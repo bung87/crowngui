@@ -1,94 +1,60 @@
-import objc
+import objc, foundation
+
+type NSMenu = object of NSObject # appkit
+type NSMenuItem = object of NSObject # appkit
 const NSEventModifierFlagCommand = (1 shl 20)
 const NSEventModifierFlagOption = (1 shl 19)
-func create_menu_item(title: ID, action: string, key: string): ID =
+
+func createMenuItem(title: ID, action: string, key: string): ID =
   result = objc_msgSend(getClass("NSMenuItem").ID, registerName("alloc"))
   objc_msgSend(result, registerName("initWithTitle:action:keyEquivalent:"),
-              title, registerName(action), get_nsstring(key))
+              title, if action != "": registerName(action) else: nil, get_nsstring(key))
   objc_msgSend(result, registerName("autorelease"))
 
 func createMenu*() =
-  let menubar: ID =
-    objc_msgSend(getClass("NSMenu").ID, $$"alloc");
-  objc_msgSend(menubar, $$"initWithTitle:", get_nsstring(""));
-  discard objc_msgSend(menubar, $$"autorelease")
+  objcr:
+    let menubar: ID = [NSMenu alloc]
+    [menubar initWithTitle: ""]
+    [menubar autorelease]
+    let info = [NSProcessInfo processInfo]
+    let appName = [info processName]
+    let appMenuItem = [NSMenuItem alloc]
+    [appMenuItem initWithTitle: appName, action: nil, keyEquivalent: ""]
+    let appMenu = [NSMenu alloc]
+    [appMenu initWithTitle: appName]
+    [appMenu autorelease]
+    [appMenuItem setSubmenu: appMenu]
+    [menubar addItem: appMenuItem]
+    var title = ["Hide "stringByAppendingString: appName]
+    [appMenu addItem: createMenuItem(title, "hide:", "h")]
+    var item = createMenuItem(@"Hide Others", "hideOtherApplications:", "h")
+    [item setKeyEquivalentModifierMask: (NSEventModifierFlagOption or NSEventModifierFlagCommand)]
+    [appMenu addItem: item]
+    [appMenu addItem: createMenuItem(@"Show All", "unhideAllApplications:", "")]
+    let sep = [NSMenuItem separatorItem]
+    [appMenu addItem: sep]
+    title = ["Quit "stringByAppendingString: appName]
+    [appMenu addItem: createMenuItem(title, "terminate:", "q")]
+    var editMenuItem = [NSMenuItem alloc]
+    [editMenuItem initWithTitle: "Edit", action: "", keyEquivalent: ""]
+    var editMenu = [NSMenu alloc]
+    [editMenu initWithTitle: "Edit"]
+    [editMenu autorelease]
 
-  let appName = objc_msgSend(objc_msgSend(getClass("NSProcessInfo").ID,
-                                         registerName("processInfo")),
-                            registerName("processName"))
+    [editMenu addItem: createMenuItem(@"Undo", "undo:", "z")]
+    [editMenu addItem: createMenuItem(@"Redo", "redo:", "y")]
 
-  let appMenuItem =
-    objc_msgSend(getClass("NSMenuItem").ID, registerName("alloc"))
-  discard objc_msgSend(appMenuItem,
-               registerName("initWithTitle:action:keyEquivalent:"), appName,
-               nil, get_nsstring(""));
+    let sep2 = [NSMenuItem separatorItem]
+    [editMenu addItem: sep2]
 
-  let appMenu =
-    objc_msgSend(getClass("NSMenu").ID, registerName("alloc"))
-  discard objc_msgSend(appMenu, registerName("initWithTitle:"), appName)
-  discard objc_msgSend(appMenu, registerName("autorelease"))
+    [editMenu addItem: createMenuItem(@"Cut", "cut:", "x")]
 
-  objc_msgSend(appMenuItem, registerName("setSubmenu:"), appMenu)
-  objc_msgSend(menubar, registerName("addItem:"), appMenuItem)
+    [editMenu addItem: createMenuItem(@"Copy", "copy:", "c")]
 
-  var title =
-    objc_msgSend(get_nsstring("Hide "),
-                 registerName("stringByAppendingString:"), appName)
-  var item = create_menu_item(title, "hide:", "h")
-  objc_msgSend(appMenu, registerName("addItem:"), item)
+    [editMenu addItem: createMenuItem(@"Paste", "paste:", "v")]
 
-  item = create_menu_item(get_nsstring("Hide Others"), "hideOtherApplications:", "h")
-  objc_msgSend(item, registerName("setKeyEquivalentModifierMask:"),
-               (NSEventModifierFlagOption or NSEventModifierFlagCommand))
-  objc_msgSend(appMenu, registerName("addItem:"), item);
-
-  item =
-    create_menu_item(get_nsstring("Show All"), "unhideAllApplications:", "");
-  objc_msgSend(appMenu, registerName("addItem:"), item)
-
-  objc_msgSend(appMenu, registerName("addItem:"),
-               objc_msgSend(getClass("NSMenuItem").ID, registerName("separatorItem")))
-
-  title = objc_msgSend(get_nsstring("Quit "),
-                       registerName("stringByAppendingString:"), appName);
-  item = create_menu_item(title, "terminate:", "q");
-  objc_msgSend(appMenu, registerName("addItem:"), item);
-
-  var editMenuItem = objc_msgSend(getClass("NSMenuItem").ID, registerName("alloc"))
-
-  objc_msgSend(editMenuItem,
-               registerName("initWithTitle:action:keyEquivalent:"), get_nsstring("Edit"),
-               nil, get_nsstring(""));
-
-  var editMenu =
-    objc_msgSend(getClass("NSMenu").ID, registerName("alloc"))
-  objc_msgSend(editMenu, registerName("initWithTitle:"), get_nsstring("Edit"));
-  objc_msgSend(editMenu, registerName("autorelease"));
-
-  objc_msgSend(editMenuItem, registerName("setSubmenu:"), editMenu);
-  objc_msgSend(menubar, registerName("addItem:"), editMenuItem);
-
-  item = create_menu_item(get_nsstring("Undo"), "undo:", "z");
-  objc_msgSend(editMenu, registerName("addItem:"), item);
-
-  item = create_menu_item(get_nsstring("Redo"), "redo:", "y");
-  objc_msgSend(editMenu, registerName("addItem:"), item);
-
-  item = objc_msgSend(getClass("NSMenuItem").ID, registerName("separatorItem"))
-  objc_msgSend(editMenu, registerName("addItem:"), item);
-
-  item = create_menu_item(get_nsstring("Cut"), "cut:", "x");
-  objc_msgSend(editMenu, registerName("addItem:"), item);
-
-  item = create_menu_item(get_nsstring("Copy"), "copy:", "c");
-  objc_msgSend(editMenu, registerName("addItem:"), item);
-
-  item = create_menu_item(get_nsstring("Paste"), "paste:", "v");
-  objc_msgSend(editMenu, registerName("addItem:"), item);
-
-  item = create_menu_item(get_nsstring("Select All"), "selectAll:", "a");
-  objc_msgSend(editMenu, registerName("addItem:"), item);
-
-  objc_msgSend(objc_msgSend(getClass("NSApplication").ID,
-                            registerName("sharedApplication")),
-               registerName("setMainMenu:"), menubar)
+    [editMenu addItem: createMenuItem(@"Select All", "selectAll:", "a")]
+    [editMenuItem setSubmenu: editMenu]
+    [menubar addItem: editMenuItem]
+    let app = [NSApplication sharedApplication]
+    [app setMainMenu: menubar]

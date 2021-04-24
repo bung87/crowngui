@@ -71,10 +71,6 @@ type
   NSObject* = object of RootObj
     id*: ID
 
-  NSWindow* = object of NSObject
-
-  NSWindowController* = object of NSObject
-
   NSView* = object of NSObject
 
   NSTextView* = object of NSView
@@ -83,9 +79,12 @@ type
 
   NSApplication* = object of NSObject
   NSURL* = object of NSObject
+
 const
   YES* = cchar(1)
   NO* = cchar(0)
+
+converter toId*(w: NSString): ID = w.id
 
 proc isNil*(a: Class): bool =
   result = a.pointer == nil
@@ -677,75 +676,94 @@ proc objc_storeWeak(location: var ID; obj: ID): ID {.objcimport.}
 template storeWeak*(location: var ID; obj: ID): untyped =
   objc_storeWeak(location, obj)
 
+proc `@`*(a: string): NSString =
+  result.id = objc_msgSend(getClass("NSString").ID, $$"stringWithUTF8String:", a.cstring)
+
 proc transExprColonExpr(son: NimNode): NimNode =
-  var self = son[0][0]
-  var sel = ident(son[0][1].strVal & ":")
-  var v = son[1]
-  var f = nnkCommand.newTree(self, sel, v)
-  var cc = toSeq(son.children)
-  for v in cc[2 .. ^1]:
-    f.add v
-  return f
+  if son[0].kind == nnkCommand:
+    var self = son[0][0]
+    var sel = ident(son[0][1].strVal & ":")
+    var v = son[1]
+    var f = nnkCommand.newTree(self, sel, v)
+    var cc = toSeq(son.children)
+    for v in cc[2 .. ^1]:
+      f.add v
+    return f
+  else:
+    let c = nnkCall.newTree(ident"registerName", ident(son[0].strVal & ":").toStrLit)
+    var f = nnkCommand.newTree(c, son[1])
+    return f
 
-proc genCall(e: var NimNode, args: NimNode) =
-  var pv = false
-  for i in 0 ..< args.len:
-    if args[i].kind == nnkIdent:
-      var m: RegexMatch
-      if args[i].strVal.match(re"^[A-Z]+\w+", m) and i == 0:
-        e.add nnkStmtListExpr.newTree(
-          nnkWhenStmt.newTree(
-            nnkElifExpr.newTree(
-              nnkInfix.newTree(
-                ident("is"),
-                args[i],
-                ident("ID")
-          ),
-          args[i]
+proc transformNode(node: NimNode): NimNode =
+  if node.kind == nnkIdent:
+    var m: RegexMatch
+    if node.strVal.match(re"^[A-Z]+\w+", m):
+      return nnkStmtListExpr.newTree(
+        nnkWhenStmt.newTree(
+          nnkElifExpr.newTree(
+            nnkInfix.newTree(
+              ident("is"),
+              node,
+              ident("ID")
         ),
-            nnkElseExpr.newTree(
-              newCall(ident"ID", nnkCall.newTree(ident"getClass", args[i].toStrLit))
-          )
+        node
+      ),
+          nnkElseExpr.newTree(
+            newCall(ident"ID", nnkCall.newTree(ident"getClass", node.toStrLit))
         )
-        )
+      )
+      )
 
-      else:
-        if i == 0:
-          pv = false
-          e.add args[i]
-        else:
-          if args[i].strVal().endsWith(":"):
-            pv = true
-            e.add nnkCall.newTree(ident"registerName", args[i].toStrLit)
-          else:
-            if pv == true:
-              e.add args[i]
-              pv = false
-            else:
-              e.add nnkCall.newTree(ident"registerName", args[i].toStrLit)
-    elif args[i].kind == nnkStrLit:
-      e.add newCall(ident"get_nsstring", args[i])
     else:
-      e.add args[i]
+      return node
+  elif node.kind == nnkStrLit:
+    return newCall(ident"get_nsstring", node)
+  else:
+    return node
+
+proc extractSelf(self: NimNode, args: var seq[NimNode]): NimNode =
+  case self.kind
+  of nnkExprColonExpr:
+    case self[0].kind
+    of nnkCommand:
+      let sel = self[0][1]
+      let v = self[1]
+      let ce = nnkExprColonExpr.newTree(sel, v)
+      args.insert(ce)
+      return self[0][0]
+    else:
+      discard
+  of nnkCommand:
+    if self[1].kind == nnkIdent:
+      args.insert(nnkCall.newTree(ident"registerName", self[1].toStrLit))
+    else:
+      args.insert(self[1])
+    return self[0]
+  else:
+    discard
+  return self
 
 proc replaceBracket(node: NimNode): NimNode =
-  var z = 0
   if node.kind != nnkBracket:
     return node
   var newnode = newCall(ident"objc_msgSend")
-  for s in node:
-    var son = node[z]
-    if son.kind == nnkCommand:
-      genCall(newnode, son)
-    elif son.kind == nnkExprColonExpr:
-      genCall(newnode, transExprColonExpr(son))
-    else:
-      newnode.add son
-    inc z
+  var child = toSeq(node.children)
+  var self = child[0]
+  var args = child[1 .. ^1]
+  self = extractSelf(self, args)
+  newnode.add transformNode(self)
+  var positionalArgs = args.filterIt(it.kind != nnkExprColonExpr)
+  for pa in positionalArgs:
+    newnode.add transformNode(pa)
+  var namedArgs = args.filterIt(it.kind == nnkExprColonExpr)
+  if namedArgs.len > 0:
+    var names = namedArgs.mapIt(it[0].strVal()).join(":") & ":"
+    # var values = namedArgs.mapIt( it[1] )
+    newnode.add nnkCall.newTree(ident"registerName", newStrLitNode(names))
+    for a in namedArgs:
+      newnode.add transformNode(a[1])
   return newnode
 
-proc generateOc(arg: NimNode): NimNode =
-  result = replaceBracket(arg)
 
 macro objcr*(arg: untyped): untyped =
   if arg.kind == nnkStmtList:
@@ -756,18 +774,31 @@ macro objcr*(arg: untyped): untyped =
         if one[^1][^1].kind == nnkBracket:
           var b = nnkLetSection.newTree()
           copyChildrenTo(one, b)
-          b[^1][^1] = generateOc(one[^1][^1])
+          b[^1][^1] = replaceBracket(one[^1][^1])
           result.add b
+        else:
+          result.add one
       of nnkVarSection:
         if one[^1][^1].kind == nnkBracket:
           var b = nnkVarSection.newTree()
           copyChildrenTo(one, b)
-          b[^1][^1] = generateOc(one[^1][^1])
+          b[^1][^1] = replaceBracket(one[^1][^1])
           result.add b
+        else:
+          result.add one
+      of nnkAsgn:
+        if one[1].kind == nnkBracket:
+          var b = nnkAsgn.newTree()
+          copyChildrenTo(one, b)
+          b[1] = replaceBracket(one[1])
+        else:
+          result.add one
+      of nnkBracket:
+        result.add replaceBracket(one)
       else:
-        result.add generateOc(one)
+        result.add one
   else:
-    result = generateOc(arg)
+    result = replaceBracket(arg)
 
 func get_nsstring*(c_str: string): ID =
   return objc_msgSend(getClass("NSString").ID, registerName("stringWithUTF8String:"), c_str.cstring)

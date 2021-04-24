@@ -394,8 +394,6 @@ proc newWebView*(path: static[string] = ""; title = ""; width: Positive = 1000; 
   result = webView(title, path, width, height, resizable, debug, callback)
   when defined(macosx):
     let webview = result
-    webview.bindProcs("api"):
-      proc jsSetUrl(url: string) = webview.setUrl(url)
     let Delegate = allocateClassPair(getClass("NSObject"), "AppDelegate", 0)
     proc application(self: ID; cmd: SEL; sender: NSApplication; openFile: NSString): Bool {.cdecl.} =
       let path = cast[cstring](objc_msgSend(cast[ID](openFile.unsafeAddr), $$"UTF8String"))
