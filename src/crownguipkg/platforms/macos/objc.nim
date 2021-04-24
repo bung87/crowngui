@@ -696,24 +696,22 @@ proc transExprColonExpr(son: NimNode): NimNode =
 
 proc replaceBracket(node: NimNode): NimNode
 
+template isIDCheck(a: untyped): untyped = (when declared(a): a is ID else: false)
+
 proc transformNode(node: NimNode): NimNode =
+  let isIDCheck = bindSym("isIDCheck", brClosed)
   if node.kind == nnkIdent:
     var m: RegexMatch
     if node.strVal.match(re"^[A-Z]+\w+", m):
-      let declaredCall = nnkCall.newTree(ident("declared"), node)
-      let isId = nnkInfix.newTree(ident("is"), node, ident("ID"))
+      let declaredCall = nnkCall.newTree(isIDCheck, node)
       return nnkStmtListExpr.newTree(
         nnkWhenStmt.newTree(
           nnkElifExpr.newTree(
-          nnkInfix.newTree(
-            ident("and"),
             declaredCall,
-            isId
+            node
         ),
-        node
-      ),
-          nnkElseExpr.newTree(newCall(ident"ID", nnkCall.newTree(ident"getClass", node.toStrLit)))
-        )
+        nnkElseExpr.newTree(newCall(ident"ID", nnkCall.newTree(ident"getClass", node.toStrLit)))
+      )
       )
     else:
       return node
