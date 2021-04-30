@@ -384,6 +384,10 @@ proc newWebView*(path: static[string] = ""; title = ""; width: Positive = 1000; 
   when defined(macosx):
     let webview = result
     let Delegate = allocateClassPair(getClass("NSObject"), "AppDelegate", 0)
+    # applicationWillFinishLaunching: -> application:openFile: -> applicationDidFinishLaunching:
+    proc applicationWillFinishLaunching(self: ID; cmd: SEL; notification: ID): void {.cdecl.} =
+      echo "applicationWillFinishLaunching"
+
     proc application(self: ID; cmd: SEL; sender: NSApplication; openFile: NSString): Bool {.cdecl.} =
       let path = cast[cstring](objc_msgSend(cast[ID](openFile.unsafeAddr), $$"UTF8String"))
       var cls = self.getClass()
@@ -396,12 +400,11 @@ proc newWebView*(path: static[string] = ""; title = ""; width: Positive = 1000; 
       echo "applicationDidFinishLaunching"
     proc applicationWillBecomeActive(self: ID; cmd: SEL; notification: ID): void {.cdecl.} =
       echo "applicationWillBecomeActive"
-    proc applicationWillFinishLaunching(self: ID; cmd: SEL; notification: ID): void {.cdecl.} =
-      echo "applicationWillFinishLaunching"
-    when compiles(onOpenFile(webview, "")):
-      discard Delegate.addMethod($$"applicationWillFinishLaunching:", cast[IMP](applicationWillFinishLaunching), "v@:@")
 
-    discard Delegate.addMethod($$"application:openFile:", cast[IMP](application), "B@:@@")
+    discard Delegate.addMethod($$"applicationWillFinishLaunching:", cast[IMP](applicationWillFinishLaunching), "v@:@")
+    when compiles(onOpenFile(webview, "")):
+      discard Delegate.addMethod($$"application:openFile:", cast[IMP](application), "B@:@@")
+
     discard Delegate.addMethod($$"applicationDidFinishLaunching:", cast[IMP](applicationDidFinishLaunching), "v@:@")
     discard Delegate.addMethod($$"applicationWillBecomeActive:", cast[IMP](applicationWillBecomeActive), "v@:@")
     discard addIvar(Delegate, "webview", sizeof(Webview), log2(sizeof(Webview).float64).int, "@")
