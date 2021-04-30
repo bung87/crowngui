@@ -1,11 +1,11 @@
 # Package
 
-version       = "0.2.6"
+version       = "0.2.7"
 author        = "bung87"
 description   = "Web Technologies based Crossplatform GUI Framework"
 license       = "MIT"
 srcDir        = "src"
-installExt    = @["nim"]
+installExt    = @["nim","h"]
 bin           = @["crowngui"]
 
 # Dependencies
