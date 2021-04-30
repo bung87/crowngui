@@ -2,7 +2,8 @@
 import os, strutils, crownguipkg/webview
 import static_server, mimetypes, asyncdispatch
 import finder
-
+import strformat, xlsx, tables, math
+export webview
 type
   EntryType = enum
     url, file, html, dir
@@ -61,6 +62,7 @@ proc css(app: ApplicationRef, css: cstring) = app.webview.css(css)
 proc exit(app: ApplicationRef) = app.webview.exit
 
 
+
 when isMainModule:
 
   # const
@@ -72,6 +74,8 @@ when isMainModule:
   #   let theme = if "--light-theme" in commandLineParams(): cssLight else: cssDark
   #   app.css(theme)
   const cssSpreadSheet = staticRead"assets/spreadsheet.css".strip.unindent.cstring
+  # app.webview.onOpenFile = proc (webview:Webview;path:string) =
+
   app.css cssSpreadSheet
   app.run()
   app.exit()

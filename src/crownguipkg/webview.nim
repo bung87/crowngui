@@ -1,5 +1,4 @@
 import tables, strutils, macros, json, os, base64, strformat, std/exitprocs
-import xlsx, tables, math
 
 const headerC = currentSourcePath().substr(0, high(currentSourcePath()) - 11) & "webview.h"
 {.passc: "-DWEBVIEW_STATIC -DWEBVIEW_IMPLEMENTATION -I" & headerC.}
@@ -35,6 +34,9 @@ type
     invokeCb {.importc: "external_invoke_cb".}: pointer                       ## Callback proc js:window.external.invoke
     priv {.importc: "priv".}: WebviewPrivObj
     userdata {.importc: "userdata".}: pointer
+    # onOpenFile*:OnOpenFile
+
+  OnOpenFile* = proc (view: Webview; filePath: string)
   Webview* = ptr WebviewObj
   DispatchFn* = proc()
   DialogType {.size: sizeof(cint).} = enum
@@ -90,6 +92,7 @@ var
 
 func init(w: Webview): cint {.importc: "webview_init", header: headerC.}
 func loadHTML*(w: Webview; html: cstring) {.importc: "webview_load_HTML", header: headerC.}
+func loadHTML*(w: Webview; html: string) = loadHTML(w, html.cstring)
 func loadURL*(w: Webview; url: cstring) {.importc: "webview_load_URL", header: headerC.}
 func reload(w: Webview; url: cstring) {.importc: "webview_reload", header: headerC.}
 func loop(w: Webview; blocking: cint): cint {.importc: "webview_loop", header: headerC.}
@@ -349,24 +352,7 @@ proc webView(title = ""; url = ""; width: Positive = 1000; height: Positive = 70
   if callback != nil: result.externalInvokeCB = callback
   if result.init() != 0: return nil
 
-proc escapeHtml*(val: string; escapeQuotes = false): string =
-  ## translates the characters `&`, `<` and `>` to their corresponding
-  ## HTML entities. if `escapeQuotes` is `true`, also translates
-  ## `"` and `'`.
 
-  for c in val:
-    case c:
-    of '&': result &= "&amp;"
-    of '<': result &= "&lt;"
-    of '>': result &= "&gt;"
-    of '"':
-      if escapeQuotes: result &= "&quot;"
-      else: result &= "\""
-    of '\'':
-      if escapeQuotes: result &= "&#39;"
-      else: result &= "'"
-    else:
-      result &= c
 
 proc newWebView*(path: static[string] = ""; title = ""; width: Positive = 1000; height: Positive = 700;
     resizable: static[bool] = true; debug: static[bool] = not defined(release); callback: ExternalInvokeCb = nil;
@@ -400,42 +386,21 @@ proc newWebView*(path: static[string] = ""; title = ""; width: Positive = 1000; 
     let Delegate = allocateClassPair(getClass("NSObject"), "AppDelegate", 0)
     proc application(self: ID; cmd: SEL; sender: NSApplication; openFile: NSString): Bool {.cdecl.} =
       let path = cast[cstring](objc_msgSend(cast[ID](openFile.unsafeAddr), $$"UTF8String"))
-      jsDebug(fmt"open with file {file}")
-      let table = parseExcel($path)
-      var content: string = ""
-      for k, v in table.data.pairs:
-        let d = $v
-        content.add fmt"<h3>{k}</h3>"
-        content.add """<table class="SpreadsheetJs">"""
-        let rows = v.toSeq(false)
-        for row in rows:
-          content.add "<tr>"
-          for col in row:
-            content.add fmt"<td>{escapeHtml(col)}</td>"
-          content.add "</tr>"
-        content.add "</table>"
-        # content.add fmt"<pre>{escapeHtml(d)}</pre>"
-      let html = fmt"""<!DOCTYPE html><html><head><meta charset="utf-8"><meta content='width=device-width,initial-scale=1' name=viewport></head><body>{content}</body></html>"""
-      # html = dataUriHtmlHeader html
       var cls = self.getClass()
       var ivar = cls.getIvar("webview")
       var wv = cast[Webview](self.getIvar(ivar))
-      wv.loadHTML(html)
-      # objcr:
-      #   let nsURL1: ID = [NSURL URLWithString: get_nsstring(html)]
-      #   let url = [NSURLRequest requestWithURL: nsURL1]
-      #   [wv.priv.webview loadRequest: url]
-      # webview.setUrl(html)
-      # webview.js(fmt"""window.api.jsSetUrl("{html}")""".cstring)
-      return Yes
+      when compiles(onOpenFile(wv, $path)):
+        return cast[Bool](onOpenFile(wv, $path))
+
     proc applicationDidFinishLaunching(self: ID; cmd: SEL; notification: ID): void {.cdecl.} =
       echo "applicationDidFinishLaunching"
     proc applicationWillBecomeActive(self: ID; cmd: SEL; notification: ID): void {.cdecl.} =
       echo "applicationWillBecomeActive"
     proc applicationWillFinishLaunching(self: ID; cmd: SEL; notification: ID): void {.cdecl.} =
       echo "applicationWillFinishLaunching"
+    when compiles(onOpenFile(webview, "")):
+      discard Delegate.addMethod($$"applicationWillFinishLaunching:", cast[IMP](applicationWillFinishLaunching), "v@:@")
 
-    discard Delegate.addMethod($$"applicationWillFinishLaunching:", cast[IMP](applicationWillFinishLaunching), "v@:@")
     discard Delegate.addMethod($$"application:openFile:", cast[IMP](application), "B@:@@")
     discard Delegate.addMethod($$"applicationDidFinishLaunching:", cast[IMP](applicationDidFinishLaunching), "v@:@")
     discard Delegate.addMethod($$"applicationWillBecomeActive:", cast[IMP](applicationWillBecomeActive), "v@:@")
