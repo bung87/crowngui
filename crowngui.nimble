@@ -12,16 +12,10 @@ bin           = @["crowngui"]
 
 requires "nim >= 1.1.1"
 # requires "nimble >= 0.11.4"
-requires "plists"
-requires "cligen >= 1.5"
-requires "imageman"
-requires "zopflipng"
-requires "rcedit"
-requires "zippy"
+
 requires "regex"
 requires "xlsx"
 requires "http://github.com/bung87/static_server >= 2.2.0"
-requires "https://github.com/bung87/icon >= 0.2.0"
 requires "jsonschema"
 
 task docs,"a":

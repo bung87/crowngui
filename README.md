@@ -24,12 +24,12 @@ Your project `.nimble` file
 bin           = @["yourexecutable"]
 ```
 
-crowngui cli will bundle your executable to `exe` on windows, `.app` on mac  
+`crowncli` will bundle your executable to `exe` on windows, `.app` on mac  
 
 Your project root can have `"logo.png"` which will generate as icon of application.  
 
 ### CLI usage  
-`crowngui [build,run] --help`  
+`crowncli [build,run] --help`  
 
 ```
 Usage:
@@ -49,10 +49,10 @@ Options:
 ## Development  
 
 run  
-`nim c -r -f src/crownguipkg/cli.nim run --target macos`  
+`crowncli run --target macos`  
 
 build  
-`nim c -r -f src/crownguipkg/cli.nim build --target macos`
+`crowncli build --target macos`
 
 
 ## Cross compilation for Windows  
