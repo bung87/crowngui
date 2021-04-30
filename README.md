@@ -2,7 +2,8 @@
 
 Web Technologies based Crossplatform GUI Framework  
 
-cli tool:[crowncli](https://github.com/bung87/crowncli) for build application.   
+CLI tool:  
+[crowncli](https://github.com/bung87/crowncli) for build application.   
 
 ## Usage  
 file: yourexecutable.nim  
