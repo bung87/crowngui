@@ -58,9 +58,10 @@ proc newApplication*(entry: static[string]): ApplicationRef =
   result.entryType = entryType
   result.webview = newWebView(url)
 
-proc run(app: ApplicationRef) = app.webview.run
-proc css(app: ApplicationRef, css: cstring) = app.webview.css(css)
-proc exit(app: ApplicationRef) = app.webview.exit
+proc run*(app: ApplicationRef) = app.webview.run
+proc css*(app: ApplicationRef, css: cstring) = app.webview.css(css)
+proc css*(app: ApplicationRef, css: string) = app.webview.css(css.cstring)
+proc exit*(app: ApplicationRef) = app.webview.exit
 
 
 
