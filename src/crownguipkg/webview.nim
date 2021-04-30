@@ -1,4 +1,4 @@
-import tables, strutils, macros, json, os, base64, strformat, std/exitprocs
+import tables, strutils, macros, json, os, base64, strformat, std/exitprocs, math
 
 const headerC = currentSourcePath().substr(0, high(currentSourcePath()) - 11) & "webview.h"
 {.passc: "-DWEBVIEW_STATIC -DWEBVIEW_IMPLEMENTATION -I" & headerC.}

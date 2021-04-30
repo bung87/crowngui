@@ -2,8 +2,9 @@
 import os, strutils, crownguipkg/webview
 import static_server, mimetypes, asyncdispatch
 import finder
-import strformat, xlsx, tables, math
+
 export webview
+
 type
   EntryType = enum
     url, file, html, dir
@@ -65,17 +66,14 @@ proc exit(app: ApplicationRef) = app.webview.exit
 
 when isMainModule:
 
-  # const
-  #   cssDark = staticRead"assets/dark.css".strip.unindent.cstring
-  #   cssLight = staticRead"assets/light.css".strip.unindent.cstring
+  const
+    cssDark = staticRead"assets/dark.css".strip.unindent.cstring
+    cssLight = staticRead"assets/light.css".strip.unindent.cstring
 
   let app = newApplication(staticRead("assets/demo.html"))
-  # when not defined(bundle):
-  #   let theme = if "--light-theme" in commandLineParams(): cssLight else: cssDark
-  #   app.css(theme)
-  const cssSpreadSheet = staticRead"assets/spreadsheet.css".strip.unindent.cstring
-  # app.webview.onOpenFile = proc (webview:Webview;path:string) =
+  when not defined(bundle):
+    let theme = if "--light-theme" in commandLineParams(): cssLight else: cssDark
+    app.css(theme)
 
-  app.css cssSpreadSheet
   app.run()
   app.exit()
