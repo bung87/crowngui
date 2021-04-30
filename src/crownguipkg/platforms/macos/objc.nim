@@ -67,24 +67,24 @@ type
     OBJC_ASSOCIATION_RETAIN = 01401
     OBJC_ASSOCIATION_COPY = 01403
 
-type
-  NSObject* = object of RootObj
-    id*: ID
+# type
+#   NSObject* = object of RootObj
+#     id*: ID
 
-  NSView* = object of NSObject
+#   NSView* = object of NSObject
 
-  NSTextView* = object of NSView
+#   NSTextView* = object of NSView
 
-  NSString* = object of NSObject
+#   NSString* = object of NSObject
 
-  NSApplication* = object of NSObject
-  NSURL* = object of NSObject
+#   NSApplication* = object of NSObject
+#   NSURL* = object of NSObject
 
 const
   YES* = cchar(1)
   NO* = cchar(0)
 
-converter toId*(w: NSString): ID = w.id
+# converter toId*(w: NSString): ID = w.id
 
 proc isNil*(a: Class): bool =
   result = a.pointer == nil
@@ -676,8 +676,8 @@ proc objc_storeWeak(location: var ID; obj: ID): ID {.objcimport.}
 template storeWeak*(location: var ID; obj: ID): untyped =
   objc_storeWeak(location, obj)
 
-proc `@`*(a: string): NSString =
-  result.id = objc_msgSend(getClass("NSString").ID, $$"stringWithUTF8String:", a.cstring)
+# proc `@`*(a: string): NSString =
+#   result.id = objc_msgSend(getClass("NSString").ID, $$"stringWithUTF8String:", a.cstring)
 
 proc transExprColonExpr(son: NimNode): NimNode =
   if son[0].kind == nnkCommand:

@@ -1,42 +1,42 @@
 import objc, foundation, strutils, math, sequtils, macros
 
-type
-  NSWindow* = object of NSObject # appkit
+# type
+#   NSWindow* = object of NSObject # appkit
 
-  NSWindowController* = object of NSObject # appkit
+#   NSWindowController* = object of NSObject # appkit
 
-converter toId*(w: NSWindow): ID = w.id
+# converter toId*(w: NSWindow): ID = w.id
 
 proc objc_alloc(cls: string): ID =
   objc_msgSend(getClass(cls).ID, $$"alloc")
 
-proc autorelease(obj: NSObject) =
-  discard objc_msgSend(obj.id, $$"autorelease")
+# proc autorelease(obj: NSObject) =
+#   discard objc_msgSend(obj.id, $$"autorelease")
 
-proc init(x: typedesc[NSWindow], rect: CMRect, mask: int, backing: int, xdefer: BOOL): NSWindow =
-  var wnd = objc_alloc("NSWindow")
-  var cmd = $$"initWithContentRect:styleMask:backing:defer:"
-  result.id = wnd.objc_msgSend(cmd, rect, mask.uint64, backing.uint64, xdefer)
+# proc init(x: typedesc[NSWindow], rect: CMRect, mask: int, backing: int, xdefer: BOOL): NSWindow =
+#   var wnd = objc_alloc("NSWindow")
+#   var cmd = $$"initWithContentRect:styleMask:backing:defer:"
+#   result.id = wnd.objc_msgSend(cmd, rect, mask.uint64, backing.uint64, xdefer)
 
-proc init(x: typedesc[NSWindowController], window: NSWindow): NSWindowController =
-  var ctrl = objc_alloc("NSWindowController")
-  result.id = ctrl.objc_msgSend($$"initWithWindow:", window.id)
+# proc init(x: typedesc[NSWindowController], window: NSWindow): NSWindowController =
+#   var ctrl = objc_alloc("NSWindowController")
+#   result.id = ctrl.objc_msgSend($$"initWithWindow:", window.id)
 
-proc contentView(self: NSWindow, view: NSView) =
-  discard objc_msgSend(self.id, $$"setContentView:", view.id)
+# proc contentView(self: NSWindow, view: NSView) =
+#   discard objc_msgSend(self.id, $$"setContentView:", view.id)
 
-proc init(x: typedesc[NSTextView], rect: CMRect): NSTextView =
-  var view = objc_alloc("NSTextView")
-  result.id = view.objc_msgSend($$"initWithFrame:", rect)
+# proc init(x: typedesc[NSTextView], rect: CMRect): NSTextView =
+#   var view = objc_alloc("NSTextView")
+#   result.id = view.objc_msgSend($$"initWithFrame:", rect)
 
-proc insertText(self: NSTextView, text: string) =
-  discard objc_msgSend(self.id, $$"insertText:", @text.id)
+# proc insertText(self: NSTextView, text: string) =
+#   discard objc_msgSend(self.id, $$"insertText:", @text.id)
 
-proc call(cls: typedesc, cmd: SEL) =
-  discard objc_msgSend(getClass(cls.name).ID, cmd)
+# proc call(cls: typedesc, cmd: SEL) =
+#   discard objc_msgSend(getClass(cls.name).ID, cmd)
 
-proc `[]`(obj: NSObject, cmd: SEL) =
-  discard objc_msgSend(obj.id, cmd)
+# proc `[]`(obj: NSObject, cmd: SEL) =
+#   discard objc_msgSend(obj.id, cmd)
 
 macro `[]`(id: ID, cmd: SEL, args: varargs[untyped]): ID =
   if args.len > 0:

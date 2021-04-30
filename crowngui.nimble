@@ -23,6 +23,7 @@ requires "xlsx"
 requires "http://github.com/bung87/static_server >= 2.2.0"
 requires "https://github.com/bung87/icon >= 0.2.0"
 requires "jsonschema"
+requires "darwin"
 
 task docs,"a":
   exec "nim doc --project src/crowngui.nim"
