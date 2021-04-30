@@ -758,9 +758,10 @@ proc replaceBracket(node: NimNode): NimNode =
     newnode.add transformNode(pa)
   var namedArgs = args.filterIt(it.kind == nnkExprColonExpr)
   if namedArgs.len > 0:
-    var names = namedArgs.mapIt(it[0].strVal()).join(":") & ":"
+    var names = namedArgs.mapIt(if it[0].kind != nnkAccQuoted: it[0].strVal() else: it[0][0].strVal())
+    let name = names.join(":") & ":"
     # var values = namedArgs.mapIt( it[1] )
-    newnode.add nnkCall.newTree(ident"registerName", newStrLitNode(names))
+    newnode.add nnkCall.newTree(ident"registerName", newStrLitNode(name))
     for a in namedArgs:
       newnode.add transformNode(a[1])
   return newnode

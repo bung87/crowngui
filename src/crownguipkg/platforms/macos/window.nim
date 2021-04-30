@@ -1,4 +1,4 @@
-import objc, cocoa, foundation
+import objc, cocoa, foundation, menu
 
 {.passL: "-framework Foundation".}
 {.passL: "-framework AppKit".}
@@ -12,11 +12,6 @@ const
   NSResizableWindowMask = 1 shl 3
 
 var NSApp {.importc.}: ID
-func create_menu_item(title: ID, action: string, key: string): ID =
-  result = objc_msgSend(getClass("NSMenuItem").ID, registerName("alloc"))
-  objc_msgSend(result, registerName("initWithTitle:action:keyEquivalent:"),
-              title, registerName(action), get_nsstring(key))
-  objc_msgSend(result, registerName("autorelease"))
 
 type
   NSApplicationActivationPolicy {.size: sizeof(cint).} = enum
@@ -40,25 +35,22 @@ proc main() =
       return
     [NSApp setActivationPolicy: NSApplicationActivationPolicyRegular.cint]
 
-    var menuBar = newClass("NSMenu")
-    var appMenuItem = newClass("NSMenuItem")
-
-    discard menuBar.objc_msgSend($$"addItem:", appMenuItem)
+    var menuBar = [[NSMenu alloc]init]
+    var appMenuItem = [[NSMenuItem alloc]init]
+    [menuBar addItem: appMenuItem]
     [NSApp setMainMenu: menuBar]
-  # discard NSApp.objc_msgSend($$"setMainMenu:", menuBar)
 
-    # var appMenu = newClass("NSMenu")
+    var appMenu = [[NSMenu alloc]init]
 
-    # var quitTitle = @"Quit"
-    # var quitMenuItem = create_menu_item(quitTitle, "terminate:", "q")
-    # discard appMenu.objc_msgSend($$"addItem:", quitMenuItem)
-    # discard appMenuItem.objc_msgSend($$"setSubmenu:", appMenu)
+    var quitTitle = @"Quit"
+    var quitMenuItem = createMenuItem(quitTitle, "terminate:", "q")
+    [appMenu addItem: quitMenuItem]
+    [appMenuItem setSubmenu: appMenu]
 
-    var mainWindow = objc_msgSend(getClass("NSWindow").ID, $$"alloc")
+    var mainWindow = [NSWindow alloc]
     var rect = CMRect(x: 0, y: 0, w: 200, h: 200)
-    # [mainWindow $$"initWithContentRect:styleMask:backing:defer:", rect, NSTitledWindowMask, NSBackingStoreBuffered, false]
-    discard mainWindow.objc_msgSend($$"initWithContentRect:styleMask:backing:defer:",
-      rect, NSTitledWindowMask, NSBackingStoreBuffered, false)
+    [mainWindow initWithContentRect: rect, styleMask: NSTitledWindowMask, backing: NSBackingStoreBuffered,
+        `defer`: false]
 
     var pos = CMPoint(x: 20, y: 20)
 
