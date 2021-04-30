@@ -2,6 +2,8 @@
 
 Web Technologies based Crossplatform GUI Framework  
 
+cli tool:[crowncli](https://github.com/bung87/crowncli) for build application.   
+
 ## Usage  
 file: yourexecutable.nim  
 ``` nim
@@ -42,6 +44,9 @@ Options:
   -r, --release    bool    false     set release
 
 ```
+
+## Examples  
+[crown_excel](https://github.com/bung87/crown_excel)  crowngui based excel viewer
 ## Prerequires  
   
 `rcedit` for windows exe icon on non-windows platform requires `wine`  

@@ -22,7 +22,7 @@ task docs,"a":
   exec "nim doc --project src/crowngui.nim"
   exec "mv src/htmldocs/theindex.html src/htmldocs/index.html"
 task macos,"build macos":
-  exec "crowncli run --target macos"
+  exec "crowncli build --target macos"
 task ghpage,"gh page":
   cd "src/htmldocs" 
   exec "git init"
