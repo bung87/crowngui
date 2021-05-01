@@ -1,17 +1,16 @@
-import objc, foundation
+import objc_runtime
+import darwin / [app_kit, foundation]
 
-type NSMenu = object of NSObject # appkit
-type NSMenuItem = object of NSObject # appkit
 const NSEventModifierFlagCommand = (1 shl 20)
 const NSEventModifierFlagOption = (1 shl 19)
 
-func createMenuItem*(title: ID, action: string, key: string): ID =
+func createMenuItem*(title: ID|NSString, action: string, key: string): ID =
   result = objc_msgSend(getClass("NSMenuItem").ID, registerName("alloc"))
   objc_msgSend(result, registerName("initWithTitle:action:keyEquivalent:"),
               title, if action != "": registerName(action) else: nil, get_nsstring(key))
   objc_msgSend(result, registerName("autorelease"))
 
-func createMenu*() =
+proc createMenu*() =
   objcr:
     let menubar: ID = [NSMenu alloc]
     [menubar initWithTitle: ""]

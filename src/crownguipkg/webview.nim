@@ -8,9 +8,8 @@ when defined(linux):
 elif defined(windows):
   {.passc: "-DWEBVIEW_WINAPI=1", passl: "-lole32 -lcomctl32 -loleaut32 -luuid -lgdi32".}
 elif defined(macosx):
-  import platforms/macos/objc
-  import platforms/macos/cocoa
-  import platforms/macos/foundation
+  import objc_runtime
+  import darwin / [app_kit, foundation]
   import platforms/macos/menu
   var NSApp {.importc.}: ID
   {.passc: "-DOBJC_OLD_DISPATCH_PROTOTYPES=1 -DWEBVIEW_COCOA=1 -x objective-c",

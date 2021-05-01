@@ -15,8 +15,10 @@ requires "nim >= 1.1.1"
 
 requires "regex"
 requires "xlsx"
-requires "http://github.com/bung87/static_server >= 2.2.0"
+requires "static_server >= 2.2.0"
 requires "jsonschema"
+requires "https://github.com/bung87/objc_runtime"
+requires "darwin"
 
 task docs,"a":
   exec "nim doc --project src/crowngui.nim"
