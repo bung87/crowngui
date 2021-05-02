@@ -1,5 +1,6 @@
-import tables, strutils, macros, json, os, base64, strformat, std/exitprocs, math
-
+import tables, strutils, macros, logging, json, os, base64, strformat, std/exitprocs, math
+var logger = newRollingFileLogger(expandTilde("~/crowngui.log"))
+addHandler(logger)
 const headerC = currentSourcePath().substr(0, high(currentSourcePath()) - 11) & "webview.h"
 {.passc: "-DWEBVIEW_STATIC -DWEBVIEW_IMPLEMENTATION -I" & headerC.}
 when defined(linux):
@@ -33,7 +34,6 @@ type
     invokeCb {.importc: "external_invoke_cb".}: pointer                       ## Callback proc js:window.external.invoke
     priv {.importc: "priv".}: WebviewPrivObj
     userdata {.importc: "userdata".}: pointer
-    # onOpenFile*:OnOpenFile
 
   OnOpenFile* = proc (view: Webview; filePath: string)
   Webview* = ptr WebviewObj
@@ -93,7 +93,7 @@ func init(w: Webview): cint {.importc: "webview_init", header: headerC.}
 func loadHTML*(w: Webview; html: cstring) {.importc: "webview_load_HTML", header: headerC.}
 func loadHTML*(w: Webview; html: string) = loadHTML(w, html.cstring)
 func loadURL*(w: Webview; url: cstring) {.importc: "webview_load_URL", header: headerC.}
-func reload(w: Webview; url: cstring) {.importc: "webview_reload", header: headerC.}
+func reload*(w: Webview; url: cstring) {.importc: "webview_reload", header: headerC.}
 func loop(w: Webview; blocking: cint): cint {.importc: "webview_loop", header: headerC.}
 func js*(w: Webview; javascript: cstring): cint {.importc: "webview_eval", header: headerC,
     discardable.} ## Evaluate a JavaScript cstring, runs the javascript string on the window
@@ -351,8 +351,6 @@ proc webView(title = ""; url = ""; width: Positive = 1000; height: Positive = 70
   if callback != nil: result.externalInvokeCB = callback
   if result.init() != 0: return nil
 
-
-
 proc newWebView*(path: static[string] = ""; title = ""; width: Positive = 1000; height: Positive = 700;
     resizable: static[bool] = true; debug: static[bool] = not defined(release); callback: ExternalInvokeCb = nil;
         skipTaskbar: static[bool] = false; windowBorders: static[bool] = true; focus: static[bool] = false;
@@ -382,13 +380,15 @@ proc newWebView*(path: static[string] = ""; title = ""; width: Positive = 1000; 
   result = webView(title, path, width, height, resizable, debug, callback)
   when defined(macosx):
     let webview = result
-    let Delegate = allocateClassPair(getClass("NSObject"), "AppDelegate", 0)
+    let MyAppDelegateClass = allocateClassPair(getClass("NSObject"), "AppDelegate", 0)
     # applicationWillFinishLaunching: -> application:openFile: -> applicationDidFinishLaunching:
     proc applicationWillFinishLaunching(self: ID; cmd: SEL; notification: ID): void {.cdecl.} =
       echo "applicationWillFinishLaunching"
 
     proc application(self: ID; cmd: SEL; sender: NSApplication; openFile: NSString): Bool {.cdecl.} =
-      let path = cast[cstring](objc_msgSend(cast[ID](openFile.unsafeAddr), $$"UTF8String"))
+      logging.debug("application openFile:")
+      let path = cast[cstring](objc_msgSend(cast[ID](openFile), $$"UTF8String"))
+      logging.debug("application openFile:" & $path)
       var cls = self.getClass()
       var ivar = cls.getIvar("webview")
       var wv = cast[Webview](self.getIvar(ivar))
@@ -400,18 +400,49 @@ proc newWebView*(path: static[string] = ""; title = ""; width: Positive = 1000; 
     proc applicationWillBecomeActive(self: ID; cmd: SEL; notification: ID): void {.cdecl.} =
       echo "applicationWillBecomeActive"
 
-    discard Delegate.addMethod($$"applicationWillFinishLaunching:", cast[IMP](applicationWillFinishLaunching), "v@:@")
+    discard MyAppDelegateClass.addMethod($$"applicationWillFinishLaunching:", cast[IMP](applicationWillFinishLaunching), "v@:@")
     when compiles(onOpenFile(webview, "")):
-      discard Delegate.addMethod($$"application:openFile:", cast[IMP](application), "B@:@@")
+      discard MyAppDelegateClass.addMethod($$"application:openFile:", cast[IMP](application), "B@:@@")
 
-    discard Delegate.addMethod($$"applicationDidFinishLaunching:", cast[IMP](applicationDidFinishLaunching), "v@:@")
-    discard Delegate.addMethod($$"applicationWillBecomeActive:", cast[IMP](applicationWillBecomeActive), "v@:@")
-    discard addIvar(Delegate, "webview", sizeof(Webview), log2(sizeof(Webview).float64).int, "@")
-    let ivar: Ivar = getIvar(Delegate, "webview")
-    Delegate.registerClassPair()
+    discard MyAppDelegateClass.addMethod($$"applicationDidFinishLaunching:", cast[IMP](applicationDidFinishLaunching), "v@:@")
+    discard MyAppDelegateClass.addMethod($$"applicationWillBecomeActive:", cast[IMP](applicationWillBecomeActive), "v@:@")
+    discard addIvar(MyAppDelegateClass, "webview", sizeof(Webview), log2(sizeof(Webview).float64).int, "@")
+    let ivar: Ivar = getIvar(MyAppDelegateClass, "webview")
+    MyAppDelegateClass.registerClassPair()
+
+    let WindowControllerClass = allocateClassPair(getClass("NSWindowController"), "WindowController", 0)
+    proc awakeFromNib(self: ID; cmd: SEL; ): void {.cdecl.} =
+      logging.debug("awakeFromNib")
+      objcr:
+        var super = ObjcSuper(receiver: self, superClass: self.getClass().getSuperclass())
+        discard objc_msgSendSuper(super, $$"awakeFromNib")
+        var typs = [[MutableArray alloc]init]
+        [typs addObject: @"xlsx"]
+        let tid = cast[ID](typs.unsafeAddr)
+        [self registerForDraggedTypes: tid]
+
+    proc initWithCoder(self: ID; cmd: SEL; code: ID): ID {.cdecl.} =
+      logging.debug("initWithCoder")
+      objcr:
+        var super = ObjcSuper(receiver: self, superClass: self.getClass().getSuperclass())
+        discard objc_msgSendSuper(super, $$"initWithCoder")
+        var typs = [[MutableArray alloc]init]
+        [typs addObject: @"xlsx"]
+        let tid = cast[ID](typs.unsafeAddr)
+        [self registerForDraggedTypes: tid]
+      return self
+
+    proc draggingEntered(self: ID; cmd: SEL; sender: NSDraggingInfo): NSDragOperation {.cdecl.} =
+      logging.debug("draggingEntered")
+      return NSDragOperationCopy
+    discard WindowControllerClass.replaceMethod($$"initWithCoder:", cast[IMP](initWithCoder), "@@:@")
+    discard WindowControllerClass.replaceMethod($$"draggingEntered:", cast[IMP](draggingEntered), "I@:@")
+    WindowControllerClass.registerClassPair()
     objcr:
       var appDel = [AppDelegate alloc]
       [appDel init]
+      # var windowController = [[WindowController alloc] init]
+      # [webview.priv.window setDelegate: windowController]
       [NSApplication sharedApplication]
       [NSApp setDelegate: appDel]
       setIvar(appDel, ivar, cast[ID](webview))

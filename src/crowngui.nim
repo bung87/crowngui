@@ -64,6 +64,9 @@ proc css*(app: ApplicationRef, css: string) = app.webview.css(css.cstring)
 proc exit*(app: ApplicationRef) = app.webview.exit
 
 
+# proc onOpenFile(webview:Webview; filePath:string): bool =
+#   # jsDebug(filePath.cstring)
+#   return true
 
 when isMainModule:
 
