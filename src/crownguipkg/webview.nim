@@ -19,11 +19,12 @@ elif defined(macosx):
 type
   ExternalInvokeCb* = proc (w: Webview; arg: string) ## External CallBack Proc
   WebviewPrivObj {.importc: "struct webview_priv", header: headerC, bycopy.} = object
-    pool: ID
-    window: ID
-    webview: ID
-    windowDelegate: ID
-    should_exit: int
+    when defined(macosx):
+      pool: ID
+      window: ID
+      webview: ID
+      windowDelegate: ID
+      should_exit: int
   WebviewObj* {.importc: "struct webview", header: headerC, bycopy.} = object ## WebView Type
     url* {.importc: "url".}: cstring                                          ## Current URL
     title* {.importc: "title".}: cstring                                      ## Window Title
