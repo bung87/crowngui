@@ -451,7 +451,10 @@ proc newWebView*(path: static[string] = ""; title = ""; width: Positive = 1000; 
       [NSApp finishLaunching]
       [NSApp activateIgnoringOtherApps: true]
 
-
+  when not defined(macosx) and compiles(onOpenFile(webview, "")):
+    let filepath = paramStr(1)
+    if filepath.len > 0:
+      onOpenFile(filepath)
   when skipTaskbar: result.setSkipTaskbar(skipTaskbar)
   when not windowBorders: result.setBorderlessWindow(windowBorders)
   when focus: result.setFocus()
