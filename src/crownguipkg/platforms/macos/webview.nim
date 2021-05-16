@@ -2,7 +2,7 @@ import objc_runtime
 import darwin / [app_kit, foundation]
 import menu
 var NSApp {.importc.}: ID
-{.passc: "-DOBJC_OLD_DISPATCH_PROTOTYPES=1 -DWEBVIEW_COCOA=1 -x objective-c",
+{.passc: "-DOBJC_OLD_DISPATCH_PROTOTYPES=1 -x objective-c",
     passl: "-framework Cocoa -framework WebKit".}
 
 const NSKeyDown = (1 shl 10)
