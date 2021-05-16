@@ -83,12 +83,12 @@ proc run_open_panel(self:Id ,cmd: SEL ,webView: Id , parameters:Id ,
     var openPanel = [NSOpenPanel openPanel]
     [openPanel setAllowsMultipleSelection,[parameters allowsMultipleSelection]] 
     [openPanel setCanChooseFiles:1]
-    [openPanel beginWithCompletionHandler:proc (r:Id ) =
+    let b2 = toBlock() do(r:Id ):
       if r == cast[Id](NSModalResponseOK):
-        completionHandler([openPanel URLs])
+        cast[CompletionHandler](completionHandler)(objc_msgSend(openPanel,$$("URLs")))
       else :
-        completionHandler(nil)
-    ]
+        cast[CompletionHandler](completionHandler)(nil)
+    [openPanel beginWithCompletionHandler: b2]
 type CompletionHandler2 = proc (allowOverwrite:int,destination:Id):void
 proc run_save_panel(self:Id, cmd:SEL , download:Id , filename:Id ,completionHandler:Block[CompletionHandler2]) =
   objcr:
@@ -114,12 +114,10 @@ proc run_confirmation_panel(self:Id , cmd:SEL , webView:Id ,message: Id ,
     [alert setInformativeText:message]
     [alert addButtonWithTitle:"OK"]
     [alert addButtonWithTitle:"Cancel"]
-    
     if [alert runModal] == cast[ID](NSAlertFirstButtonReturn) :
       completionHandler(true)
     else:
       completionHandler(false)
-    
     [alert release]
 
 type CompletionHandler4 = proc ():void
@@ -300,7 +298,7 @@ proc webview_init(w:Webview):int =
     if (w.resizable) :
       style = style or NSWindowStyleMaskResizable
     w.priv.window =[NSWindow alloc]
-    [w.priv.window initWithContentRect:r,:styleMask:style,backing:NSBackingStoreBuffered,`defer`:0]
+    [w.priv.window initWithContentRect:r,styleMask:style,backing:NSBackingStoreBuffered,`defer`:0]
     [w.priv.window autorelease]
     [w.priv.window setTitle:nsTitle]
     [w.priv.window setDelegate:w.priv.windowDelegate]
@@ -346,11 +344,11 @@ proc webview_init(w:Webview):int =
   w.priv.should_exit = 0
   return 0
 
-proc webview_loop(w:Webview, blocking:int ):int=
+proc webview_loop(w:Webview, blocking:int ): int =
   objcr:
     var until:Id = if blocking > 0 : [NSDate distantFuture] else: [NSDate distantPast]
     [NSApplication sharedApplication]
-    var event:Id = [NSApp nextEventMatchingMask:ULONG_MAX,untilDate:until,inMode:"kCFRunLoopDefaultMode",dequeue:true]
+    var event:Id = [NSApp nextEventMatchingMask:max(culong),untilDate:until,inMode:"kCFRunLoopDefaultMode",dequeue:true]
     if cast[pointer](event) != nil:
       [NSApp sendEvent:event]
     return w.priv.should_exit
