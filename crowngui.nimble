@@ -17,7 +17,7 @@ requires "regex"
 requires "xlsx"
 requires "static_server >= 2.2.0"
 requires "jsonschema"
-requires "https://github.com/bung87/objc_runtime"
+requires "objc_runtime >= 0.1.2"
 requires "darwin"
 
 task docs,"a":
