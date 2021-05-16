@@ -83,8 +83,8 @@ proc run_open_panel(self:Id ,cmd: SEL ,webView: Id , parameters:Id ,
     var openPanel = [NSOpenPanel openPanel]
     [openPanel setAllowsMultipleSelection,[parameters allowsMultipleSelection]] 
     [openPanel setCanChooseFiles:1]
-    [openPanel beginWithCompletionHandler:proc (result:Id ) =
-      if result == cast[Id](NSModalResponseOK):
+    [openPanel beginWithCompletionHandler:proc (r:Id ) =
+      if r == cast[Id](NSModalResponseOK):
         completionHandler([openPanel URLs])
       else :
         completionHandler(nil)
