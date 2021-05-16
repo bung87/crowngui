@@ -2,6 +2,11 @@
 
 Web Technologies based Crossplatform GUI Framework  
 
+It uses Cocoa/WebKit on macOS, gtk-webkit2 on Linux and IE on Windows  
+
+Notice: I mainly work on macOS, also it has well document of Cocoa/WebKit,
+ contribute to Linux and Windows are welcome, the windows binding will change to Edge and webview2 api in the future.
+
 CLI tool:  
 [crowncli](https://github.com/bung87/crowncli) for build application.   
 
