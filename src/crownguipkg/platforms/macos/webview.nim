@@ -151,7 +151,7 @@ proc make_nav_policy_decision( self:Id,cmd: SEL ,webView: Id ,response: Id ,
       decisionHandler(WKNavigationResponsePolicyAllow)
 
 proc webview_load_HTML(w:Webview,html:cstring) =
-  objcr:[w.priv.webview,loadHTMLString:@(html),baseURL:nil]
+  objcr: [w.priv.webview,loadHTMLString:@(html),baseURL:nil]
 
 proc webview_load_URL(w:Webview,url:cstring) =
   objcr:
@@ -162,7 +162,7 @@ proc webview_load_URL(w:Webview,url:cstring) =
     [w.priv.webview loadRequest:request]
 
 proc webview_reload(w:Webview) =
-    objc_msgSend(w.priv.webview, registerName("reload"));
+  objcr: [w.priv.webview $$"reload"]
 
 proc webview_show(w:Webview) =
   objcr:
@@ -172,23 +172,24 @@ proc webview_show(w:Webview) =
     [w.priv.window makeKeyAndOrderFront:nil]
 
 proc webview_hide(w:Webview) =
+  objcr: [w.priv.window $$"orderOut:"]
   objc_msgSend(w.priv.window, registerName("orderOut:"), nil);
 
 proc webview_minimize(w:Webview) =
-  objc_msgSend(w.priv.window, registerName("miniaturize:"), nil)
+  objcr: [w.priv.window $$"miniaturize:"]
 
 proc webview_close(w:Webview) =
-  objc_msgSend(w.priv.window, registerName("close"))
+  objcr: [w.priv.window $$"close"]
 
 proc webview_set_size(w:Webview,width:int , height:int ) =
-  var frame:CGRect = cast[CGRect](objc_msgSend(w.priv.window, registerName("frame")))
-  frame.size.width = width.CGFloat
-  frame.size.height = height.CGFloat
-  objc_msgSend(w.priv.window, registerName("setFrame:display:"), frame, true)
+  objcr:
+    var frame:CGRect = [w.priv.window $$"frame"]
+    frame.size.width = width.CGFloat
+    frame.size.height = height.CGFloat
+    [w.priv.window $$"setFrame:display:",frame,true]
 
 proc webview_set_developer_tools_enabled(w:Webview,enabled:bool ) =
-  objcr:
-    [[w.priv.window configuration] registerName("_setDeveloperExtrasEnabled"):enabled]
+  objcr: [[w.priv.window configuration] $$"_setDeveloperExtrasEnabled":enabled]
 
 proc webview_init(w:Webview):int =
   objcr:
