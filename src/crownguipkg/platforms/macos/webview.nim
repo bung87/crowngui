@@ -77,6 +77,9 @@ proc webview_external_invoke(self:ID ,cmd: SEL ,contentController: Id ,
     cast[Webview](w).external_invoke_cb(cast[Webview](w), cast[cstring](msg))
 
 type CompletionHandler = proc (Id:Id):void
+
+proc `==`(x, y: Id):bool = cast[pointer](x) == cast[pointer](y)
+
 proc run_open_panel(self:Id ,cmd: SEL ,webView: Id , parameters:Id ,
                            frame:Id ,completionHandler:Block[CompletionHandler]) =
   objcr:
@@ -85,9 +88,9 @@ proc run_open_panel(self:Id ,cmd: SEL ,webView: Id , parameters:Id ,
     [openPanel setCanChooseFiles:1]
     let b2 = toBlock() do(r:Id ):
       if r == cast[Id](NSModalResponseOK):
-        cast[CompletionHandler](completionHandler)(objc_msgSend(openPanel,$$("URLs")))
+        objc_msgSend(cast[Id](completionHandler),$$"invoke", objc_msgSend(openPanel,$$("URLs")))
       else :
-        cast[CompletionHandler](completionHandler)(nil)
+        objc_msgSend(cast[Id](completionHandler),$$"invoke", nil)
     [openPanel beginWithCompletionHandler: b2]
 type CompletionHandler2 = proc (allowOverwrite:int,destination:Id):void
 proc run_save_panel(self:Id, cmd:SEL , download:Id , filename:Id ,completionHandler:Block[CompletionHandler2]) =
@@ -95,14 +98,15 @@ proc run_save_panel(self:Id, cmd:SEL , download:Id , filename:Id ,completionHand
     var savePanel = [NSSavePanel savePanel]
     [savePanel setCanCreateDirectories:1]
     [savePanel setNameFieldStringValue:filename]
-    [savePanel beginWithCompletionHandler:proc (result:Id) = 
-      if result == cast[Id](NSModalResponseOK) :
-        var url:Id = [savePanel URL]
-        var  path :Id= [url path]
-        completionHandler(1, path);
+    let blk = toBlock() do(r:Id):
+      if r == cast[Id](NSModalResponseOK):
+        var url:Id = objc_msgSend(savePanel,$$"URL")
+        var  path :Id = objc_msgSend(url,$$"path")
+        objc_msgSend(cast[Id](completionHandler),$$"invoke", 1,path)
       else:
-        completionHandler(NO, nil);
-    ]
+        objc_msgSend(cast[Id](completionHandler),$$"invoke", No,nil)
+    
+    [savePanel beginWithCompletionHandler: blk]
 
 type CompletionHandler3 = proc (b:bool):void
 proc run_confirmation_panel(self:Id , cmd:SEL , webView:Id ,message: Id ,
@@ -110,14 +114,14 @@ proc run_confirmation_panel(self:Id , cmd:SEL , webView:Id ,message: Id ,
   objcr:
     var alert:Id = [NSAlert new]
     [alert setIcon:[NSImage imageNamed:"NSCaution"]]
-    [alert setShowsHelp:0]
-    [alert setInformativeText:message]
-    [alert addButtonWithTitle:"OK"]
-    [alert addButtonWithTitle:"Cancel"]
-    if [alert runModal] == cast[ID](NSAlertFirstButtonReturn) :
-      completionHandler(true)
+    [alert setShowsHelp: 0]
+    [alert setInformativeText: message]
+    [alert addButtonWithTitle: "OK"]
+    [alert addButtonWithTitle: "Cancel"]
+    if [alert runModal] == cast[ID](NSAlertFirstButtonReturn):
+      objc_msgSend(cast[Id](completionHandler),$$"invoke", true)
     else:
-      completionHandler(false)
+      objc_msgSend(cast[Id](completionHandler),$$"invoke", false)
     [alert release]
 
 type CompletionHandler4 = proc ():void
@@ -131,7 +135,7 @@ proc run_alert_panel(self:Id , cmd:SEL ,webView: Id ,message: Id ,frame: Id ,
     [alert addButtonWithTitle:"OK"]
     [alert runModal]
     [alert release]
-    completionHandler()
+    objc_msgSend(cast[Id](completionHandler),$$"invoke")
 
 # static void download_failed(Id self, SEL cmd, Id download, Id error) {
 #   printf("%s",
@@ -143,17 +147,17 @@ type CompletionHandler5 = proc (c:cint):void
 proc make_nav_policy_decision( self:Id,cmd: SEL ,webView: Id ,response: Id ,
                                      decisionHandler:Block[CompletionHandler4]) =
   objcr:
-    if [response canShowMIMEType] == 0:
-      decisionHandler(WKNavigationActionPolicyDownload)
+    if [response canShowMIMEType] == cast[Id](0):
+      objc_msgSend(cast[Id](decisionHandler),$$"invoke",WKNavigationActionPolicyDownload)
     else:
-      decisionHandler(WKNavigationResponsePolicyAllow)
+      objc_msgSend(cast[Id](decisionHandler),$$"invoke",WKNavigationResponsePolicyAllow)
 
 proc webview_load_HTML(w:Webview,html:cstring) =
-  objcr: [w.priv.webview,loadHTMLString:@(html),baseURL:nil]
+  objcr: [w.priv.webview,loadHTMLString: @($html),baseURL:nil]
 
 proc webview_load_URL(w:Webview,url:cstring) =
   objcr:
-    var requestURL:Id = [NSURL URLWithString: @(url)]
+    var requestURL:Id = [NSURL URLWithString: @($url)]
     [requestURL autorelease]
     var request = [NSURLRequest requestWithURL:requestURL]
     [request autorelease]
@@ -165,7 +169,7 @@ proc webview_reload(w:Webview) =
 proc webview_show(w:Webview) =
   objcr:
     [w.priv.window reload]
-    if [w.priv.window isMiniaturized]:
+    if cast[bool]([w.priv.window isMiniaturized]):
       [w.priv.window deminiaturize:nil]
     [w.priv.window makeKeyAndOrderFront:nil]
 
@@ -174,20 +178,21 @@ proc webview_hide(w:Webview) =
   objc_msgSend(w.priv.window, registerName("orderOut:"), nil);
 
 proc webview_minimize(w:Webview) =
-  objcr: [w.priv.window $$"miniaturize:"]
+  objcr: [w.priv.window $$"miniaturize:",nil]
 
 proc webview_close(w:Webview) =
   objcr: [w.priv.window $$"close"]
 
 proc webview_set_size(w:Webview,width:int , height:int ) =
   objcr:
-    var frame:CGRect = [w.priv.window $$"frame"]
+    let f = [w.priv.window $$"frame"]
+    var frame:CGRect = cast[CGRect](f)
     frame.size.width = width.CGFloat
     frame.size.height = height.CGFloat
-    [w.priv.window $$"setFrame:display:",frame,true]
+    [w.priv.window setFrame:frame, display:true]
 
 proc webview_set_developer_tools_enabled(w:Webview,enabled:bool ) =
-  objcr: [[w.priv.window configuration] $$"_setDeveloperExtrasEnabled":enabled]
+  objcr: [[w.priv.window configuration] "_setDeveloperExtrasEnabled":enabled]
 
 proc webview_init(w:Webview):int =
   objcr:
@@ -196,14 +201,14 @@ proc webview_init(w:Webview):int =
 
   var handler = proc ( event:Id) =
     objcr:
-      var flag:NSUInteger = [event modifierFlags]
-      NSString charactersIgnoringModifiers = [event charactersIgnoringModifiers] 
-      BOOL isX =[charactersIgnoringModifiers isEqualToString:"x"] 
-      BOOL isC =[charactersIgnoringModifiers isEqualToString:"c"]  
-      BOOL isV = [charactersIgnoringModifiers isEqualToString:"v"] 
-      BOOL isZ = [charactersIgnoringModifiers isEqualToString:"z"] 
-      BOOL isA = [charactersIgnoringModifiers isEqualToString:"a"] 
-      BOOL isY = [charactersIgnoringModifiers isEqualToString:"y"] 
+      var flag:NSUInteger = cast[NSUInteger]([event modifierFlags])
+      var charactersIgnoringModifiers:NSString  = cast[NSString]([event charactersIgnoringModifiers] )
+      Bool isX = cast[Bool]([charactersIgnoringModifiers isEqualToString:"x"])
+      Bool isC = cast[Bool]([charactersIgnoringModifiers isEqualToString:"c"])  
+      Bool isV = cast[Bool]([charactersIgnoringModifiers isEqualToString:"v"]) 
+      Bool isZ = cast[Bool]([charactersIgnoringModifiers isEqualToString:"z"]) 
+      Bool isA = cast[Bool]([charactersIgnoringModifiers isEqualToString:"a"]) 
+      Bool isY = cast[Bool]([charactersIgnoringModifiers isEqualToString:"y"]) 
       if (flag  and  NSEventModifierFlagCommand):
         if (isX):
           BOOL cut = objc_msgSend(getClass("NSApp"),registerName("sendAction:"),registerName("cut:"),registerName("to:"),nil,registerName("from:"),getClass("NSApp"));
@@ -227,7 +232,7 @@ proc webview_init(w:Webview):int =
           BOOL selectAll = objc_msgSend(getClass("NSApp"),registerName("sendAction:"),registerName("selectAll:"),registerName("to:"),nil,registerName("from:"),getClass("NSApp"))
           if (selectAll):
             return nil
-      elif (flag & NSEventModifierFlagDeviceIndependentFlagsMask == (NSEventModifierFlagCommand | NSEventModifierFlagShift)):
+      elif (flag & NSEventModifierFlagDeviceIndependentFlagsMask == (NSEventModifierFlagCommand or NSEventModifierFlagShift)):
         BOOL isY = objc_msgSend(charactersIgnoringModifiers,registerName("isEqualToString:"),@"y")
         if (isY):
           BOOL redo = objc_msgSend(getClass("NSApp"),registerName("sendAction:"),registerName("redo:"),registerName("to:"),nil,registerName("from:"),getClass("NSApp"))
@@ -253,8 +258,8 @@ proc webview_init(w:Webview):int =
   var downloadDelegate:Id  = objc_msgSend((Id)PrivWKDownloadDelegate, registerName("new"))
 
   var PrivWKPreferences:Class = allocateClassPair(getClass("WKPreferences"),"PrivWKPreferences", 0)
-  var typ = PropertyAttribute(name:"T",value:"c")
-  var ownership = PropertyAttribute(name:"N",value:"")
+  var typ = objc_property_attribute_t(name:"T".cstring,value:"c".cstring)
+  var ownership = objc_property_attribute_t(name:"N".cstring,value:"".cstring)
   replaceProperty(PrivWKPreferences, "developerExtrasEnabled", [typ,ownership])
   registerClassPair(PrivWKPreferences);
   var wkPref:Id = objc_msgSend((Id)PrivWKPreferences, registerName("new"))
@@ -271,7 +276,7 @@ proc webview_init(w:Webview):int =
     var windowExternalOverrideScript:Id =[WKUserScript alloc] 
     const source = """window.external = this; invoke = function(arg){ 
                    webkit.messageHandlers.invoke.postMessage(arg); };"""
-    [windowExternalOverrideScript initWithSource:source,injectionTime:WKUserScriptInjectionTimeAtDocumentStart,forMainFrameOnly:0]
+    [windowExternalOverrideScript initWithSource: @(source),injectionTime:WKUserScriptInjectionTimeAtDocumentStart,forMainFrameOnly:0]
     [userController addUserScript:windowExternalOverrideScript]
     var config:Id = [WKWebViewConfiguration new]
     var processPool:Id = [config processPool]
