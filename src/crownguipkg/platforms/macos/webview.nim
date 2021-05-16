@@ -309,14 +309,11 @@ proc webview_init(w:webview):int =
                            OBJC_ASSOCIATION_ASSIGN)
   objcr:
     var nsTitle:id = @(w.title)
-
     var r:CGRect = CGRectMake(0, 0, w.width, w.height)
     var style = NSWindowStyleMaskTitled or NSWindowStyleMaskClosable or
                        NSWindowStyleMaskMiniaturizable;
     if (w.resizable) :
       style = style or NSWindowStyleMaskResizable
-    
-
     w.priv.window =[NSWindow alloc]
     [w.priv.window initWithContentRect:r,:styleMask:style,backing:NSBackingStoreBuffered,`defer`:0]
     [w.priv.window autorelease]
@@ -366,10 +363,8 @@ proc webview_init(w:webview):int =
     [[w.priv.webview contentView] addSubview:w.priv.webview]
     [w.priv.webview orderFrontRegardless]
     [[NSApplication sharedApplication] setActivationPolicy:NSApplicationActivationPolicyRegular]
-  
   w.priv.should_exit = 0
   return 0
-
 
 proc webview_loop(w:webview, blocking:int ):int=
   objcr:
@@ -400,14 +395,15 @@ proc webview_set_fullscreen(w:webview, fullscreen:int ) =
     var windowStyleMask:culong = [w.priv.window styleMask]
     var b:int = if windowStyleMask and NSWindowStyleMaskFullScreen == NSWindowStyleMaskFullScreen:1 else:0
 
-  if b != fullscreen:
-    objc_msgSend(w.priv.window, sel_registerName("toggleFullScreen:"), nil)
+    if b != fullscreen:
+      [w.priv.window toggleFullScreen:nil]
 
 proc webview_set_iconify(w:webview, iconify:int ) =
-  if (iconify) :
-    objc_msgSend(w.priv.window, sel_registerName("miniaturize:"), nil)
-  else :
-    objc_msgSend(w.priv.window, sel_registerName("deminiaturize:"), nil)
+  objcr:
+  if (iconify):
+    [w.priv.window miniaturize:nil]
+  else:
+    [w.priv.window deminiaturize:nil]
 
 proc webview_launch_external_URL(w:webview, uri:cstring) =
   objcr:
@@ -421,7 +417,6 @@ proc webview_set_color(w:webview;r,g,b,a:uint8) =
   if (0.5 >= ((r / 255.0 * 299.0) + (g / 255.0 * 587.0) + (b / 255.0 * 114.0)) /
                  1000.0) :
     [w.priv.window setAppearance:[ NSAppearance appearanceNamed:"NSAppearanceNameVibrantDark"]]
-
   else:
     [w.priv.window setAppearance:[NSAppearance appearanceNamed:"NSAppearanceNameVibrantLight"]]
     [w.priv.window setOpaque:0]
@@ -461,13 +456,11 @@ proc webview_dialog(w:webview,dlgtype:webview_dialog_type , flags:int ,
       var filename:cstring = [path "UTF8String"]
       strlcpy(result, filename, resultsz)
     
-    elif (dlgtype == WEBVIEW_DIALOG_TYPE_ALERT) :
-
+    elif (dlgtype == WEBVIEW_DIALOG_TYPE_ALERT):
       var a:id = [NSAlert `new`] 
       case flags and WEBVIEW_DIALOG_FLAG_ALERT_MASK:
       of WEBVIEW_DIALOG_FLAG_INFO:
         [a setAlertStyle:NSAlertStyleInformational]
-      
         break
       of WEBVIEW_DIALOG_FLAG_WARNING:
         # printf("Warning\n");
