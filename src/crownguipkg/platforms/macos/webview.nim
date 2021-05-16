@@ -475,7 +475,8 @@ proc webview_dialog(w:Webview,dlgtype:WebviewDialogType , flags:int ,
 
 
 proc webview_exit(w:Webview) =
-  var app:Id = [NSApplication sharedApplication]
-  [app terminate: app]
+  objcr:
+    var app:Id = [NSApplication sharedApplication]
+    [app terminate: app]
 
 # proc webview_print_log(s:cstring) = printf("%s\n", s)
