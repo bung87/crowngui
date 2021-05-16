@@ -142,19 +142,17 @@ type CompletionHandler5 = proc (c:cint):void
 proc make_nav_policy_decision( self:id,cmd: SEL ,webView: id ,response: id ,
                                      decisionHandler:Block[CompletionHandler4]) =
   objcr:
-    
     if ([response canShowMIMEType] == 0) :
       decisionHandler(WKNavigationActionPolicyDownload)
     else:
       decisionHandler(WKNavigationResponsePolicyAllow)
 
 proc webview_load_HTML(w:webview,html:cstring) =
-  objcr:[w.priv.webview,loadHTMLString:get_nsstring(html),baseURL:nil]
-
+  objcr:[w.priv.webview,loadHTMLString:@(html),baseURL:nil]
 
 proc webview_load_URL(w:webview,url:cstring) =
   objcr:
-    var requestURL:id = [NSURL URLWithString: get_nsstring(url)]
+    var requestURL:id = [NSURL URLWithString: @(url)]
     [requestURL autorelease]
     var request = [NSURLRequest requestWithURL:requestURL]
     [request autorelease]
@@ -380,8 +378,7 @@ proc webview_eval(w:webview, js:cstring) :int =
   objcr:
     var userScript:id = [WKUserScript alloc]
     [userScript initWithSource:@(js),injectionTime:WKUserScriptInjectionTimeAtDocumentEnd,forMainFrameOnly:0]
-    var userScript:id = objc_msgSend(
-      (id)objc_getClass("WKUserScript"), sel_registerName("alloc"));
+    var userScript:id = [WKUserScript alloc]
     var config:id = [w.priv.webview valueForKey:"configuration"]
     var userContentController:id  = [config valueForKey:"userContentController"]
     [userContentController addUserScript:userScript]
@@ -394,7 +391,6 @@ proc webview_set_fullscreen(w:webview, fullscreen:int ) =
   objcr:
     var windowStyleMask:culong = [w.priv.window styleMask]
     var b:int = if windowStyleMask and NSWindowStyleMaskFullScreen == NSWindowStyleMaskFullScreen:1 else:0
-
     if b != fullscreen:
       [w.priv.window toggleFullScreen:nil]
 
