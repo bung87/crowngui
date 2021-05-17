@@ -10,13 +10,13 @@ var NSApp {.importc.}: ID
 #include <limits.h>
 const NSKeyDown = (1 shl 10)
 const NSEventModifierFlagDeviceIndependentFlagsMask = 0xffff0000.culong
-# const WEBVIEW_DIALOG_FLAG_FILE = (0 shl 0)
-# const WEBVIEW_DIALOG_FLAG_DIRECTORY= (1 shl 0)
+const WEBVIEW_DIALOG_FLAG_FILE = (0 shl 0)
+const WEBVIEW_DIALOG_FLAG_DIRECTORY= (1 shl 0)
 
-# const WEBVIEW_DIALOG_FLAG_INFO= (1 shl 1)
-# const WEBVIEW_DIALOG_FLAG_WARNING= (2 shl 1)
-# const WEBVIEW_DIALOG_FLAG_ERROR =(3 shl 1)
-# const WEBVIEW_DIALOG_FLAG_ALERT_MASK= (3 shl 1)
+const WEBVIEW_DIALOG_FLAG_INFO= (1 shl 1)
+const WEBVIEW_DIALOG_FLAG_WARNING= (2 shl 1)
+const WEBVIEW_DIALOG_FLAG_ERROR =(3 shl 1)
+const WEBVIEW_DIALOG_FLAG_ALERT_MASK= (3 shl 1)
 const NSAlertStyleWarning = 0
 const NSAlertStyleCritical =2
 const NSWindowStyleMaskResizable= 8
@@ -396,10 +396,10 @@ proc webview_launch_external_URL(w:Webview, uri:cstring) =
 
 proc webview_set_color(w:Webview;r,g,b,a:uint8) =
   objcr:
-    var color:Id = [NSColor colorWithRed:r / 255.0,green:g / 255.0,blue:b / 255.0,alpha:a / 255.0]
+    var color:Id = [NSColor colorWithRed:r.float64 / 255.0,green:g.float64 / 255.0,blue:b.float64 / 255.0,alpha:a.float64 / 255.0]
     [w.priv.window setBackgroundColor:color]
 
-    if (0.5 >= ((r / 255.0 * 299.0) + (g / 255.0 * 587.0) + (b / 255.0 * 114.0)) /
+    if (0.5 >= ((r.float64 / 255.0 * 299.0) + (g.float64 / 255.0 * 587.0) + (b.float64 / 255.0 * 114.0)) /
                   1000.0) :
       [w.priv.window setAppearance:[ NSAppearance appearanceNamed:"NSAppearanceNameVibrantDark"]]
     else:
@@ -413,11 +413,11 @@ proc webview_dialog(w:Webview,dlgtype:WebviewDialogType , flags:int ,
   objcr:
     if (dlgtype == WEBVIEW_DIALOG_TYPE_OPEN or
         dlgtype == WEBVIEW_DIALOG_TYPE_SAVE) :
-      var panel:Id = getClass("NSSavePanel")
+      var panel = cast[Id](getClass("NSSavePanel"))
     
       if (dlgtype == WEBVIEW_DIALOG_TYPE_OPEN) :
-        var openPanel:Id =[NSOpenPanel openPanel] 
-        if (flags and WEBVIEW_DIALOG_FLAG_DIRECTORY) :
+        var openPanel =[NSOpenPanel openPanel] 
+        if (flags and WEBVIEW_DIALOG_FLAG_DIRECTORY) > 0 :
           [openPanel setCanChooseFiles:0]
           [openPanel setCanChooseDirectories:1]
         else :
@@ -433,34 +433,36 @@ proc webview_dialog(w:Webview,dlgtype:WebviewDialogType , flags:int ,
       [panel setExtensionHidden:0]
       [panel setCanSelectHiddenExtension:0]
       [panel setTreatsFilePackagesAsDirectories:1]
-      [panel beginSheetModalForWindow:w.priv.window,completionHandler: proc (result:Id) = 
-        [[NSApplication sharedApplication] stopModalWithCode:result]
-      ]
-      if [[NSApplication sharedApplication] runModalForWindow:panel] == NSModalResponseOK:
+      let blk = toBlock() do (r:Id):
+        objcr:
+          [[NSApplication sharedApplication] stopModalWithCode:r]
+      
+      [panel beginSheetModalForWindow:w.priv.window,completionHandler: blk ]
+      if [[NSApplication sharedApplication] runModalForWindow: panel] == cast[Id](NSModalResponseOK):
         var url:Id = [panel URL] 
         var path:Id = [url path]
-        var filename:cstring = [path "UTF8String"]
-        strlcpy(result, filename, resultsz)
+        var filename:cstring = cast[cstring]([path UTF8String])
+        copyMem(result,filename,resultsz)
+        # strlcpy(result, filename, resultsz)
       
       elif (dlgtype == WEBVIEW_DIALOG_TYPE_ALERT):
-        var a:Id = [NSAlert `new`] 
+        var a:Id = [NSAlert new] 
         case flags and WEBVIEW_DIALOG_FLAG_ALERT_MASK:
         of WEBVIEW_DIALOG_FLAG_INFO:
-          [a setAlertStyle:NSAlertStyleInformational]
-          break
+          [a setAlertStyle: NSAlertStyleInformational]
         of WEBVIEW_DIALOG_FLAG_WARNING:
           # printf("Warning\n");
-          [a setAlertStyle:NSAlertStyleWarning]
-          break
+          [a setAlertStyle: NSAlertStyleWarning]
         of WEBVIEW_DIALOG_FLAG_ERROR:
           # printf("Error\n");
           [a setAlertStyle:NSAlertStyleCritical]
-          break
+        else:
+          discard
         [a setShowsHelp:0]
         [a setShowsSuppressionButton:0]
-        [a setMessageText: @(title)]
-        [a setInformativeText: @(arg)]
-        [a addButtonWithTitle:"OK"]
+        [a setMessageText: @($title)]
+        [a setInformativeText: @($arg)]
+        [a addButtonWithTitle: "OK"]
         [a runModal]
         [a release]
 
