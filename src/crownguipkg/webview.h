@@ -74,20 +74,6 @@ struct webview_priv {
   DWORD saved_ex_style;
   RECT saved_rect;
 };
-#elif defined(WEBVIEW_COCOA)
-#include <objc/objc-runtime.h>
-#include <CoreGraphics/CoreGraphics.h>
-#include <Block.h>
-#include <limits.h>
-struct webview_priv {
-  id pool;
-  id window;
-  id webview;
-  id windowDelegate;
-  int should_exit;
-};
-#define NSKeyDown (1 << 10)
-#define NSEventModifierFlagDeviceIndependentFlagsMask 0xffff0000UL
 #else
 #error "Define one of: WEBVIEW_GTK, WEBVIEW_COCOA or WEBVIEW_WINAPI"
 #endif

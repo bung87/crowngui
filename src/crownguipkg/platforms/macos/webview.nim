@@ -4,7 +4,10 @@ import menu
 var NSApp {.importc.}: ID
 {.passc: "-DOBJC_OLD_DISPATCH_PROTOTYPES=1 -x objective-c",
     passl: "-framework Cocoa -framework WebKit".}
-
+#include <objc/objc-runtime.h>
+#include <CoreGraphics/CoreGraphics.h>
+#include <Block.h>
+#include <limits.h>
 const NSKeyDown = (1 shl 10)
 const NSEventModifierFlagDeviceIndependentFlagsMask = 0xffff0000.culong
 # const WEBVIEW_DIALOG_FLAG_FILE = (0 shl 0)
@@ -58,6 +61,8 @@ type
     userdata : pointer
   WebviewDialogType = enum
     WEBVIEW_DIALOG_TYPE_OPEN,WEBVIEW_DIALOG_TYPE_SAVE,WEBVIEW_DIALOG_TYPE_ALERT
+
+proc webview_check_url(s:cstring):cstring = s
 
 proc webview_terminate(w:Webview) =
   w.priv.should_exit = 1
@@ -199,44 +204,42 @@ proc webview_init(w:Webview):int =
     w.priv.pool = [NSAutoreleasePool new]
     [NSApplication sharedApplication]
 
-  var handler = proc ( event:Id) =
+  var handler = proc ( event:Id):Id =
     objcr:
       var flag:NSUInteger = cast[NSUInteger]([event modifierFlags])
-      var charactersIgnoringModifiers:NSString  = cast[NSString]([event charactersIgnoringModifiers] )
-      Bool isX = cast[Bool]([charactersIgnoringModifiers isEqualToString:"x"])
-      Bool isC = cast[Bool]([charactersIgnoringModifiers isEqualToString:"c"])  
-      Bool isV = cast[Bool]([charactersIgnoringModifiers isEqualToString:"v"]) 
-      Bool isZ = cast[Bool]([charactersIgnoringModifiers isEqualToString:"z"]) 
-      Bool isA = cast[Bool]([charactersIgnoringModifiers isEqualToString:"a"]) 
-      Bool isY = cast[Bool]([charactersIgnoringModifiers isEqualToString:"y"]) 
-      if (flag  and  NSEventModifierFlagCommand):
-        if (isX):
-          BOOL cut = objc_msgSend(getClass("NSApp"),registerName("sendAction:"),registerName("cut:"),registerName("to:"),nil,registerName("from:"),getClass("NSApp"));
-          if (cut):
+      var charactersIgnoringModifiers  = [event charactersIgnoringModifiers]
+      let isX:Bool = cast[Bool]([charactersIgnoringModifiers isEqualToString: @"x"])
+      let isC:Bool = cast[Bool]([charactersIgnoringModifiers isEqualToString: @"c"])  
+      let isV:Bool = cast[Bool]([charactersIgnoringModifiers isEqualToString: @"v"]) 
+      let isZ:Bool = cast[Bool]([charactersIgnoringModifiers isEqualToString: @"z"]) 
+      let isA:Bool = cast[Bool]([charactersIgnoringModifiers isEqualToString: @"a"]) 
+      let isY:Bool = cast[Bool]([charactersIgnoringModifiers isEqualToString: @"y"]) 
+      if (flag.uint and NSEventModifierFlagCommand) > 0:
+        if isX == Yes:
+          let cut:Bool = cast[Bool]([NSApp "sendAction:cut:to:":nil,`from`:NSApp])
+          if cut:
             return nil
-        elif (isC):
-          BOOL copy = objc_msgSend(getClass("NSApp"),registerName("sendAction:"),registerName("copy:"),registerName("to:"),nil,registerName("from:"),getClass("NSApp"));
-          if (copy):
+        elif isC:
+          let copy:Bool = cast[Bool]([NSApp "sendAction:copy:to:":nil,`from`:NSApp]) 
+          if copy:
             return nil
-        
-        elif (isV):
-          BOOL paste = objc_msgSend(getClass("NSApp"),registerName("sendAction:"),registerName("paste:"),registerName("to:"),nil,registerName("from:"),getClass("NSApp"));
-          if (paste):
+        elif isV:
+          let paste:Bool = cast[Bool]([NSApp "sendAction:paste:to:":nil,`from`:NSApp] ) 
+          if paste:
             return nil
-        
-        elif (isZ):
-          BOOL undo = objc_msgSend(getClass("NSApp"),registerName("sendAction:"),registerName("undo:"),registerName("to:"),nil,registerName("from:"),getClass("NSApp"));
-          if (undo):
+        elif isZ:
+          let undo:Bool =  cast[Bool]([NSApp "sendAction:undo:to:":nil,`from`:NSApp]) 
+          if undo:
             return nil
-        elif (isA):
-          BOOL selectAll = objc_msgSend(getClass("NSApp"),registerName("sendAction:"),registerName("selectAll:"),registerName("to:"),nil,registerName("from:"),getClass("NSApp"))
-          if (selectAll):
+        elif isA:
+          let selectAll:Bool  = cast[Bool]([NSApp "sendAction:selectAll:to:":nil,`from`:NSApp]) 
+          if selectAll:
             return nil
-      elif (flag & NSEventModifierFlagDeviceIndependentFlagsMask == (NSEventModifierFlagCommand or NSEventModifierFlagShift)):
-        BOOL isY = objc_msgSend(charactersIgnoringModifiers,registerName("isEqualToString:"),@"y")
-        if (isY):
-          BOOL redo = objc_msgSend(getClass("NSApp"),registerName("sendAction:"),registerName("redo:"),registerName("to:"),nil,registerName("from:"),getClass("NSApp"))
-          if (redo):
+      elif (flag.uint and NSEventModifierFlagDeviceIndependentFlagsMask) == (NSEventModifierFlagCommand or NSEventModifierFlagShift):
+        let isY:Bool = cast[Bool]([charactersIgnoringModifiers isEqualToString: @"y"])
+        if isY:
+          let redo:Bool = cast[Bool]([NSApp "sendAction:redo:to:":nil,`from`:NSApp])
+          if redo:
             return nil
       return event
   
@@ -253,7 +256,7 @@ proc webview_init(w:Webview):int =
       PrivWKDownloadDelegate,
       registerName("_download:decideDestinationWithSuggestedFilename:completionHandler:"),
       cast[IMP](run_save_panel), "v@:@@?");
-  discard addMethod(PrivWKDownloadDelegate,registerName("_download:didFailWithError:"),cast[IMP](download_failed), "v@:@@")
+  # discard addMethod(PrivWKDownloadDelegate,registerName("_download:didFailWithError:"),cast[IMP](download_failed), "v@:@@")
   registerClassPair(PrivWKDownloadDelegate);
   var downloadDelegate:Id  = objc_msgSend((Id)PrivWKDownloadDelegate, registerName("new"))
 
@@ -265,11 +268,11 @@ proc webview_init(w:Webview):int =
   var wkPref:Id = objc_msgSend((Id)PrivWKPreferences, registerName("new"))
 
   objcr:
-    [wkPref setValue:[NSNumber numberWithBool:w.debug], forKey:"developerExtrasEnabled"]
+    [wkPref setValue:[NSNumber numberWithBool: w.debug], forKey: "developerExtrasEnabled"]
 
     var userController:Id = [WKUserContentController new]
 
-    setAssociatedObject(userController, $$"webview", (Id)(w),
+    setAssociatedObject(userController, cast[pointer]($$("webview")), (Id)(w),
                             OBJC_ASSOCIATION_ASSIGN)
     [userController addScriptMessageHandler:scriptMessageHandler, name:"invoke"]
 
@@ -280,7 +283,7 @@ proc webview_init(w:Webview):int =
     [userController addUserScript:windowExternalOverrideScript]
     var config:Id = [WKWebViewConfiguration new]
     var processPool:Id = [config processPool]
-    [processPool $$"_setDownloadDelegate": downloadDelegate]
+    [processPool "_setDownloadDelegate": downloadDelegate]
     [config setProcessPool:processPool]
     [config setUserContentController:userController]
     [config setPreferences:wkPref]
@@ -295,17 +298,19 @@ proc webview_init(w:Webview):int =
 
   setAssociatedObject(w.priv.windowDelegate, cast[pointer]($$"webview"), (Id)(w),
                            OBJC_ASSOCIATION_ASSIGN)
+  proc CGRectMake(x,y,w,h:SomeNumber): CGRect =
+    result = CGRect(origin:CGPoint(x:x.CGFloat,y:y.CGFloat),size:CGSize(width:w.CGFloat,height:h.CGFloat))
   objcr:
-    var nsTitle:Id = @(w.title)
+    var nsTitle = @($w.title)
     var r:CGRect = CGRectMake(0, 0, w.width, w.height)
     var style = NSWindowStyleMaskTitled or NSWindowStyleMaskClosable or
                        NSWindowStyleMaskMiniaturizable;
-    if (w.resizable) :
+    if w.resizable > 0 :
       style = style or NSWindowStyleMaskResizable
     w.priv.window =[NSWindow alloc]
     [w.priv.window initWithContentRect:r,styleMask:style,backing:NSBackingStoreBuffered,`defer`:0]
     [w.priv.window autorelease]
-    [w.priv.window setTitle:nsTitle]
+    [w.priv.window setTitle: nsTitle]
     [w.priv.window setDelegate:w.priv.windowDelegate]
     [w.priv.window center]
 
@@ -334,12 +339,12 @@ proc webview_init(w:Webview):int =
       cast[IMP](make_nav_policy_decision), "v@:@@?")
   registerClassPair(PrivWKNavigationDelegate);
   objcr:
-    var navDel:Id = [PrivWKNavigationDelegate `new`] 
+    var navDel:Id = [PrivWKNavigationDelegate new] 
     w.priv.webview =[WKWebView alloc]
     [w.priv.webview initWithFrame:r,configuration:config]
     [w.priv.webview setUIDelegate:uiDel]
     [w.priv.webview setNavigationDelegate:navDel]
-    var nsURL:Id = [NSURL URLWithString:@(webview_check_url(w->url))]
+    var nsURL:Id = [NSURL URLWithString: @($webview_check_url(w.url))]
     [w.priv.webview loadRequest:[NSURLRequest requestWithURL:nsURL]]
     [w.priv.webview setAutoresizesSubviews:1]
     [w.priv.webview setAutoresizingMask:NSViewWidthSizable or NSViewHeightSizable]
@@ -353,7 +358,7 @@ proc webview_loop(w:Webview, blocking:int ): int =
   objcr:
     var until:Id = if blocking > 0 : [NSDate distantFuture] else: [NSDate distantPast]
     [NSApplication sharedApplication]
-    var event:Id = [NSApp nextEventMatchingMask:max(culong),untilDate:until,inMode:"kCFRunLoopDefaultMode",dequeue:true]
+    var event:Id = [NSApp nextEventMatchingMask:culong.high,untilDate:until,inMode:"kCFRunLoopDefaultMode",dequeue:true]
     if cast[pointer](event) != nil:
       [NSApp sendEvent:event]
     return w.priv.should_exit
@@ -361,33 +366,32 @@ proc webview_loop(w:Webview, blocking:int ): int =
 proc webview_eval(w:Webview, js:cstring) :int =
   objcr:
     var userScript:Id = [WKUserScript alloc]
-    [userScript initWithSource:@(js),injectionTime:WKUserScriptInjectionTimeAtDocumentEnd,forMainFrameOnly:0]
-    var userScript:Id = [WKUserScript alloc]
+    [userScript initWithSource: @($js),injectionTime: WKUserScriptInjectionTimeAtDocumentEnd,forMainFrameOnly: 0]
     var config:Id = [w.priv.webview valueForKey:"configuration"]
     var userContentController:Id  = [config valueForKey:"userContentController"]
     [userContentController addUserScript:userScript]
   return 0
 
 proc webview_set_title(w:Webview,title:cstring) =
-  objcr: [w.priv.window setTitle:@(title)]
+  objcr: [w.priv.window setTitle: @($title)]
 
 proc webview_set_fullscreen(w:Webview, fullscreen:int ) =
   objcr:
-    var windowStyleMask:culong = [w.priv.window styleMask]
-    var b:int = if windowStyleMask and NSWindowStyleMaskFullScreen == NSWindowStyleMaskFullScreen:1 else:0
+    var windowStyleMask:culong = cast[culong]([w.priv.window styleMask])
+    var b:int = if (windowStyleMask and NSWindowStyleMaskFullScreen) == NSWindowStyleMaskFullScreen: 1 else: 0
     if b != fullscreen:
       [w.priv.window toggleFullScreen:nil]
 
 proc webview_set_iconify(w:Webview, iconify:int ) =
   objcr:
-    if (iconify):
+    if iconify > 0:
       [w.priv.window miniaturize:nil]
     else:
       [w.priv.window deminiaturize:nil]
 
 proc webview_launch_external_URL(w:Webview, uri:cstring) =
   objcr:
-    var url:Id = [NSURL @(webview_check_url(uri))]
+    var url:Id = [NSURL URLWithString: @($webview_check_url(uri))]
     [[NSWorkspace sharedWorkspace] openURL:url]
 
 proc webview_set_color(w:Webview;r,g,b,a:uint8) =
@@ -402,7 +406,7 @@ proc webview_set_color(w:Webview;r,g,b,a:uint8) =
       [w.priv.window setAppearance:[NSAppearance appearanceNamed:"NSAppearanceNameVibrantLight"]]
       [w.priv.window setOpaque:0]
       [w.priv.window setTitlebarAppearsTransparent:1]
-      [w.priv.window $$"_setDrawsBackground":0]
+      [w.priv.window "_setDrawsBackground":0]
 
 proc webview_dialog(w:Webview,dlgtype:WebviewDialogType , flags:int ,
                                 title:cstring,arg:cstring,result:var cstring,resultsz:csize_t) =
