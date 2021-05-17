@@ -74,6 +74,19 @@ struct webview_priv {
   DWORD saved_ex_style;
   RECT saved_rect;
 };
+#elif defined(WEBVIEW_COCOA)
+#include <objc/objc-runtime.h>
+#include <CoreGraphics/CoreGraphics.h>
+#include <Block.h>
+#include <limits.h>
+struct webview_priv {
+  id pool;
+  id window;
+  id webview;
+  id windowDelegate;
+  int should_exit;
+};
+
 #else
 #error "Define one of: WEBVIEW_GTK, WEBVIEW_COCOA or WEBVIEW_WINAPI"
 #endif
@@ -1676,7 +1689,32 @@ WEBVIEW_API void webview_exit(struct webview *w) {
 
 WEBVIEW_API void webview_print_log(const char *s) { OutputDebugString(s); }
 
-#endif /* WEBVIEW_WINAPI */
+
+#elif defined(WEBVIEW_COCOA)
+static id get_nsstring(const char *c_str) {
+  return objc_msgSend((id)objc_getClass("NSString"),
+                      sel_registerName("stringWithUTF8String:"), c_str);
+}
+
+#define WKUserScriptInjectionTimeAtDocumentEnd 1
+WEBVIEW_API int webview_eval(struct webview *w, const char *js) {
+  id userScript = objc_msgSend(
+      (id)objc_getClass("WKUserScript"), sel_registerName("alloc"));
+  objc_msgSend(
+      userScript,
+      sel_registerName("initWithSource:injectionTime:forMainFrameOnly:"),
+      get_nsstring(js),
+      WKUserScriptInjectionTimeAtDocumentEnd, 0);  
+      // should Inject the script after the document finishes loading, but before other subresources finish loading.
+      // this also ensure webview give full html structure(html>head+body) in case content only has body inner part.
+  id config = objc_msgSend(w->priv.webview, sel_registerName("valueForKey:"), get_nsstring("configuration"));
+  id userContentController = objc_msgSend(config, sel_registerName("valueForKey:"), get_nsstring("userContentController"));
+  objc_msgSend(userContentController, sel_registerName("addUserScript:"),
+               userScript);
+
+  return 0;
+}
+#endif /* WEBVIEW_COCOA */
 
 #endif /* WEBVIEW_IMPLEMENTATION */
 

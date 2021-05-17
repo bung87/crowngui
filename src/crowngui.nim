@@ -61,8 +61,8 @@ proc newApplication*(entry: static[string]): ApplicationRef =
 proc run*(app: ApplicationRef) = app.webview.run
 proc css*(app: ApplicationRef, css: cstring) = app.webview.css(css)
 proc css*(app: ApplicationRef, css: string) = app.webview.css(css.cstring)
-proc js*(app: ApplicationRef, js: cstring) = app.webview.js(js)
-proc js*(app: ApplicationRef, js: string) = app.webview.js(js.cstring)
+proc js*(app: ApplicationRef, js: cstring) = discard app.webview.js(js)
+proc js*(app: ApplicationRef, js: string) = discard app.webview.js(js.cstring)
 proc exit*(app: ApplicationRef) = app.webview.exit
 template bindProcs*(app: ApplicationRef; scope: string; n: untyped): untyped = app.webview.bindProcs(scope, n)
 

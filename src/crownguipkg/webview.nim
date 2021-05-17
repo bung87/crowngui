@@ -12,30 +12,31 @@ elif defined(macosx):
   import objc_runtime
   import darwin / [app_kit, foundation]
   import platforms/macos/menu
+  import platforms/macos/webview
   var NSApp {.importc.}: ID
   {.passc: "-DOBJC_OLD_DISPATCH_PROTOTYPES=1 -DWEBVIEW_COCOA=1 -x objective-c",
       passl: "-framework Cocoa -framework WebKit".}
 
+# type
+#   ExternalInvokeCb* = proc (w: Webview; arg: string) ## External CallBack Proc
+#   WebviewPrivObj {.importc: "struct webview_priv", header: headerC, bycopy.} = object
+#     when defined(macosx):
+#       pool: ID
+#       window: ID
+#       webview: ID
+#       windowDelegate: ID
+#       should_exit: int
+#   WebviewObj* {.importc: "struct webview", header: headerC, bycopy.} = object ## WebView Type
+#     url* {.importc: "url".}: cstring                                          ## Current URL
+#     title* {.importc: "title".}: cstring                                      ## Window Title
+#     width* {.importc: "width".}: cint                                         ## Window Width
+#     height* {.importc: "height".}: cint                                       ## Window Height
+#     resizable* {.importc: "resizable".}: cint ## `true` to Resize the Window, `false` for Fixed size Window
+#     debug* {.importc: "debug".}: cint                                         ## Debug is `true` when not build for Release
+#     external_invoke_cb {.importc: "external_invoke_cb".}: pointer                       ## Callback proc js:window.external.invoke
+#     priv {.importc: "priv".}: WebviewPrivObj
+#     userdata {.importc: "userdata".}: pointer
 type
-  ExternalInvokeCb* = proc (w: Webview; arg: string) ## External CallBack Proc
-  WebviewPrivObj {.importc: "struct webview_priv", header: headerC, bycopy.} = object
-    when defined(macosx):
-      pool: ID
-      window: ID
-      webview: ID
-      windowDelegate: ID
-      should_exit: int
-  WebviewObj* {.importc: "struct webview", header: headerC, bycopy.} = object ## WebView Type
-    url* {.importc: "url".}: cstring                                          ## Current URL
-    title* {.importc: "title".}: cstring                                      ## Window Title
-    width* {.importc: "width".}: cint                                         ## Window Width
-    height* {.importc: "height".}: cint                                       ## Window Height
-    resizable* {.importc: "resizable".}: cint ## `true` to Resize the Window, `false` for Fixed size Window
-    debug* {.importc: "debug".}: cint                                         ## Debug is `true` when not build for Release
-    invokeCb {.importc: "external_invoke_cb".}: pointer                       ## Callback proc js:window.external.invoke
-    priv {.importc: "priv".}: WebviewPrivObj
-    userdata {.importc: "userdata".}: pointer
-
   OnOpenFile* = proc (view: Webview; filePath: string)
   Webview* = ptr WebviewObj
   DispatchFn* = proc()
@@ -90,12 +91,12 @@ var
   cbs = newTable[Webview, ExternalInvokeCb]()                                   # easy callbacks
   dispatchTable = newTable[int, DispatchFn]()                                   # for dispatch
 
-func init(w: Webview): cint {.importc: "webview_init", header: headerC.}
-func loadHTML*(w: Webview; html: cstring) {.importc: "webview_load_HTML", header: headerC.}
-func loadHTML*(w: Webview; html: string) = loadHTML(w, html.cstring)
-func loadURL*(w: Webview; url: cstring) {.importc: "webview_load_URL", header: headerC.}
-func reload*(w: Webview; url: cstring) {.importc: "webview_reload", header: headerC.}
-func loop(w: Webview; blocking: cint): cint {.importc: "webview_loop", header: headerC.}
+proc init(w: Webview): cint = webview_init(w)
+proc loadHTML*(w: Webview; html: cstring) = webview_load_HTML(w, html)
+proc loadHTML*(w: Webview; html: string) = loadHTML(w, html.cstring)
+proc loadURL*(w: Webview; url: cstring) = webview_load_URL(w, url)
+func reload*(w: Webview; ) = webview_reload(w)
+proc loop(w: Webview; blocking: cint): cint = webview_loop(w, blocking)
 func js*(w: Webview; javascript: cstring): cint {.importc: "webview_eval", header: headerC,
     discardable.} ## Evaluate a JavaScript cstring, runs the javascript string on the window
 func css*(w: Webview; css: cstring): cint {.importc: "webview_inject_css", header: headerC,
@@ -106,13 +107,13 @@ func setColor*(w: Webview; red, green, blue, alpha: uint8) {.importc: "webview_s
 func setFullscreen*(w: Webview; fullscreen: bool) {.importc: "webview_set_fullscreen", header: headerC.} ## Set fullscreen
 func dialog(w: Webview; dlgtype: DialogType; flags: cint; title: cstring; arg: cstring; result: cstring;
     resultsz: system.csize_t) {.importc: "webview_dialog", header: headerC.}
-func dispatch(w: Webview; fn: pointer; arg: pointer) {.importc: "webview_dispatch",
-    header: headerC.} # dispatch nim func,function will be executed on the UI thread
-func webview_terminate(w: Webview) {.importc: "webview_terminate", header: headerC.}
-func webview_exit(w: Webview) {.importc: "webview_exit", header: headerC.}
-func jsDebug*(format: cstring) {.varargs, importc: "webview_debug",
-    header: headerC.} ##  `console.debug()` directly inside the JavaScript context.
-func jsLog*(s: cstring) {.importc: "webview_print_log", header: headerC.} ## `console.log()` directly inside the JavaScript context.
+func dispatch(w: Webview; fn: pointer; arg: pointer) = webview_dispatch(w, fn,
+    arg) # dispatch nim func,function will be executed on the UI thread
+# func webview_terminate(w: Webview) {.importc: "webview_terminate", header: headerC.}
+# func webview_exit(w: Webview) {.importc: "webview_exit", header: headerC.}
+# func jsDebug*(format: cstring) {.varargs, importc: "webview_debug",
+    # header: headerC.} ##  `console.debug()` directly inside the JavaScript context.
+# func jsLog*(s: cstring) {.importc: "webview_print_log", header: headerC.} ## `console.log()` directly inside the JavaScript context.
 func webview(title: cstring; url: cstring; w: cint; h: cint; resizable: cint): cint {.importc: "webview",
     header: headerC, used.}
 func launchExternalURL*(w: Webview; url: cstring) {.importc: "webview_launch_external_URL", header: headerC.} ## Set the current URL
@@ -195,7 +196,7 @@ template dialogOpenDir*(w: Webview; title = ""): string =
   w.dialog(dtOpen, 1.cint, title, "")
 
 proc generalExternalInvokeCallback(w: Webview; arg: cstring) {.exportc.} =
-  # assign to webview.invokeCb using eps,cbs store user defined proc
+  # assign to webview.external_invoke_cb using eps,cbs store user defined proc
   var handled = false
   if eps.hasKey(w):
     try:
@@ -317,7 +318,7 @@ macro bindProcs*(w: Webview; scope: string; n: untyped): untyped =
   result = newBlockStmt(body)
   when not defined(release): echo repr(result)
 
-func run*(w: Webview) {.inline.} =
+proc run*(w: Webview) {.inline.} =
   ## `run` starts the main UI loop until the user closes the window or `exit()` is called.
   while w.loop(1) == 0: discard
 
@@ -348,7 +349,7 @@ proc webView(title = ""; url = ""; width: Positive = 1000; height: Positive = 70
   result.height = height.cint
   result.resizable = when resizable: 1 else: 0
   result.debug = when debug: 1 else: 0
-  result.invokeCb = generalExternalInvokeCallback
+  result.external_invoke_cb = generalExternalInvokeCallback
   if callback != nil: result.externalInvokeCB = callback
   if result.init() != 0: return nil
 
