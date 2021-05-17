@@ -13,6 +13,7 @@ elif defined(macosx):
   import darwin / [app_kit, foundation]
   import platforms/macos/menu
   import platforms/macos/webview
+  export webview
   var NSApp {.importc.}: ID
   {.passc: "-DOBJC_OLD_DISPATCH_PROTOTYPES=1 -DWEBVIEW_COCOA=1 -x objective-c",
       passl: "-framework Cocoa -framework WebKit".}
@@ -38,7 +39,7 @@ elif defined(macosx):
 #     userdata {.importc: "userdata".}: pointer
 type
   OnOpenFile* = proc (view: Webview; filePath: string)
-  Webview* = ptr WebviewObj
+  # Webview* = ptr WebviewObj
   DispatchFn* = proc()
   DialogType {.size: sizeof(cint).} = enum
     dtOpen = 0, dtSave = 1, dtAlert = 2
@@ -114,8 +115,8 @@ func dispatch(w: Webview; fn: pointer; arg: pointer) = webview_dispatch(w, fn,
 # func jsDebug*(format: cstring) {.varargs, importc: "webview_debug",
     # header: headerC.} ##  `console.debug()` directly inside the JavaScript context.
 # func jsLog*(s: cstring) {.importc: "webview_print_log", header: headerC.} ## `console.log()` directly inside the JavaScript context.
-func webview(title: cstring; url: cstring; w: cint; h: cint; resizable: cint): cint {.importc: "webview",
-    header: headerC, used.}
+# func webview(title: cstring; url: cstring; w: cint; h: cint; resizable: cint): cint {.importc: "webview",
+#     header: headerC, used.}
 func launchExternalURL*(w: Webview; url: cstring) {.importc: "webview_launch_external_URL", header: headerC.} ## Set the current URL
 func setIconify*(w: Webview; mustBeIconified: bool) {.importc: "webview_set_iconify",
     header: headerC.} ## Set window to be Minimized Iconified
@@ -343,8 +344,8 @@ func exit*(w: Webview) {.inline.} =
 proc webView(title = ""; url = ""; width: Positive = 1000; height: Positive = 700; resizable: static[bool] = true;
     debug: static[bool] = not defined(release); callback: ExternalInvokeCb = nil): Webview {.inline.} =
   result = cast[Webview](alloc0(sizeof(WebviewObj)))
-  result.title = title
-  result.url = url
+  result.title = title.cstring
+  result.url = url.cstring
   result.width = width.cint
   result.height = height.cint
   result.resizable = when resizable: 1 else: 0

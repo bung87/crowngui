@@ -1,7 +1,7 @@
 import objc_runtime
 import darwin / [app_kit, foundation, objc/runtime, objc/blocks, core_graphics/cggeometry]
 import menu
-import macros
+import macros, os, strutils, base64
 var NSApp {.importc.}: ID
 {.passc: "-DOBJC_OLD_DISPATCH_PROTOTYPES=1 -x objective-c",
     passl: "-framework Cocoa -framework WebKit".}
@@ -40,30 +40,34 @@ const WKNavigationResponsePolicyAllow = 1
 const WKUserScriptInjectionTimeAtDocumentStart = 0
 const WKUserScriptInjectionTimeAtDocumentEnd = 1
 const NSApplicationActivationPolicyRegular = 0
-
+const headerC = currentSourcePath.parentDir.parentDir.parentDir / "webview.h"
+proc webview_external_invoke(self: Id, cmd: Sel, contentController: Id, message: Id) {.
+    importc: "webview_external_invoke", header: headerC.}
+proc webview_check_url(s: cstring): cstring {.importc: "webview_check_url", header: headerC.}
 type
   Webview* = ptr WebviewObj
   ExternalInvokeCb* = proc (w: Webview; arg: cstring) ## External CallBack Proc
-  WebviewPrivObj {.bycopy.} = object
-    pool: ID
-    window: ID
-    webview: ID
-    windowDelegate: ID
-    should_exit*: cint
-  WebviewObj* {.bycopy.} = object         ## WebView Type
-    url*: cstring                         ## Current URL
-    title*: cstring                       ## Window Title
-    width*: cint                          ## Window Width
-    height*: cint                         ## Window Height
-    resizable*: cint                      ## `true` to Resize the Window, `false` for Fixed size Window
-    debug*: cint                          ## Debug is `true` when not build for Release
-    external_invoke_cb*: ExternalInvokeCb ## Callback proc js:window.external.invoke
-    priv: WebviewPrivObj
-    userdata: pointer
+  WebviewPrivObj {.importc: "struct webview_priv", header: headerC, bycopy.} = object
+    when defined(macosx):
+      pool: ID
+      window: ID
+      webview: ID
+      windowDelegate: ID
+      should_exit: cint
+  WebviewObj* {.importc: "struct webview", header: headerC, bycopy.} = object ## WebView Type
+    url* {.importc: "url".}: cstring                                          ## Current URL
+    title* {.importc: "title".}: cstring                                      ## Window Title
+    width* {.importc: "width".}: cint                                         ## Window Width
+    height* {.importc: "height".}: cint                                       ## Window Height
+    resizable* {.importc: "resizable".}: cint ## `true` to Resize the Window, `false` for Fixed size Window
+    debug* {.importc: "debug".}: cint                                         ## Debug is `true` when not build for Release
+    invokeCb {.importc: "external_invoke_cb".}: pointer                       ## Callback proc js:window.external.invoke
+    priv {.importc: "priv".}: WebviewPrivObj
+    userdata {.importc: "userdata".}: pointer
   WebviewDialogType = enum
     WEBVIEW_DIALOG_TYPE_OPEN, WEBVIEW_DIALOG_TYPE_SAVE, WEBVIEW_DIALOG_TYPE_ALERT
 
-proc webview_check_url(s: cstring): cstring = s
+
 
 proc webview_terminate*(w: Webview) =
   w.priv.should_exit = 1
@@ -72,15 +76,15 @@ proc webview_window_will_close*(self: Id; cmd: SEL; notification: Id) =
   var w = getAssociatedObject(self, cast[pointer]($$"webview"))
   webview_terminate(cast[Webview](w))
 
-proc webview_external_invoke*(self: ID; cmd: SEL; contentController: Id;
-                                    message: Id) =
-  var w = getAssociatedObject(contentController, cast[pointer]($$"webview"))
-  if (cast[pointer](w) == nil or cast[Webview](w).external_invoke_cb == nil):
-    return
+# proc webview_external_invoke*(self: ID; cmd: SEL; contentController: Id;
+#                                     message: Id) =
+#   var w = getAssociatedObject(contentController, cast[pointer]($$"webview"))
+#   if (cast[pointer](w) == nil or cast[Webview](w).external_invoke_cb == nil):
+#     return
 
-  objcr:
-    var msg = [[message body]UTF8String]
-    cast[Webview](w).external_invoke_cb(cast[Webview](w), cast[cstring](msg))
+#   objcr:
+#     var msg = [[message body]UTF8String]
+#     cast[Webview](w).external_invoke_cb(cast[Webview](w), cast[cstring](msg))
 
 type CompletionHandler = proc (Id: Id): void
 
@@ -343,8 +347,13 @@ proc webview_init*(w: Webview): cint =
     [w.priv.webview initWithFrame: r, configuration: config]
     [w.priv.webview setUIDelegate: uiDel]
     [w.priv.webview setNavigationDelegate: navDel]
-    var nsURL: Id = [NSURL URLWithString: @($webview_check_url(w.url))]
-    [w.priv.webview loadRequest: [NSURLRequest requestWithURL: nsURL]]
+    let url = $webview_check_url(w.url)
+    if "data:text/html;charset=utf-8;base64," in url:
+      let html = base64.decode(url.split(",")[1])
+      [w.priv.webview loadHTMLString: @(html), baseURL: nil]
+    else:
+      var nsURL: Id = [NSURL URLWithString: @(url)]
+      [w.priv.webview loadRequest: [NSURLRequest requestWithURL: nsURL]]
     [w.priv.webview setAutoresizesSubviews: 1]
     [w.priv.webview setAutoresizingMask: NSViewWidthSizable or NSViewHeightSizable]
     [[w.priv.window contentView]addSubview: w.priv.webview]
@@ -361,6 +370,9 @@ proc webview_loop*(w: Webview; blocking: cint): cint =
     if cast[pointer](event) != nil:
       [NSApp sendEvent: event]
     return w.priv.should_exit
+
+
+
 
 # proc webview_eval*(w:Webview, js:cstring) :cint =
 #   objcr:
@@ -495,3 +507,19 @@ proc webview_exit*(w: Webview) =
     [app terminate: app]
 
 # proc webview_print_log*(s:cstring) = printf("%s\n", s)
+# proc webview*(title:cstring, url:cstring,  width:cint,
+#                          height:cint,  resizable:cint):cint =
+#   var webview:Webview
+#   webview.title = title
+#   webview.url = url
+#   echo url
+#   webview.width = width
+#   webview.height = height
+#   webview.resizable = resizable
+#   let r = webview_init(webview)
+#   if r != 0:
+#     return r
+
+#   while (webview_loop(webview, 1) == 0) : discard
+#   webview_exit(webview);
+#   return 0

@@ -197,7 +197,18 @@ WEBVIEW_API int webview(const char *title, const char *url, int width,
   webview_exit(&webview);
   return 0;
 }
+static void webview_external_invoke(id self, SEL cmd, id contentController,
+                                    id message) {
+  struct webview *w =
+      (struct webview *)objc_getAssociatedObject(contentController, "webview");
+  if (w == NULL || w->external_invoke_cb == NULL) {
+    return;
+  }
 
+  w->external_invoke_cb(w, (const char *)objc_msgSend(
+                               objc_msgSend(message, sel_registerName("body")),
+                               sel_registerName("UTF8String")));
+}
 WEBVIEW_API void webview_debug(const char *format, ...) {
   char buf[4096];
   va_list ap;
@@ -1714,6 +1725,7 @@ WEBVIEW_API int webview_eval(struct webview *w, const char *js) {
 
   return 0;
 }
+
 #endif /* WEBVIEW_COCOA */
 
 #endif /* WEBVIEW_IMPLEMENTATION */
