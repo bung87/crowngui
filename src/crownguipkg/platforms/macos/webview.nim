@@ -466,23 +466,28 @@ proc webview_dialog(w:Webview,dlgtype:WebviewDialogType , flags:int ,
         [a runModal]
         [a release]
 
-# proc webview_dispatch_cb(void *arg) =
-#   struct webview_dispatch_arg *context = (struct webview_dispatch_arg *)arg;
-#   (context->fn)(context->w, context->arg);
-#   free(context)
-# 
+type webview_dispatch_arg = object
+  w:Webview
+  arg:pointer
+  fn:proc(w:Webview,arg:pointer)
 
-# WEBVIEW_API void webview_dispatch(struct webview *w, webview_dispatch_fn fn,
-#                                   void *arg) {
-#   struct webview_dispatch_arg *context = (struct webview_dispatch_arg *)malloc(
-#       sizeof(struct webview_dispatch_arg));
-#   context->w = w;
-#   context->arg = arg;
-#   context->fn = fn;
-#   dispatch_async_f(dispatch_get_main_queue(), context, webview_dispatch_cb);
-# }
+proc webview_dispatch_cb(arg:pointer) =
+  # struct webview_dispatch_arg *context = (struct webview_dispatch_arg *)arg;
+  let context = cast[webview_dispatch_arg](arg)
+  (context.fn)(context.w, context.arg)
+  # cfree(context)
 
+proc dispatch_async_f(q:pointer,b:pointer,c:pointer){.importc,header:"<dispatch/dispatch.h>".}
+proc dispatch_get_main_queue():pointer{.importc,header:"<dispatch/dispatch.h>".}
 
+proc webview_dispatch(w:Webview, webview_dispatch_fn :proc(w:Webview,arg:pointer),arg: pointer)=
+  # struct webview_dispatch_arg *context = (struct webview_dispatch_arg *)malloc(
+  #     sizeof(struct webview_dispatch_arg));
+  # context->w = w;
+  # context->arg = arg;
+  # context->fn = fn;
+  var context = webview_dispatch_arg(w:w,fn:webview_dispatch_fn,arg:arg)
+  dispatch_async_f(dispatch_get_main_queue(), context.addr, cast[pointer](webview_dispatch_cb))
 
 proc webview_exit(w:Webview) =
   objcr:
