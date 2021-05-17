@@ -1,6 +1,7 @@
 import objc_runtime
 import darwin / [app_kit, foundation, objc/runtime, objc/blocks, core_graphics/cggeometry]
 import menu
+import macros
 var NSApp {.importc.}: ID
 {.passc: "-DOBJC_OLD_DISPATCH_PROTOTYPES=1 -x objective-c",
     passl: "-framework Cocoa -framework WebKit".}
@@ -181,18 +182,17 @@ proc webview_show*(w: Webview) =
     [w.priv.window makeKeyAndOrderFront: nil]
 
 proc webview_hide*(w: Webview) =
-  objcr: [w.priv.window $$"orderOut:"]
-  objc_msgSend(w.priv.window, registerName("orderOut:"), nil);
+  objcr: [w.priv.window orderOut: nil]
 
 proc webview_minimize*(w: Webview) =
-  objcr: [w.priv.window $$"miniaturize:", nil]
+  objcr: [w.priv.window miniaturize: nil]
 
 proc webview_close*(w: Webview) =
-  objcr: [w.priv.window $$"close"]
+  objcr: [w.priv.window close]
 
 proc webview_set_size*(w: Webview; width: int; height: int) =
   objcr:
-    let f = [w.priv.window $$"frame"]
+    let f = [w.priv.window frame]
     var frame: CGRect = cast[CGRect](f)
     frame.size.width = width.CGFloat
     frame.size.height = height.CGFloat
@@ -206,7 +206,7 @@ proc webview_init*(w: Webview): cint =
     w.priv.pool = [NSAutoreleasePool new]
     [NSApplication sharedApplication]
 
-  var handler = proc (event: Id): Id =
+  var handler = proc (event: Id): Id {.closure.} =
     objcr:
       var flag: NSUInteger = cast[NSUInteger]([event modifierFlags])
       var charactersIgnoringModifiers = [event charactersIgnoringModifiers]
@@ -245,10 +245,9 @@ proc webview_init*(w: Webview): cint =
           if redo:
             return nil
       return event
-  echo handler == nil
-  objcr: [NSEvent addLocalMonitorForEventsMatchingMask: NSKeyDown, handler: handler]
+  objcr: [NSEvent addLocalMonitorForEventsMatchingMask: NSKeyDown, handler: toBlock(handler)]
   var PrivWKScriptMessageHandler: Class = allocateClassPair(getClass("NSObject"), "PrivWKScriptMessageHandler", 0)
-  discard addMethod(PrivWKScriptMessageHandler, registerName("userContentController:didReceiveScriptMessage:"), cast[
+  discard addMethod(PrivWKScriptMessageHandler, $$"userContentController:didReceiveScriptMessage:", cast[
       IMP](webview_external_invoke), "v@:@@")
   registerClassPair(PrivWKScriptMessageHandler)
 
@@ -272,13 +271,10 @@ proc webview_init*(w: Webview): cint =
 
   objcr:
     [wkPref setValue: [NSNumber numberWithBool: w.debug], forKey: "developerExtrasEnabled"]
-
     var userController: Id = [WKUserContentController new]
-
     setAssociatedObject(userController, cast[pointer]($$("webview")), (Id)(w),
                             OBJC_ASSOCIATION_ASSIGN)
     [userController addScriptMessageHandler: scriptMessageHandler, name: "invoke"]
-
     var windowExternalOverrideScript: Id = [WKUserScript alloc]
     const source = """window.external = this; invoke = function(arg){ 
                    webkit.messageHandlers.invoke.postMessage(arg); };"""
@@ -321,27 +317,26 @@ proc webview_init*(w: Webview): cint =
   var PrivWKUIDelegate: Class = allocateClassPair(getClass("NSObject"), "PrivWKUIDelegate", 0)
   discard addProtocol(PrivWKUIDelegate, getProtocol("WKUIDelegate"))
   discard addMethod(PrivWKUIDelegate,
-                  registerName("webView:runOpenPanelWithParameters:initiatedByFrame:completionHandler:"),
+                  $$"webView:runOpenPanelWithParameters:initiatedByFrame:completionHandler:",
                   cast[IMP](run_open_panel), "v@:@@@?")
   discard addMethod(PrivWKUIDelegate,
-                  registerName("webView:runJavaScriptAlertPanelWithMessage:initiatedByFrame:completionHandler:"),
+                  $$"webView:runJavaScriptAlertPanelWithMessage:initiatedByFrame:completionHandler:",
                   cast[IMP](run_alert_panel), "v@:@@@?")
   discard addMethod(
       PrivWKUIDelegate,
-      registerName("webView:runJavaScriptConfirmPanelWithMessage:initiatedByFrame:completionHandler:"),
+      $$"webView:runJavaScriptConfirmPanelWithMessage:initiatedByFrame:completionHandler:",
       cast[IMP](run_confirmation_panel), "v@:@@@?")
   registerClassPair(PrivWKUIDelegate)
-  var uiDel: Id = objc_msgSend((Id)PrivWKUIDelegate, registerName("new"))
+  var uiDel: Id = objcr: [PrivWKUIDelegate new]
 
   var PrivWKNavigationDelegate: Class = allocateClassPair(
       getClass("NSObject"), "PrivWKNavigationDelegate", 0)
   discard addProtocol(PrivWKNavigationDelegate, getProtocol("WKNavigationDelegate"))
   discard addMethod(
       PrivWKNavigationDelegate,
-      registerName(
-          "webView:decidePolicyForNavigationResponse:decisionHandler:"),
+      $$"webView:decidePolicyForNavigationResponse:decisionHandler:",
       cast[IMP](make_nav_policy_decision), "v@:@@?")
-  registerClassPair(PrivWKNavigationDelegate);
+  registerClassPair(PrivWKNavigationDelegate)
   objcr:
     var navDel: Id = [PrivWKNavigationDelegate new]
     w.priv.webview = [WKWebView alloc]
@@ -352,8 +347,8 @@ proc webview_init*(w: Webview): cint =
     [w.priv.webview loadRequest: [NSURLRequest requestWithURL: nsURL]]
     [w.priv.webview setAutoresizesSubviews: 1]
     [w.priv.webview setAutoresizingMask: NSViewWidthSizable or NSViewHeightSizable]
-    [[w.priv.webview contentView]addSubview: w.priv.webview]
-    [w.priv.webview orderFrontRegardless]
+    [[w.priv.window contentView]addSubview: w.priv.webview]
+    [w.priv.window orderFrontRegardless]
     [[NSApplication sharedApplication]setActivationPolicy: NSApplicationActivationPolicyRegular]
   w.priv.should_exit = 0
   return 0
