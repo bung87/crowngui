@@ -64,14 +64,14 @@ type
 
 proc webview_check_url(s:cstring):cstring = s
 
-proc webview_terminate(w:Webview) =
+proc webview_terminate*(w:Webview) =
   w.priv.should_exit = 1
 
-proc webview_window_will_close( self:Id, cmd:SEL , notification:Id ) =
+proc webview_window_will_close*( self:Id, cmd:SEL , notification:Id ) =
   var w = getAssociatedObject(self, cast[pointer]($$"webview") )
   webview_terminate(cast[Webview](w) )
 
-proc webview_external_invoke(self:ID ,cmd: SEL ,contentController: Id ,
+proc webview_external_invoke*(self:ID ,cmd: SEL ,contentController: Id ,
                                     message:Id ) =
   var w = getAssociatedObject(contentController, cast[pointer]($$"webview"))
   if (cast[pointer](w) == nil or cast[Webview](w).external_invoke_cb == nil) :
@@ -97,7 +97,9 @@ proc run_open_panel(self:Id ,cmd: SEL ,webView: Id , parameters:Id ,
       else :
         objc_msgSend(cast[Id](completionHandler),$$"invoke", nil)
     [openPanel beginWithCompletionHandler: b2]
+
 type CompletionHandler2 = proc (allowOverwrite:int,destination:Id):void
+
 proc run_save_panel(self:Id, cmd:SEL , download:Id , filename:Id ,completionHandler:Block[CompletionHandler2]) =
   objcr:
     var savePanel = [NSSavePanel savePanel]
@@ -157,10 +159,10 @@ proc make_nav_policy_decision( self:Id,cmd: SEL ,webView: Id ,response: Id ,
     else:
       objc_msgSend(cast[Id](decisionHandler),$$"invoke",WKNavigationResponsePolicyAllow)
 
-proc webview_load_HTML(w:Webview,html:cstring) =
+proc webview_load_HTML*(w:Webview,html:cstring) =
   objcr: [w.priv.webview,loadHTMLString: @($html),baseURL:nil]
 
-proc webview_load_URL(w:Webview,url:cstring) =
+proc webview_load_URL*(w:Webview,url:cstring) =
   objcr:
     var requestURL:Id = [NSURL URLWithString: @($url)]
     [requestURL autorelease]
@@ -168,27 +170,27 @@ proc webview_load_URL(w:Webview,url:cstring) =
     [request autorelease]
     [w.priv.webview loadRequest:request]
 
-proc webview_reload(w:Webview) =
+proc webview_reload*(w:Webview) =
   objcr: [w.priv.webview $$"reload"]
 
-proc webview_show(w:Webview) =
+proc webview_show*(w:Webview) =
   objcr:
     [w.priv.window reload]
     if cast[bool]([w.priv.window isMiniaturized]):
       [w.priv.window deminiaturize:nil]
     [w.priv.window makeKeyAndOrderFront:nil]
 
-proc webview_hide(w:Webview) =
+proc webview_hide*(w:Webview) =
   objcr: [w.priv.window $$"orderOut:"]
   objc_msgSend(w.priv.window, registerName("orderOut:"), nil);
 
-proc webview_minimize(w:Webview) =
+proc webview_minimize*(w:Webview) =
   objcr: [w.priv.window $$"miniaturize:",nil]
 
-proc webview_close(w:Webview) =
+proc webview_close*(w:Webview) =
   objcr: [w.priv.window $$"close"]
 
-proc webview_set_size(w:Webview,width:int , height:int ) =
+proc webview_set_size*(w:Webview,width:int , height:int ) =
   objcr:
     let f = [w.priv.window $$"frame"]
     var frame:CGRect = cast[CGRect](f)
@@ -196,10 +198,10 @@ proc webview_set_size(w:Webview,width:int , height:int ) =
     frame.size.height = height.CGFloat
     [w.priv.window setFrame:frame, display:true]
 
-proc webview_set_developer_tools_enabled(w:Webview,enabled:bool ) =
+proc webview_set_developer_tools_enabled*(w:Webview,enabled:bool ) =
   objcr: [[w.priv.window configuration] "_setDeveloperExtrasEnabled":enabled]
 
-proc webview_init(w:Webview):int =
+proc webview_init*(w:Webview):int =
   objcr:
     w.priv.pool = [NSAutoreleasePool new]
     [NSApplication sharedApplication]
@@ -354,7 +356,7 @@ proc webview_init(w:Webview):int =
   w.priv.should_exit = 0
   return 0
 
-proc webview_loop(w:Webview, blocking:int ): int =
+proc webview_loop*(w:Webview, blocking:int ): int =
   objcr:
     var until:Id = if blocking > 0 : [NSDate distantFuture] else: [NSDate distantPast]
     [NSApplication sharedApplication]
@@ -363,7 +365,7 @@ proc webview_loop(w:Webview, blocking:int ): int =
       [NSApp sendEvent:event]
     return w.priv.should_exit
 
-proc webview_eval(w:Webview, js:cstring) :int =
+proc webview_eval*(w:Webview, js:cstring) :int =
   objcr:
     var userScript:Id = [WKUserScript alloc]
     [userScript initWithSource: @($js),injectionTime: WKUserScriptInjectionTimeAtDocumentEnd,forMainFrameOnly: 0]
@@ -372,29 +374,29 @@ proc webview_eval(w:Webview, js:cstring) :int =
     [userContentController addUserScript:userScript]
   return 0
 
-proc webview_set_title(w:Webview,title:cstring) =
+proc webview_set_title*(w:Webview,title:cstring) =
   objcr: [w.priv.window setTitle: @($title)]
 
-proc webview_set_fullscreen(w:Webview, fullscreen:int ) =
+proc webview_set_fullscreen*(w:Webview, fullscreen:int ) =
   objcr:
     var windowStyleMask:culong = cast[culong]([w.priv.window styleMask])
     var b:int = if (windowStyleMask and NSWindowStyleMaskFullScreen) == NSWindowStyleMaskFullScreen: 1 else: 0
     if b != fullscreen:
       [w.priv.window toggleFullScreen:nil]
 
-proc webview_set_iconify(w:Webview, iconify:int ) =
+proc webview_set_iconify*(w:Webview, iconify:int ) =
   objcr:
     if iconify > 0:
       [w.priv.window miniaturize:nil]
     else:
       [w.priv.window deminiaturize:nil]
 
-proc webview_launch_external_URL(w:Webview, uri:cstring) =
+proc webview_launch_external_URL*(w:Webview, uri:cstring) =
   objcr:
     var url:Id = [NSURL URLWithString: @($webview_check_url(uri))]
     [[NSWorkspace sharedWorkspace] openURL:url]
 
-proc webview_set_color(w:Webview;r,g,b,a:uint8) =
+proc webview_set_color*(w:Webview;r,g,b,a:uint8) =
   objcr:
     var color:Id = [NSColor colorWithRed:r.float64 / 255.0,green:g.float64 / 255.0,blue:b.float64 / 255.0,alpha:a.float64 / 255.0]
     [w.priv.window setBackgroundColor:color]
@@ -408,7 +410,7 @@ proc webview_set_color(w:Webview;r,g,b,a:uint8) =
       [w.priv.window setTitlebarAppearsTransparent:1]
       [w.priv.window "_setDrawsBackground":0]
 
-proc webview_dialog(w:Webview,dlgtype:WebviewDialogType , flags:int ,
+proc webview_dialog*(w:Webview,dlgtype:WebviewDialogType , flags:int ,
                                 title:cstring,arg:cstring,result:var cstring,resultsz:csize_t) =
   objcr:
     if (dlgtype == WEBVIEW_DIALOG_TYPE_OPEN or
@@ -471,7 +473,7 @@ type webview_dispatch_arg = object
   arg:pointer
   fn:proc(w:Webview,arg:pointer)
 
-proc webview_dispatch_cb(arg:pointer) =
+proc webview_dispatch_cb*(arg:pointer) =
   # struct webview_dispatch_arg *context = (struct webview_dispatch_arg *)arg;
   let context = cast[webview_dispatch_arg](arg)
   (context.fn)(context.w, context.arg)
@@ -480,7 +482,7 @@ proc webview_dispatch_cb(arg:pointer) =
 proc dispatch_async_f(q:pointer,b:pointer,c:pointer){.importc,header:"<dispatch/dispatch.h>".}
 proc dispatch_get_main_queue():pointer{.importc,header:"<dispatch/dispatch.h>".}
 
-proc webview_dispatch(w:Webview, webview_dispatch_fn :proc(w:Webview,arg:pointer),arg: pointer)=
+proc webview_dispatch*(w:Webview, webview_dispatch_fn :proc(w:Webview,arg:pointer),arg: pointer)=
   # struct webview_dispatch_arg *context = (struct webview_dispatch_arg *)malloc(
   #     sizeof(struct webview_dispatch_arg));
   # context->w = w;
@@ -489,9 +491,9 @@ proc webview_dispatch(w:Webview, webview_dispatch_fn :proc(w:Webview,arg:pointer
   var context = webview_dispatch_arg(w:w,fn:webview_dispatch_fn,arg:arg)
   dispatch_async_f(dispatch_get_main_queue(), context.addr, cast[pointer](webview_dispatch_cb))
 
-proc webview_exit(w:Webview) =
+proc webview_exit*(w:Webview) =
   objcr:
     var app:Id = [NSApplication sharedApplication]
     [app terminate: app]
 
-# proc webview_print_log(s:cstring) = printf("%s\n", s)
+# proc webview_print_log*(s:cstring) = printf("%s\n", s)
