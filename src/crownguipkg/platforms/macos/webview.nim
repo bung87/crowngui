@@ -5,10 +5,7 @@ import macros, os, strutils, base64
 var NSApp {.importc.}: ID
 {.passc: "-DOBJC_OLD_DISPATCH_PROTOTYPES=1 -x objective-c",
     passl: "-framework Cocoa -framework WebKit".}
-#include <objc/objc-runtime.h>
-#include <CoreGraphics/CoreGraphics.h>
-#include <Block.h>
-#include <limits.h>
+
 const NSKeyDown = (1 shl 10)
 const NSEventModifierFlagDeviceIndependentFlagsMask = 0xffff0000.culong
 const WEBVIEW_DIALOG_FLAG_FILE = (0 shl 0)
@@ -371,9 +368,6 @@ proc webview_loop*(w: Webview; blocking: cint): cint =
       [NSApp sendEvent: event]
     return w.priv.should_exit
 
-
-
-
 # proc webview_eval*(w:Webview, js:cstring) :cint =
 #   objcr:
 #     var userScript:Id = [WKUserScript alloc]
@@ -507,19 +501,3 @@ proc webview_exit*(w: Webview) =
     [app terminate: app]
 
 # proc webview_print_log*(s:cstring) = printf("%s\n", s)
-# proc webview*(title:cstring, url:cstring,  width:cint,
-#                          height:cint,  resizable:cint):cint =
-#   var webview:Webview
-#   webview.title = title
-#   webview.url = url
-#   echo url
-#   webview.width = width
-#   webview.height = height
-#   webview.resizable = resizable
-#   let r = webview_init(webview)
-#   if r != 0:
-#     return r
-
-#   while (webview_loop(webview, 1) == 0) : discard
-#   webview_exit(webview);
-#   return 0
