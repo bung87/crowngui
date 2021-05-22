@@ -2,6 +2,7 @@ import objc_runtime
 import darwin / [app_kit, foundation, objc/runtime, objc/blocks, core_graphics/cggeometry]
 import menu
 import macros, os, strutils, base64
+import ../../common
 var NSApp {.importc.}: ID
 {.passc: "-DOBJC_OLD_DISPATCH_PROTOTYPES=1 -x objective-c",
     passl: "-framework Cocoa -framework WebKit".}
@@ -41,16 +42,9 @@ const headerC = currentSourcePath.parentDir.parentDir.parentDir / "webview.h"
 proc webview_external_invoke(self: Id, cmd: Sel, contentController: Id, message: Id) {.
     importc: "webview_external_invoke", header: headerC.}
 proc webview_check_url(s: cstring): cstring {.importc: "webview_check_url", header: headerC.}
+
 type
   Webview* = ptr WebviewObj
-  ExternalInvokeCb* = proc (w: Webview; arg: cstring) ## External CallBack Proc
-  WebviewPrivObj {.importc: "struct webview_priv", header: headerC, bycopy.} = object
-    when defined(macosx):
-      pool: ID
-      window: ID
-      webview: ID
-      windowDelegate: ID
-      should_exit: cint
   WebviewObj* {.importc: "struct webview", header: headerC, bycopy.} = object ## WebView Type
     url* {.importc: "url".}: cstring                                          ## Current URL
     title* {.importc: "title".}: cstring                                      ## Window Title
@@ -61,11 +55,14 @@ type
     invokeCb {.importc: "external_invoke_cb".}: pointer                       ## Callback proc js:window.external.invoke
     priv {.importc: "priv".}: WebviewPrivObj
     userdata {.importc: "userdata".}: pointer
-  WebviewDialogType = enum
-    WEBVIEW_DIALOG_TYPE_OPEN, WEBVIEW_DIALOG_TYPE_SAVE, WEBVIEW_DIALOG_TYPE_ALERT
+  ExternalInvokeCb* = proc (w: Webview; arg: cstring) ## External CallBack Proc
 
-
-
+  WebviewPrivObj* = object
+    pool: ID
+    window: ID
+    webview: ID
+    windowDelegate: ID
+    should_exit: cint
 proc webview_terminate*(w: Webview) =
   w.priv.should_exit = 1
 
