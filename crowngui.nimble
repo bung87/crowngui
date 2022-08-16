@@ -19,6 +19,8 @@ requires "static_server >= 2.2.0"
 requires "jsonschema"
 requires "objc_runtime >= 0.1.2"
 requires "darwin"
+requires "winim"
+requires "goto"
 
 task docs,"a":
   exec "nim doc --project src/crowngui.nim"
