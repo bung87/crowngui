@@ -5,6 +5,10 @@ import winim/inc/mshtml
 import winim/[utils]
 import goto
 
+converter toLPCWSTR*(s: string): LPCWSTR = 
+  ## Converts a Nim string to Sciter-expected ptr wchar_t (LPCWSTR)
+  var widestr = newWideCString(s)
+  result = cast[LPCWSTR](addr widestr[0])
 # webview_eval
 # webview_set_title
 # webview_set_fullscreen
@@ -17,7 +21,7 @@ import goto
 const headerC = currentSourcePath.parentDir.parentDir.parentDir / "webview.h"
 
 type
-  ExternalInvokeCb* = proc (w: Webview; arg: string)  ## External CallBack Proc
+  ExternalInvokeCb* = proc (w: Webview; arg: cstring)  ## External CallBack Proc
   WebviewPrivObj {.importc: "struct webview_priv", header: headerC, bycopy.} = object
     hwnd {.importc: "hwnd".}:HWND
     browser {.importc: "browser".}:ptr ptr IOleObject
@@ -44,14 +48,14 @@ proc EmbedBrowserObject*(w: Webview):cint {.importc: "EmbedBrowserObject", heade
 
 proc UnEmbedBrowserObject*(w: Webview) {.importc: "UnEmbedBrowserObject", header: headerC.}
 
-proc wndproc(hwnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): LRESULT
-      {.stdcall.} =
-    var w = cast[Webview](GetWindowLongPtr(hwnd, 0))
+proc wndproc(hwnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): LRESULT {.stdcall.} =
+    var w = cast[Webview](GetWindowLongPtr(hwnd, GWLP_USERDATA))
 
     case msg
       of WM_SIZE:
         var webBrowser2:ptr IWebBrowser2
-        var browser = w.priv.browser
+        MessageBoxW(0, repr w, "", MB_OK)
+        var browser = w[].priv.browser
         if browser[].QueryInterface( &IID_IWebBrowser2,
                                           cast[ptr pointer](webBrowser2.addr)) == S_OK:
           var rect: RECT
@@ -62,7 +66,7 @@ proc wndproc(hwnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): LRESULT
       of WM_CREATE:
         let cs = cast[ptr CREATESTRUCT](lParam)
         w = cast[Webview](cs)
-        w.priv.hwnd = hwnd
+        w[].priv.hwnd = hwnd
         return EmbedBrowserObject(w)
 
       of WM_DESTROY:
@@ -200,7 +204,7 @@ proc getHtml*(self: Webview): string =
   result = $bstr
 
 proc DisplayHTMLPage*(w: Webview):cint {.importc: "DisplayHTMLPage", header: headerC.}
-
+# proc webview_init*(w: Webview) {.importc: "webview_init", header: headerC.}
 proc  webview_init*(w: Webview): cint =
   var wc:WNDCLASSEX
   var hInstance:HINSTANCE
@@ -208,14 +212,16 @@ proc  webview_init*(w: Webview): cint =
   var clientRect:RECT
   var rect:RECT
 
-  if (webview_fix_ie_compat_mode() < 0) :
-    return -1;
+  if (webview_fix_ie_compat_mode() < 0):
+    MessageBoxW(0, "webview_fix_ie_compat_mode error", "", MB_OK)
+    return -1
 
   hInstance = GetModuleHandle(NULL)
   if hInstance == 0:
     return -1
   
   if (OleInitialize(NULL) != S_OK):
+    MessageBoxW(0, "OleInitialize error", "", MB_OK)
     return -1
   
   ZeroMemory(&wc, sizeof(WNDCLASSEX))
@@ -225,9 +231,9 @@ proc  webview_init*(w: Webview): cint =
   wc.lpszClassName = classname
   RegisterClassEx(&wc)
 
-  style = WS_OVERLAPPEDWINDOW;
+  style = WS_OVERLAPPEDWINDOW
   if (not w.resizable) :
-    style = WS_OVERLAPPED or WS_CAPTION or WS_MINIMIZEBOX or WS_SYSMENU;
+    style = WS_OVERLAPPED or WS_CAPTION or WS_MINIMIZEBOX or WS_SYSMENU
 
   rect.left = 0;
   rect.top = 0;
@@ -243,21 +249,22 @@ proc  webview_init*(w: Webview): cint =
   rect.bottom = rect.bottom - rect.top + top
   rect.top = top
 
-  w.priv.hwnd = CreateWindowEx(0, classname, w.title, style, rect.left, rect.top,
+  w[].priv.hwnd = CreateWindowEx(0, classname, w.title, style, rect.left, rect.top,
                      rect.right - rect.left, rect.bottom - rect.top,
                      HWND_DESKTOP, cast[HMENU](NULL), hInstance, w)
-  if (w.priv.hwnd == 0):
+  if (w[].priv.hwnd == 0):
+    MessageBoxW(0, "w[].priv.hwnd == 0", "", MB_OK)
     OleUninitialize()
     return -1
 
-  SetWindowLongPtr(w.priv.hwnd, GWLP_USERDATA, cast[LONG_PTR](w))
+  SetWindowLongPtr(w[].priv.hwnd, GWLP_USERDATA, cast[LONG_PTR](w))
 
-  discard DisplayHTMLPage(w)
+  # discard DisplayHTMLPage(w)
 
-  SetWindowText(w.priv.hwnd, w.title)
-  ShowWindow(w.priv.hwnd, SW_SHOWDEFAULT)
-  UpdateWindow(w.priv.hwnd)
-  SetFocus(w.priv.hwnd)
+  SetWindowText(w[].priv.hwnd, w.title)
+  ShowWindow(w[].priv.hwnd, SW_SHOWDEFAULT)
+  UpdateWindow(w[].priv.hwnd)
+  SetFocus(w[].priv.hwnd)
 
   return 0
 

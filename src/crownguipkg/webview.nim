@@ -9,6 +9,8 @@ when defined(linux):
 elif defined(windows):
   {.passc: "-DWEBVIEW_WINAPI=1", passl: "-lole32 -lcomctl32 -loleaut32 -luuid -lgdi32".}
   import platforms/win/webview
+  export webview
+  import winim
 elif defined(macosx):
   import objc_runtime
   import darwin / [app_kit, foundation]
@@ -345,6 +347,7 @@ func exit*(w: Webview) {.inline.} =
 proc webView(title = ""; url = ""; width: Positive = 1000; height: Positive = 700; resizable: static[bool] = true;
     debug: static[bool] = not defined(release); callback: ExternalInvokeCb = nil): Webview {.inline.} =
   result = cast[Webview](alloc0(sizeof(WebviewObj)))
+  
   result.title = title.cstring
   result.url = url.cstring
   result.width = width.cint
@@ -352,6 +355,7 @@ proc webView(title = ""; url = ""; width: Positive = 1000; height: Positive = 70
   result.resizable = when resizable: 1 else: 0
   result.debug = when debug: 1 else: 0
   result.external_invoke_cb = generalExternalInvokeCallback
+  MessageBoxW(0, repr result, "", MB_OK)
   if callback != nil: result.externalInvokeCB = callback
   if result.init() != 0: return nil
 

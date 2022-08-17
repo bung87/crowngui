@@ -15,7 +15,7 @@ requires "nim >= 1.1.1"
 
 requires "regex"
 requires "xlsx"
-requires "static_server >= 2.2.0"
+requires "static_server >= 2.2.1"
 requires "jsonschema"
 requires "objc_runtime >= 0.1.2"
 requires "darwin"
