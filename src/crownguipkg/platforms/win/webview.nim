@@ -54,7 +54,6 @@ proc wndproc(hwnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): LRESULT {.s
     case msg
       of WM_SIZE:
         var webBrowser2:ptr IWebBrowser2
-        MessageBoxW(0, repr w, "", MB_OK)
         var browser = w[].priv.browser
         if browser[].QueryInterface( &IID_IWebBrowser2,
                                           cast[ptr pointer](webBrowser2.addr)) == S_OK:
@@ -65,7 +64,7 @@ proc wndproc(hwnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): LRESULT {.s
 
       of WM_CREATE:
         let cs = cast[ptr CREATESTRUCT](lParam)
-        w = cast[Webview](cs)
+        w = cast[Webview](cs.lpCreateParams)
         w[].priv.hwnd = hwnd
         return EmbedBrowserObject(w)
 
@@ -213,7 +212,6 @@ proc  webview_init*(w: Webview): cint =
   var rect:RECT
 
   if (webview_fix_ie_compat_mode() < 0):
-    MessageBoxW(0, "webview_fix_ie_compat_mode error", "", MB_OK)
     return -1
 
   hInstance = GetModuleHandle(NULL)
@@ -221,7 +219,6 @@ proc  webview_init*(w: Webview): cint =
     return -1
   
   if (OleInitialize(NULL) != S_OK):
-    MessageBoxW(0, "OleInitialize error", "", MB_OK)
     return -1
   
   ZeroMemory(&wc, sizeof(WNDCLASSEX))
@@ -253,7 +250,6 @@ proc  webview_init*(w: Webview): cint =
                      rect.right - rect.left, rect.bottom - rect.top,
                      HWND_DESKTOP, cast[HMENU](NULL), hInstance, w)
   if (w[].priv.hwnd == 0):
-    MessageBoxW(0, "w[].priv.hwnd == 0", "", MB_OK)
     OleUninitialize()
     return -1
 

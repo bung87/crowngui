@@ -355,7 +355,6 @@ proc webView(title = ""; url = ""; width: Positive = 1000; height: Positive = 70
   result.resizable = when resizable: 1 else: 0
   result.debug = when debug: 1 else: 0
   result.external_invoke_cb = generalExternalInvokeCallback
-  MessageBoxW(0, repr result, "", MB_OK)
   if callback != nil: result.externalInvokeCB = callback
   if result.init() != 0: return nil
 
