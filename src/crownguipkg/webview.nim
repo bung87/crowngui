@@ -8,6 +8,7 @@ when defined(linux):
       passl: staticExec"pkg-config --libs gtk+-3.0 webkit2gtk-4.0".}
 elif defined(windows):
   {.passc: "-DWEBVIEW_WINAPI=1", passl: "-lole32 -lcomctl32 -loleaut32 -luuid -lgdi32".}
+  import platforms/win/webview
 elif defined(macosx):
   import objc_runtime
   import darwin / [app_kit, foundation]
@@ -96,7 +97,7 @@ proc init(w: Webview): cint = webview_init(w)
 proc loadHTML*(w: Webview; html: cstring) = webview_load_HTML(w, html)
 proc loadHTML*(w: Webview; html: string) = loadHTML(w, html.cstring)
 proc loadURL*(w: Webview; url: cstring) = webview_load_URL(w, url)
-func reload*(w: Webview; ) = webview_reload(w)
+# func reload*(w: Webview; ) = webview_reload(w)
 proc loop(w: Webview; blocking: cint): cint = webview_loop(w, blocking)
 func js*(w: Webview; javascript: cstring): cint {.importc: "webview_eval", header: headerC,
     discardable.} ## Evaluate a JavaScript cstring, runs the javascript string on the window

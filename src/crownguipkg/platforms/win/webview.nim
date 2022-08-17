@@ -4,9 +4,8 @@ import winim/inc/winuser
 import winim/inc/mshtml
 import winim/[utils]
 import goto
-# webview_init
+
 # webview_eval
-# webview_fix_ie_compat_mode
 # webview_set_title
 # webview_set_fullscreen
 # webview_set_iconify
@@ -38,196 +37,12 @@ type
     userdata {.importc: "userdata".}: pointer
   Webview* = ptr WebviewObj
 
-proc UnEmbedBrowserObject(w: Webview) =
-  if w.priv.browser != NULL:
-    w.priv.browser[].Close( OLECLOSE_NOSAVE)
-    w.priv.browser[].Release()
-    GlobalFree(cast[HGLOBAL](w.priv.browser))
-    w.priv.browser = NULL
+func webview_dispatch*(w: Webview; fn: pointer; arg: pointer) {.importc: "webview_dispatch", header: headerC.}
+func webview_terminate*(w: Webview) {.importc: "webview_terminate", header: headerC.}
+func webview_exit*(w: Webview) {.importc: "webview_exit", header: headerC.}
+proc EmbedBrowserObject*(w: Webview):cint {.importc: "EmbedBrowserObject", header: headerC.}
 
-type  IServiceProviderEx = object
-  provider: IServiceProvider 
-  mgr:IInternetSecurityManagerEx
-
-type 
-  DOCHOSTUIINFO* {.pure.} = object
-    cbSize*: ULONG
-    dwFlags*: DWORD
-    dwDoubleClick*: DWORD
-    pchHostCss*: ptr OLECHAR
-    pchHostNS*: ptr OLECHAR
-  IDocHostUIHandler* {.pure.} = object
-    lpVtbl*: ptr IDocHostUIHandlerVtbl
-  IDocHostUIHandlerVtbl* {.pure, inheritable.} = object of IUnknownVtbl
-    ShowContextMenu*: proc(self: ptr IDocHostUIHandler, dwID: DWORD, ppt: ptr POINT, pcmdtReserved: ptr IUnknown, pdispReserved: ptr IDispatch): HRESULT {.stdcall.}
-    GetHostInfo*: proc(self: ptr IDocHostUIHandler, pInfo: ptr DOCHOSTUIINFO): HRESULT {.stdcall.}
-    ShowUI*: proc(self: ptr IDocHostUIHandler, dwID: DWORD, pActiveObject: ptr IOleInPlaceActiveObject, pCommandTarget: ptr IOleCommandTarget, pFrame: ptr IOleInPlaceFrame, pDoc: ptr IOleInPlaceUIWindow): HRESULT {.stdcall.}
-    HideUI*: proc(self: ptr IDocHostUIHandler): HRESULT {.stdcall.}
-    UpdateUI*: proc(self: ptr IDocHostUIHandler): HRESULT {.stdcall.}
-    EnableModeless*: proc(self: ptr IDocHostUIHandler, fEnable: WINBOOL): HRESULT {.stdcall.}
-    OnDocWindowActivate*: proc(self: ptr IDocHostUIHandler, fActivate: WINBOOL): HRESULT {.stdcall.}
-    OnFrameWindowActivate*: proc(self: ptr IDocHostUIHandler, fActivate: WINBOOL): HRESULT {.stdcall.}
-    ResizeBorder*: proc(self: ptr IDocHostUIHandler, prcBorder: LPCRECT, pUIWindow: ptr IOleInPlaceUIWindow, fRameWindow: WINBOOL): HRESULT {.stdcall.}
-    TranslateAccelerator*: proc(self: ptr IDocHostUIHandler, lpMsg: LPMSG, pguidCmdGroup: ptr GUID, nCmdID: DWORD): HRESULT {.stdcall.}
-    GetOptionKeyPath*: proc(self: ptr IDocHostUIHandler, pchKey: ptr LPOLESTR, dw: DWORD): HRESULT {.stdcall.}
-    GetDropTarget*: proc(self: ptr IDocHostUIHandler, pDropTarget: ptr IDropTarget, ppDropTarget: ptr ptr IDropTarget): HRESULT {.stdcall.}
-    GetExternal*: proc(self: ptr IDocHostUIHandler, ppDispatch: ptr ptr IDispatch): HRESULT {.stdcall.}
-    TranslateUrl*: proc(self: ptr IDocHostUIHandler, dwTranslate: DWORD, pchURLIn: LPWSTR, ppchURLOut: ptr LPWSTR): HRESULT {.stdcall.}
-    FilterDataObject*: proc(self: ptr IDocHostUIHandler, pDO: ptr IDataObject, ppDORet: ptr ptr IDataObject): HRESULT {.stdcall.}
-
-type  IOleClientSiteEx {.pure.} = object
-    # view: wWebView
-    # hwnd: HWND
-    # hwndIe: HWND
-    # style: DWORD
-    # canGoBack: bool
-    # canGoForward: bool
-    # focusd: bool
-    # cookie: DWORD
-    # refs: LONG
-    # ole: ptr IOleObject
-    # browser: ptr IWebBrowser2
-   
-    client: IOleClientSite
-    inplace: IOleInPlaceSiteEx
-    # inPlaceFrame: IOleInPlaceFrame
-    ui: IDocHostUIHandler
-    external: IDispatch
-    provider: IServiceProviderEx 
-
-var MyIOleClientSiteTable: IOleClientSiteVtbl
-
-proc Site_QueryInterface(web: ptr IUnknown, riid: REFIID, ppvObject: ptr pointer): HRESULT {.stdcall, noSideEffect, gcsafe, locks: 0.} =
-  if ppvObject.isNil:
-    return E_POINTER
-
-  elif IsEqualIID(riid, &IID_IUnknown):
-    ppvObject[] = cast[ptr IOleClientSiteEx](web)[].external.addr
-
-  elif IsEqualIID(riid, &IID_IDispatch) or
-      IsEqualIID(riid, &DIID_DWebBrowserEvents) or
-      IsEqualIID(riid, &DIID_DWebBrowserEvents2):
-    ppvObject[] =  cast[ptr IOleClientSiteEx](web)[].external.addr
-
-  elif IsEqualIID(riid, &IID_IOleClientSite):
-    ppvObject[] =  cast[ptr IOleClientSiteEx](web)[].client.addr
-
-  elif IsEqualIID(riid, &IID_IOleWindow) or
-      IsEqualIID(riid, &IID_IOleInPlaceSite) or
-      IsEqualIID(riid, &IID_IOleInPlaceSiteEx):
-    ppvObject[] =  cast[ptr IOleClientSiteEx](web)[].inplace.addr
-
-  # elif IsEqualIID(riid, &IID_IOleInPlaceFrame):
-  #   ppvObject[] = &web.inPlaceFrame
-
-  elif IsEqualIID(riid, &IID_IDocHostUIHandler):
-    ppvObject[] = cast[ptr IOleClientSiteEx](web)[].ui.addr
-
-  else:
-    ppvObject[] = nil
-    return E_NOINTERFACE
-
-  # web.AddRef()
-  return S_OK
-
-MyIOleClientSiteTable.QueryInterface = Site_QueryInterface
-MyIOleClientSiteTable.AddRef = proc(self: ptr IUnknown): ULONG {.stdcall.} =
-  return 1
-
-MyIOleClientSiteTable.Release = proc(self: ptr IUnknown): ULONG {.stdcall.} =
-  return 1
-
-MyIOleClientSiteTable.SaveObject = proc(self: ptr IOleClientSite): HRESULT {.stdcall.} =
-  return E_NOTIMPL
-
-MyIOleClientSiteTable.GetMoniker = proc(self: ptr IOleClientSite, dwAssign: DWORD, dwWhichMoniker: DWORD, ppmk: ptr ptr IMoniker): HRESULT {.stdcall.} =
-  return E_NOTIMPL
-
-MyIOleClientSiteTable.GetContainer = proc(self: ptr IOleClientSite, ppContainer: ptr ptr IOleContainer): HRESULT {.stdcall.} =
-  ppContainer[] = nil
-  return E_NOINTERFACE
-
-MyIOleClientSiteTable.ShowObject = proc(self: ptr IOleClientSite): HRESULT {.stdcall.} =
-  return S_OK
-
-MyIOleClientSiteTable.OnShowWindow = proc(self: ptr IOleClientSite, fShow: WINBOOL): HRESULT {.stdcall.} =
-  return E_NOTIMPL
-
-MyIOleClientSiteTable.RequestNewObjectLayout = proc(self: ptr IOleClientSite): HRESULT {.stdcall.} =
-  return E_NOTIMPL
-
-
-template `+`[T](p: ptr T, off: int): ptr T =
-  cast[ptr type(p[])](cast[ByteAddress](p) +% off * sizeof(p[]))
-# https://github.com/khchen/wNim/blob/b446238744fd7e8c859b3ae8fe1942f03c966864/wNim/private/controls/wWebView.nim#L620
-proc EmbedBrowserObject(w: Webview):int =
-  var rect:RECT 
-  var webBrowser2: ptr IWebBrowser2
-  var pClassFactory:LPCLASSFACTORY = NULL
-  var iOleClientSiteEx: ptr IOleClientSiteEx = NULL
-  var browser: ptr ptr IOleObject = cast[ptr ptr IOleObject](GlobalAlloc(
-      GMEM_FIXED, sizeof(ptr IOleObject ) + sizeof(IOleClientSiteEx)))
-  if browser == NULL:
-    goto error
-  
-  w.priv.browser = browser
-
-  iOleClientSiteEx = cast[ptr IOleClientSiteEx](browser + 1)
-  iOleClientSiteEx[].client.lpVtbl = &MyIOleClientSiteTable
-  # iOleClientSiteEx->inplace.inplace.lpVtbl = &MyIOleInPlaceSiteTable
-  # iOleClientSiteEx->inplace.frame.frame.lpVtbl = &MyIOleInPlaceFrameTable
-  # iOleClientSiteEx->inplace.frame.window = w->priv.hwnd
-  # iOleClientSiteEx->ui.ui.lpVtbl = &MyIDocHostUIHandlerTable
-  # iOleClientSiteEx->external.lpVtbl = &ExternalDispatchTable
-  # iOleClientSiteEx->provider.provider.lpVtbl = &MyServiceProviderTable
-  # iOleClientSiteEx->provider.mgr.mgr.lpVtbl = &MyInternetSecurityManagerTable
-
-  if (CoGetClassObject(&CLSID_WebBrowser,
-                       CLSCTX_INPROC_SERVER or CLSCTX_INPROC_HANDLER, NULL,
-                       &IID_IClassFactory,
-                       cast[ptr LPVOID](pClassFactory.addr)) != S_OK) :
-    goto error
-
-  if (pClassFactory == NULL):
-    goto error
-
-  if (pClassFactory.CreateInstance( cast[ptr IUnknown](0),
-                                            &IID_IOleObject,
-                                            cast[ptr pointer](browser)) != S_OK) :
-    goto error
-
-  discard pClassFactory.lpVtbl.Release(pClassFactory)
-  if browser[].SetClientSite(cast[ptr IOleClientSite](iOleClientSiteEx)).FAILED:
-    goto error
-  
-  # (*browser)->lpVtbl->SetHostNames(*browser, L"My Host Name", 0);
-
-  if (OleSetContainedObject(browser[], TRUE) != S_OK):
-    goto error
-  GetClientRect(w.priv.hwnd, &rect)
-  if browser[].DoVerb(OLEIVERB_SHOW, nil, cast[ptr IOleClientSite](iOleClientSiteEx), 0,
-        w.priv.hwnd, &rect).FAILED:
-    goto error
-
-  if (browser[].QueryInterface( &IID_IWebBrowser2,
-                                        cast[ptr pointer](webBrowser2.addr)) != S_OK) :
-    goto error
-
-  webBrowser2.put_Left( 0)
-  webBrowser2.put_Top( 0)
-  webBrowser2.put_Width( rect.right)
-  webBrowser2.put_Height( rect.bottom)
-  webBrowser2.Release()
-  label error:
-    UnEmbedBrowserObject(w)
-    if (pClassFactory != NULL):
-      pClassFactory.Release()
-    
-    if (browser != NULL):
-      GlobalFree(cast[HGLOBAL](browser))
-    
-    return -1
-  return 0
+proc UnEmbedBrowserObject*(w: Webview) {.importc: "UnEmbedBrowserObject", header: headerC.}
 
 proc wndproc(hwnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): LRESULT
       {.stdcall.} =
@@ -281,7 +96,7 @@ proc webview_fix_ie_compat_mode():int =
 #   result = cast[ptr WebviewPrivObj](GetWindowLongPtr(self[].pirv.hwnd, 0))
 #   assert result != nil
   
-proc navigate*(w: Webview, url: string, noHistory = false) =
+proc webview_load_URL*(w: Webview, url: cstring) =
   ## Navigating the given url.
   var vUrl: VARIANT
   vUrl.vt = VT_BSTR
@@ -289,8 +104,7 @@ proc navigate*(w: Webview, url: string, noHistory = false) =
 
   var vFlag: VARIANT
   vFlag.vt = VT_I4
-  if noHistory:
-    vFlag.lVal = navNoHistory
+
   var webBrowser2:ptr IWebBrowser2
   if (w.priv.browser[].QueryInterface( &IID_IWebBrowser2,
                                         cast[ptr pointer](webBrowser2.addr)) == S_OK) :
@@ -302,15 +116,37 @@ proc getDocument(w: Webview): ptr IHTMLDocument2 =
   var webBrowser2:ptr IWebBrowser2
   if (w.priv.browser[].QueryInterface( &IID_IWebBrowser2,
                                         cast[ptr pointer](webBrowser2.addr)) == S_OK) :
-    if webBrowser2.get_Document(&dispatch).FAILED or dispatch == nil:
-      # always try to get a document object, event a blank one
-      w.navigate("about:blank")
-      if webBrowser2.get_Document(&dispatch).FAILED or dispatch == nil:
-        raise newException(CatchableError, "wWebView.getDocument failure")
+    # if webBrowser2.get_Document(&dispatch).FAILED or dispatch == nil:
+    #   # always try to get a document object, event a blank one
+    #   w.webview_load_HTML("about:blank".cstring)
+    #   if webBrowser2.get_Document(&dispatch).FAILED or dispatch == nil:
+    #     raise newException(CatchableError, "wWebView.getDocument failure")
 
     defer: dispatch.Release()
     if dispatch.QueryInterface(&IID_IHTMLDocument2, cast[ptr pointer](&result)).FAILED:
       raise newException(CatchableError, "wWebView.getDocument failure")
+
+proc webview_load_HTML*(self: Webview, html: cstring) =
+  ## Set the displayed page HTML source to the contents of the given string.
+  let document = self.getDocument()
+  assert document != nil
+  defer: document.Release()
+
+  var safeArray = SafeArrayCreateVector(VT_VARIANT, 0, 1)
+  if safeArray == nil:
+    raise newException(CatchableError, "wWebView.setHtml failure")
+  defer: SafeArrayDestroy(safeArray)
+
+  var param: ptr VARIANT
+  SafeArrayAccessData(safeArray, cast[ptr pointer](&param))
+  param[].vt = VT_BSTR
+  param[].bstrVal = SysAllocString(html)
+  SafeArrayUnaccessData(safeArray)
+
+  document.write(safeArray)
+  document.close()
+
+
 
 proc runScript*(self: Webview, code: string) =
   ## Runs the given javascript code. This function discard the result. If you
@@ -363,25 +199,7 @@ proc getHtml*(self: Webview): string =
 
   result = $bstr
 
-proc setHtml*(self: Webview, html: string) =
-  ## Set the displayed page HTML source to the contents of the given string.
-  let document = self.getDocument()
-  assert document != nil
-  defer: document.Release()
-
-  var safeArray = SafeArrayCreateVector(VT_VARIANT, 0, 1)
-  if safeArray == nil:
-    raise newException(CatchableError, "wWebView.setHtml failure")
-  defer: SafeArrayDestroy(safeArray)
-
-  var param: ptr VARIANT
-  SafeArrayAccessData(safeArray, cast[ptr pointer](&param))
-  param[].vt = VT_BSTR
-  param[].bstrVal = SysAllocString(html)
-  SafeArrayUnaccessData(safeArray)
-
-  document.write(safeArray)
-  document.close()
+proc DisplayHTMLPage*(w: Webview):cint {.importc: "DisplayHTMLPage", header: headerC.}
 
 proc  webview_init*(w: Webview): cint =
   var wc:WNDCLASSEX
@@ -434,7 +252,7 @@ proc  webview_init*(w: Webview): cint =
 
   SetWindowLongPtr(w.priv.hwnd, GWLP_USERDATA, cast[LONG_PTR](w))
 
-  DisplayHTMLPage(w)
+  discard DisplayHTMLPage(w)
 
   SetWindowText(w.priv.hwnd, w.title)
   ShowWindow(w.priv.hwnd, SW_SHOWDEFAULT)
@@ -443,7 +261,7 @@ proc  webview_init*(w: Webview): cint =
 
   return 0
 
-proc webview_loop*(w: Webview, blocking:int):int =
+proc webview_loop*(w: Webview, blocking:cint):cint =
   var msg: MSG
   if blocking == 1:
     if (GetMessage(msg.addr, 0, 0, 0)<0): return 0
