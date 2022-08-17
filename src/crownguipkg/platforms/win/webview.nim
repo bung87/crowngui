@@ -149,8 +149,6 @@ proc webview_load_HTML*(self: Webview, html: cstring) =
   document.write(safeArray)
   document.close()
 
-
-
 proc runScript*(self: Webview, code: string) =
   ## Runs the given javascript code. This function discard the result. If you
   ## need the result from the javascript code, use *eval* instead. For example:
@@ -218,7 +216,7 @@ proc  webview_init*(w: Webview): cint =
   if hInstance == 0:
     return -1
   
-  if (OleInitialize(NULL) != S_OK):
+  if OleInitialize(NULL) != S_OK:
     return -1
   
   ZeroMemory(&wc, sizeof(WNDCLASSEX))
@@ -229,7 +227,7 @@ proc  webview_init*(w: Webview): cint =
   RegisterClassEx(&wc)
 
   style = WS_OVERLAPPEDWINDOW
-  if (not w.resizable) :
+  if not w.resizable:
     style = WS_OVERLAPPED or WS_CAPTION or WS_MINIMIZEBOX or WS_SYSMENU
 
   rect.left = 0;
