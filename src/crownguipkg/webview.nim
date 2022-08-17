@@ -49,9 +49,13 @@ type
   CallHook = proc (params: string): string # json -> proc -> json
   MethodInfo = object
     scope, name, args: string
+
+template dataUriHtmlHeader*(s: string): string =
+  ## Data URI for HTML UTF-8 header string. For Mac uses Base64, `import base64` to use.
+  when defined(osx): "data:text/html;charset=utf-8;base64," & base64.encode(s)
+  else: "data:text/html," & s
+
 const
-  dataUriHtmlHeader* = proc (s: string): string = "data:text/html;charset=utf-8;base64," &
-      base64.encode s           ## Data URI for HTML UTF-8 header string
   fileLocalHeader* = "file:///" ## Use Local File as URL
   jsTemplate = """
     if (typeof $2 === 'undefined') {

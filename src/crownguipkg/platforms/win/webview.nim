@@ -255,7 +255,7 @@ proc  webview_init*(w: Webview): cint =
 
   SetWindowLongPtr(w[].priv.hwnd, GWLP_USERDATA, cast[LONG_PTR](w))
 
-  # discard DisplayHTMLPage(w)
+  discard DisplayHTMLPage(w)
 
   SetWindowText(w[].priv.hwnd, w.title)
   ShowWindow(w[].priv.hwnd, SW_SHOWDEFAULT)
