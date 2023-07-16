@@ -1,5 +1,5 @@
 
-import os, strutils, crownguipkg/webview
+import os, strutils, crowngui/webview
 import static_server, mimetypes, asyncdispatch
 import finder
 

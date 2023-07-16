@@ -18,7 +18,7 @@ elif defined(macosx):
   import platforms/macos/webview
   export webview
   var NSApp {.importc.}: ID
-  {.passc: "-DOBJC_OLD_DISPATCH_PROTOTYPES=1 -DWEBVIEW_COCOA=1 -x objective-c",
+  {.passc: "-DOBJC_OLD_DISPATCH_PROTOTYPES=1 -DWEBVIEW_COCOA -x objective-c",
       passl: "-framework Cocoa -framework WebKit".}
 
 # type

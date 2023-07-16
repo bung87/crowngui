@@ -1692,24 +1692,24 @@ WEBVIEW_API void webview_print_log(const char *s) { OutputDebugString(s); }
 
 #elif defined(WEBVIEW_COCOA)
 static id get_nsstring(const char *c_str) {
-  return objc_msgSend((id)objc_getClass("NSString"),
+  return ((id(*)(id, SEL, id))objc_msgSend)((id)objc_getClass("NSString"),
                       sel_registerName("stringWithUTF8String:"), c_str);
 }
 
 #define WKUserScriptInjectionTimeAtDocumentEnd 1
 WEBVIEW_API int webview_eval(struct webview *w, const char *js) {
-  id userScript = objc_msgSend(
+  id userScript = ((id(*)(id, SEL))objc_msgSend)(
       (id)objc_getClass("WKUserScript"), sel_registerName("alloc"));
-  objc_msgSend(
+  ((id(*)(id, SEL, id,int,int))objc_msgSend)(
       userScript,
       sel_registerName("initWithSource:injectionTime:forMainFrameOnly:"),
       get_nsstring(js),
       WKUserScriptInjectionTimeAtDocumentEnd, 0);  
       // should Inject the script after the document finishes loading, but before other subresources finish loading.
       // this also ensure webview give full html structure(html>head+body) in case content only has body inner part.
-  id config = objc_msgSend(w->priv.webview, sel_registerName("valueForKey:"), get_nsstring("configuration"));
-  id userContentController = objc_msgSend(config, sel_registerName("valueForKey:"), get_nsstring("userContentController"));
-  objc_msgSend(userContentController, sel_registerName("addUserScript:"),
+  id config = ((id(*)(id, SEL, id))objc_msgSend)(w->priv.webview, sel_registerName("valueForKey:"), get_nsstring("configuration"));
+  id userContentController = ((id(*)(id, SEL, id))objc_msgSend)(config, sel_registerName("valueForKey:"), get_nsstring("userContentController"));
+  ((id(*)(id, SEL, id))objc_msgSend)(userContentController, sel_registerName("addUserScript:"),
                userScript);
 
   return 0;

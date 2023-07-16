@@ -3,7 +3,7 @@ import winim
 import winim/inc/winuser
 import winim/inc/mshtml
 import winim/[utils]
-import goto
+# import goto
 
 converter toLPCWSTR*(s: string): LPCWSTR = 
   ## Converts a Nim string to Sciter-expected ptr wchar_t (LPCWSTR)

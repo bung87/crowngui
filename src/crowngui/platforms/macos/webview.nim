@@ -2,7 +2,7 @@ import objc_runtime
 import darwin / [app_kit, foundation, objc/runtime, objc/blocks, core_graphics/cggeometry]
 import menu
 import macros, os, strutils, base64
-import ../../common
+# import ../../common
 var NSApp {.importc.}: ID
 {.passc: "-DOBJC_OLD_DISPATCH_PROTOTYPES=1 -x objective-c",
     passl: "-framework Cocoa -framework WebKit".}
@@ -39,8 +39,17 @@ const WKUserScriptInjectionTimeAtDocumentStart = 0
 const WKUserScriptInjectionTimeAtDocumentEnd = 1
 const NSApplicationActivationPolicyRegular = 0
 const headerC = currentSourcePath.parentDir.parentDir.parentDir / "webview.h"
-proc webview_external_invoke(self: Id, cmd: Sel, contentController: Id, message: Id) {.
-    importc: "webview_external_invoke", header: headerC.}
+
+converter Bool2bool(a:Bool): bool = cast[bool](a)
+
+type WebviewDialogType = enum
+  WEBVIEW_DIALOG_TYPE_OPEN = 0,
+  WEBVIEW_DIALOG_TYPE_SAVE = 1,
+  WEBVIEW_DIALOG_TYPE_ALERT = 2
+
+# proc webview_external_invoke(self: Id, cmd: Sel, contentController: Id, message: Id) {.
+#     importc: "webview_external_invoke", header: headerC.}
+
 proc webview_check_url(s: cstring): cstring {.importc: "webview_check_url", header: headerC.}
 
 type
@@ -70,15 +79,15 @@ proc webview_window_will_close*(self: Id; cmd: SEL; notification: Id) =
   var w = getAssociatedObject(self, cast[pointer]($$"webview"))
   webview_terminate(cast[Webview](w))
 
-# proc webview_external_invoke*(self: ID; cmd: SEL; contentController: Id;
-#                                     message: Id) =
-#   var w = getAssociatedObject(contentController, cast[pointer]($$"webview"))
-#   if (cast[pointer](w) == nil or cast[Webview](w).external_invoke_cb == nil):
-#     return
+proc webview_external_invoke*(self: ID; cmd: SEL; contentController: Id;
+                                    message: Id) =
+  var w = getAssociatedObject(contentController, cast[pointer]($$"webview"))
+  if (cast[pointer](w) == nil or cast[Webview](w).invokeCb == nil):
+    return
 
-#   objcr:
-#     var msg = [[message body]UTF8String]
-#     cast[Webview](w).external_invoke_cb(cast[Webview](w), cast[cstring](msg))
+  objcr:
+    var msg = [[message body]UTF8String]
+    # cast[Webview](w).invokeCb(cast[Webview](w), cast[cstring](msg))
 
 type CompletionHandler = proc (Id: Id): void
 
