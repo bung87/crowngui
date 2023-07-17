@@ -16,6 +16,8 @@ elif defined(macosx):
   import darwin / [app_kit, foundation]
   import platforms/macos/menu
   import platforms/macos/webview
+  import platforms/macos/appdelegate
+  import platforms/macos/windowcontroller
   export webview
   var NSApp {.importc.}: ID
   {.passc: "-DOBJC_OLD_DISPATCH_PROTOTYPES=1 -DWEBVIEW_COCOA -x objective-c",
@@ -391,63 +393,10 @@ proc newWebView*(path: static[string] = ""; title = ""; width: Positive = 1000; 
   result = webView(title, path, width, height, resizable, debug, callback)
   when defined(macosx):
     let webview = result
-    let MyAppDelegateClass = allocateClassPair(getClass("NSObject"), "AppDelegate", 0)
-    # applicationWillFinishLaunching: -> application:openFile: -> applicationDidFinishLaunching:
-    proc applicationWillFinishLaunching(self: ID; cmd: SEL; notification: ID): void {.cdecl.} =
-      echo "applicationWillFinishLaunching"
-
-    proc application(self: ID; cmd: SEL; sender: NSApplication; openFile: NSString): Bool {.cdecl.} =
-      logging.debug("application openFile:")
-      let path = cast[cstring](objc_msgSend(cast[ID](openFile), $$"UTF8String"))
-      logging.debug("application openFile:" & $path)
-      var cls = self.getClass()
-      var ivar = cls.getIvar("webview")
-      var wv = cast[Webview](self.getIvar(ivar))
-      when compiles(onOpenFile(wv, $path)):
-        return cast[Bool](onOpenFile(wv, $path))
-
-    proc applicationDidFinishLaunching(self: ID; cmd: SEL; notification: ID): void {.cdecl.} =
-      echo "applicationDidFinishLaunching"
-    proc applicationWillBecomeActive(self: ID; cmd: SEL; notification: ID): void {.cdecl.} =
-      echo "applicationWillBecomeActive"
-
-    discard MyAppDelegateClass.addMethod($$"applicationWillFinishLaunching:", cast[IMP](applicationWillFinishLaunching), "v@:@")
-    when compiles(onOpenFile(webview, "")):
-      discard MyAppDelegateClass.addMethod($$"application:openFile:", cast[IMP](application), "B@:@@")
-
-    discard MyAppDelegateClass.addMethod($$"applicationDidFinishLaunching:", cast[IMP](applicationDidFinishLaunching), "v@:@")
-    discard MyAppDelegateClass.addMethod($$"applicationWillBecomeActive:", cast[IMP](applicationWillBecomeActive), "v@:@")
-    discard addIvar(MyAppDelegateClass, "webview", sizeof(Webview), log2(sizeof(Webview).float64).int, "@")
-    let ivar: Ivar = getIvar(MyAppDelegateClass, "webview")
+    let MyAppDelegateClass = initAppDelegate()
     MyAppDelegateClass.registerClassPair()
 
-    let WindowControllerClass = allocateClassPair(getClass("NSWindowController"), "WindowController", 0)
-    proc awakeFromNib(self: ID; cmd: SEL; ): void {.cdecl.} =
-      logging.debug("awakeFromNib")
-      objcr:
-        var super = ObjcSuper(receiver: self, superClass: self.getClass().getSuperclass())
-        discard objc_msgSendSuper(super, $$"awakeFromNib")
-        var typs = [[MutableArray alloc]init]
-        [typs addObject: @"xlsx"]
-        let tid = cast[ID](typs.unsafeAddr)
-        [self registerForDraggedTypes: tid]
-
-    proc initWithCoder(self: ID; cmd: SEL; code: ID): ID {.cdecl.} =
-      logging.debug("initWithCoder")
-      objcr:
-        var super = ObjcSuper(receiver: self, superClass: self.getClass().getSuperclass())
-        discard objc_msgSendSuper(super, $$"initWithCoder")
-        var typs = [[MutableArray alloc]init]
-        [typs addObject: @"xlsx"]
-        let tid = cast[ID](typs.unsafeAddr)
-        [self registerForDraggedTypes: tid]
-      return self
-
-    proc draggingEntered(self: ID; cmd: SEL; sender: NSDraggingInfo): NSDragOperation {.cdecl.} =
-      logging.debug("draggingEntered")
-      return NSDragOperationCopy
-    discard WindowControllerClass.replaceMethod($$"initWithCoder:", cast[IMP](initWithCoder), "@@:@")
-    discard WindowControllerClass.replaceMethod($$"draggingEntered:", cast[IMP](draggingEntered), "I@:@")
+    let WindowControllerClass = initWindowControlelr()
     WindowControllerClass.registerClassPair()
     objcr:
       var appDel = [AppDelegate alloc]
@@ -456,6 +405,7 @@ proc newWebView*(path: static[string] = ""; title = ""; width: Positive = 1000; 
       # [webview.priv.window setDelegate: windowController]
       [NSApplication sharedApplication]
       [NSApp setDelegate: appDel]
+      let ivar: Ivar = getIvar(MyAppDelegateClass, "webview")
       setIvar(appDel, ivar, cast[ID](webview))
       createMenu()
       [NSApp finishLaunching]

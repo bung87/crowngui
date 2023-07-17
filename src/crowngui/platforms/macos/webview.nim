@@ -2,7 +2,11 @@ import objc_runtime
 import darwin / [app_kit, foundation, objc/runtime, objc/blocks, core_graphics/cggeometry]
 import menu
 import macros, os, strutils, base64
-# import ../../common
+import types
+export types
+
+const headerC = currentSourcePath.parentDir.parentDir.parentDir / "webview.h"
+
 var NSApp {.importc.}: ID
 {.passc: "-DOBJC_OLD_DISPATCH_PROTOTYPES=1 -x objective-c",
     passl: "-framework Cocoa -framework WebKit".}
@@ -38,7 +42,7 @@ const WKNavigationResponsePolicyAllow = 1
 const WKUserScriptInjectionTimeAtDocumentStart = 0
 const WKUserScriptInjectionTimeAtDocumentEnd = 1
 const NSApplicationActivationPolicyRegular = 0
-const headerC = currentSourcePath.parentDir.parentDir.parentDir / "webview.h"
+
 
 converter Bool2bool(a:Bool): bool = cast[bool](a)
 
@@ -52,26 +56,7 @@ type WebviewDialogType = enum
 
 proc webview_check_url(s: cstring): cstring {.importc: "webview_check_url", header: headerC.}
 
-type
-  Webview* = ptr WebviewObj
-  WebviewObj* {.importc: "struct webview", header: headerC, bycopy.} = object ## WebView Type
-    url* {.importc: "url".}: cstring                                          ## Current URL
-    title* {.importc: "title".}: cstring                                      ## Window Title
-    width* {.importc: "width".}: cint                                         ## Window Width
-    height* {.importc: "height".}: cint                                       ## Window Height
-    resizable* {.importc: "resizable".}: cint ## `true` to Resize the Window, `false` for Fixed size Window
-    debug* {.importc: "debug".}: cint                                         ## Debug is `true` when not build for Release
-    invokeCb {.importc: "external_invoke_cb".}: pointer                       ## Callback proc js:window.external.invoke
-    priv {.importc: "priv".}: WebviewPrivObj
-    userdata {.importc: "userdata".}: pointer
-  ExternalInvokeCb* = proc (w: Webview; arg: cstring) ## External CallBack Proc
 
-  WebviewPrivObj* = object
-    pool: ID
-    window: ID
-    webview: ID
-    windowDelegate: ID
-    should_exit: cint
 proc webview_terminate*(w: Webview) =
   w.priv.should_exit = 1
 
@@ -227,30 +212,30 @@ proc webview_init*(w: Webview): cint =
         if isX == Yes:
           let cut: Bool = cast[Bool]([NSApp "sendAction:cut:to": nil, `from`: NSApp])
           if cut:
-            return nil
+            return nil.ID
         elif isC:
           let copy: Bool = cast[Bool]([NSApp "sendAction:copy:to": nil, `from`: NSApp])
           if copy:
-            return nil
+            return nil.ID
         elif isV:
           let paste: Bool = cast[Bool]([NSApp "sendAction:paste:t:": nil, `from`: NSApp])
           if paste:
-            return nil
+            return nil.ID
         elif isZ:
           let undo: Bool = cast[Bool]([NSApp "sendAction:undo:to": nil, `from`: NSApp])
           if undo:
-            return nil
+            return nil.ID
         elif isA:
           let selectAll: Bool = cast[Bool]([NSApp "sendAction:selectAll:to": nil, `from`: NSApp])
           if selectAll:
-            return nil
+            return nil.ID
       elif (flag.uint and NSEventModifierFlagDeviceIndependentFlagsMask) == (NSEventModifierFlagCommand or
           NSEventModifierFlagShift):
         let isY: Bool = cast[Bool]([charactersIgnoringModifiers isEqualToString: @"y"])
         if isY:
           let redo: Bool = cast[Bool]([NSApp "sendAction:redo:to": nil, `from`: NSApp])
           if redo:
-            return nil
+            return nil.ID
       return event
   objcr: [NSEvent addLocalMonitorForEventsMatchingMask: NSKeyDown, handler: toBlock(handler)]
   var PrivWKScriptMessageHandler: Class = allocateClassPair(getClass("NSObject"), "PrivWKScriptMessageHandler", 0)

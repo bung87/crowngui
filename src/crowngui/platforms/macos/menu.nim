@@ -7,7 +7,7 @@ const NSEventModifierFlagOption = (1 shl 19)
 func createMenuItem*(title: ID|NSString, action: string, key: string): ID =
   result = objc_msgSend(getClass("NSMenuItem").ID, registerName("alloc"))
   objc_msgSend(result, registerName("initWithTitle:action:keyEquivalent:"),
-              title, if action != "": registerName(action) else: nil, get_nsstring(key))
+              title, if action != "": registerName(action) else: cast[SEL](nil), get_nsstring(key))
   objc_msgSend(result, registerName("autorelease"))
 
 proc createMenu*() =
