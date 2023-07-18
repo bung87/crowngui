@@ -58,12 +58,13 @@ proc newApplication*(entry: static[string]): ApplicationRef =
   result.entryType = entryType
   result.webview = newWebView(url)
 
+
 proc run*(app: ApplicationRef) = app.webview.run
-proc css*(app: ApplicationRef, css: cstring) = app.webview.css(css)
-proc css*(app: ApplicationRef, css: string) = app.webview.css(css.cstring)
-proc js*(app: ApplicationRef, js: cstring) = discard app.webview.js(js)
-proc js*(app: ApplicationRef, js: string) = discard app.webview.js(js.cstring)
-proc exit*(app: ApplicationRef) = app.webview.exit
+# proc css*(app: ApplicationRef, css: cstring) = app.webview.css(css)
+# proc css*(app: ApplicationRef, css: string) = app.webview.css(css.cstring)
+# proc js*(app: ApplicationRef, js: cstring) = discard app.webview.js(js)
+# proc js*(app: ApplicationRef, js: string) = discard app.webview.js(js.cstring)
+proc destroy*(app: ApplicationRef) = app.webview.destroy
 template bindProcs*(app: ApplicationRef; scope: string; n: untyped): untyped = app.webview.bindProcs(scope, n)
 
 when isMainModule:
@@ -75,7 +76,7 @@ when isMainModule:
   let app = newApplication(staticRead("assets/demo.html"))
   when not defined(bundle):
     let theme = if "--light-theme" in commandLineParams(): cssLight else: cssDark
-    app.css(theme)
+    # app.css(theme)
 
   app.run()
-  app.exit()
+  app.destroy()

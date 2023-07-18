@@ -102,68 +102,12 @@ var
   dispatchTable = newTable[int, DispatchFn]()                                   # for dispatch
 
 proc init(w: Webview): cint = webview_init(w)
-proc loadHTML*(w: Webview; html: cstring) = webview_load_HTML(w, html)
-proc loadHTML*(w: Webview; html: string) = loadHTML(w, html.cstring)
-proc loadURL*(w: Webview; url: cstring) = webview_load_URL(w, url)
-# func reload*(w: Webview; ) = webview_reload(w)
-proc loop(w: Webview; blocking: cint): cint = webview_loop(w, blocking)
-func js*(w: Webview; javascript: cstring): cint {.importc: "webview_eval", header: headerC,
-    discardable.} ## Evaluate a JavaScript cstring, runs the javascript string on the window
-func css*(w: Webview; css: cstring): cint {.importc: "webview_inject_css", header: headerC,
-    discardable.} ## Set a CSS cstring, inject the CSS on the Window
-func setTitle*(w: Webview; title: cstring) {.importc: "webview_set_title", header: headerC.} ## Set Title of window
-func setColor*(w: Webview; red, green, blue, alpha: uint8) {.importc: "webview_set_color",
-    header: headerC.} ## Set background color of the Window
-func setFullscreen*(w: Webview; fullscreen: bool) {.importc: "webview_set_fullscreen", header: headerC.} ## Set fullscreen
-func dialog(w: Webview; dlgtype: DialogType; flags: cint; title: cstring; arg: cstring; result: cstring;
-    resultsz: system.csize_t) {.importc: "webview_dialog", header: headerC.}
+
 func dispatch(w: Webview; fn: pointer; arg: pointer) = webview_dispatch(w, fn,
     arg) # dispatch nim func,function will be executed on the UI thread
-# func webview_terminate(w: Webview) {.importc: "webview_terminate", header: headerC.}
-# func webview_exit(w: Webview) {.importc: "webview_exit", header: headerC.}
-# func jsDebug*(format: cstring) {.varargs, importc: "webview_debug",
-    # header: headerC.} ##  `console.debug()` directly inside the JavaScript context.
-# func jsLog*(s: cstring) {.importc: "webview_print_log", header: headerC.} ## `console.log()` directly inside the JavaScript context.
-# func webview(title: cstring; url: cstring; w: cint; h: cint; resizable: cint): cint {.importc: "webview",
-#     header: headerC, used.}
-func launchExternalURL*(w: Webview; url: cstring) {.importc: "webview_launch_external_URL", header: headerC.} ## Set the current URL
-func setIconify*(w: Webview; mustBeIconified: bool) {.importc: "webview_set_iconify",
-    header: headerC.} ## Set window to be Minimized Iconified
 
-func setBorderless*(w: Webview; decorated: bool) {.inline.} =
-  ## Use a window without borders, no close nor minimize buttons.
-  when defined(linux): {.emit: "gtk_window_set_decorated(GTK_WINDOW(`w`->priv.window), `decorated`);".}
-
-func setSkipTaskbar*(w: Webview; hint: bool) {.inline.} =
-  ## Do not show the window on the Taskbar
-  when defined(linux): {.emit: "gtk_window_set_skip_taskbar_hint(GTK_WINDOW(`w`->priv.window), `hint`); gtk_window_set_skip_pager_hint(GTK_WINDOW(`w`->priv.window), `hint`);".}
-
-func setSize*(w: Webview; width: Positive; height: Positive) {.inline.} =
-  ## Resize the window to given size
-  when defined(linux): {.emit: "gtk_widget_set_size_request(GTK_WINDOW(`w`->priv.window), `width`, `height`);".}
-
-func setFocus*(w: Webview) {.inline.} =
-  ## Force focus on the window
-  when defined(linux): {.emit: "gtk_widget_grab_focus(GTK_WINDOW(`w`->priv.window));".}
-
-func setOnTop*(w: Webview; mustBeOnTop: bool) {.inline.} =
-  ## Force window to be on top of all other windows
-  when defined(linux): {.emit: "gtk_window_set_keep_above(GTK_WINDOW(`w`->priv.window), `mustBeOnTop`);".}
-
-func setClipboard*(w: Webview; text: cstring) {.inline.} =
-  ## Set a text cstring on the Clipboard, text must not be empty string
-  assert text.len > 0, "text for clipboard must not be empty string"
-  when defined(linux): {.emit: "gtk_clipboard_set_text(gtk_clipboard_get(GDK_SELECTION_CLIPBOARD), `text`, -1);".}
-
-func setTrayIcon*(w: Webview; path, tooltip: cstring; visible = true) {.inline.} =
-  ## Set a TrayIcon on the corner of the desktop. `path` is full path to a PNG image icon. Only shows an icon.
-  assert path.len > 0, "icon path must not be empty string"
-  when defined(linux): {.emit: """
-    GtkStatusIcon* webview_icon_nim = gtk_status_icon_new_from_file(`path`);
-    gtk_status_icon_set_visible(webview_icon_nim, `visible`);
-    gtk_status_icon_set_title(webview_icon_nim, `tooltip`);
-    gtk_status_icon_set_name(webview_icon_nim, `tooltip`);
-  """.}
+func dialog(w: Webview; dlgtype: DialogType; flags: cint; title: cstring; arg: cstring; result: cstring;
+    resultsz: system.csize_t) {.importc: "webview_dialog", header: headerC.}
 
 proc dialog(w: Webview; dlgType: DialogType; dlgFlag: int; title, arg: string): string =
   ## dialog() opens a system dialog of the given type and title.
@@ -265,7 +209,7 @@ proc bindProcNoArg*(w: Webview; scope, name: string; p: proc()) {.used.} =
   discard eps.hasKeyOrPut(w, newTable[string, TableRef[string, CallHook]]())
   discard hasKeyOrPut(eps[w], scope, newTable[string, CallHook]())
   eps[w][scope][name] = hook
-  w.dispatch(proc() = discard w.js(jsTemplateNoArg % [name, scope]))
+  w.dispatch(proc() = w.eval(jsTemplateNoArg % [name, scope]))
 
 proc bindProc*[P](w: Webview; scope, name: string; p: proc(arg: P)) {.used.} =
   ## Do NOT use directly, see `bindProcs` macro.
@@ -328,27 +272,18 @@ macro bindProcs*(w: Webview; scope: string; n: untyped): untyped =
   result = newBlockStmt(body)
   when not defined(release): echo repr(result)
 
-proc run*(w: Webview) {.inline.} =
-  ## `run` starts the main UI loop until the user closes the window or `exit()` is called.
-  while w.loop(1) == 0: discard
+# proc run*(w: Webview) {.inline.} =
+#   ## `run` starts the main UI loop until the user closes the window or `exit()` is called.
+#   while w.loop(1) == 0: discard
 
-proc run*(w: Webview; quitProc: proc () {.noconv.}; controlCProc: proc () {.noconv.}; autoClose: static[
-    bool] = true) {.inline.} =
+proc run*(w: Webview; quitProc: proc () {.noconv.}; controlCProc: proc () {.noconv.}) {.inline.} =
   ## `run` starts the main UI loop until the user closes the window. Same as `run` but with extras.
   ## * `quitProc` is a function to run at exit, needs `{.noconv.}` pragma.
   ## * `controlCProc` is a function to run at CTRL+C, needs `{.noconv.}` pragma.
   ## * `autoClose` set to `true` to automatically run `exit()` at exit.
   exitprocs.addExitProc(quitProc)
   system.setControlCHook(controlCProc)
-  while w.loop(1) == 0: discard
-  when autoClose:
-    w.webview_terminate()
-    w.webview_exit()
-
-func exit*(w: Webview) {.inline.} =
-  ## Explicitly Terminate, close, exit, quit.
-  w.webview_terminate()
-  w.webview_exit()
+  w.run
 
 proc webView(title = ""; url = ""; width: Positive = 1000; height: Positive = 700; resizable: static[bool] = true;
     debug: static[bool] = not defined(release); callback: ExternalInvokeCb = nil): Webview {.inline.} =
@@ -423,10 +358,10 @@ proc newWebView*(path: static[string] = ""; title = ""; width: Positive = 1000; 
   when trayIcon.len > 0: result.setTrayIcon(trayIcon, title.cstring, visible = true)
   when fullscreen: result.setFullscreen(fullscreen)
 
-  when path.endsWith".js": result.js(readFile(path))
+  when path.endsWith".js": result.eval(readFile(path))
   when path.endsWith".nim":
     const compi = gorgeEx("nim js --out:" & path & ".js " & path & (when defined(release): " -d:release" else: "") & (
         when defined(danger): " -d:danger" else: ""))
     const jotaese = when compi.exitCode == 0: staticRead(path & ".js").strip.cstring else: "".cstring
     when not defined(release): echo jotaese
-    when compi.exitCode == 0: echo result.js(jotaese)
+    when compi.exitCode == 0: echo result.eval(jotaese)

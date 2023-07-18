@@ -5,8 +5,6 @@ import macros, os, strutils, base64
 import types
 export types
 
-const headerC = currentSourcePath.parentDir.parentDir.parentDir / "webview.h"
-
 var NSApp {.importc.}: ID
 {.passc: "-DOBJC_OLD_DISPATCH_PROTOTYPES=1 -x objective-c",
     passl: "-framework Cocoa -framework WebKit".}
@@ -50,11 +48,6 @@ type WebviewDialogType = enum
   WEBVIEW_DIALOG_TYPE_OPEN = 0,
   WEBVIEW_DIALOG_TYPE_SAVE = 1,
   WEBVIEW_DIALOG_TYPE_ALERT = 2
-
-# proc webview_external_invoke(self: Id, cmd: Sel, contentController: Id, message: Id) {.
-#     importc: "webview_external_invoke", header: headerC.}
-
-proc webview_check_url(s: cstring): cstring {.importc: "webview_check_url", header: headerC.}
 
 
 proc webview_terminate*(w: Webview) =
@@ -137,12 +130,7 @@ proc run_alert_panel(self: Id; cmd: SEL; webView: Id; message: Id; frame: Id;
     [alert release]
     objc_msgSend(cast[Id](completionHandler), $$"invoke")
 
-# static void download_failed(Id self, SEL cmd, Id download, Id error) {
-#   printf("%s",
-#          (const char *)objc_msgSend(
-#              objc_msgSend(error, registerName("localizedDescription")),
-#              registerName("UTF8String")));
-# }
+
 type CompletionHandler5 = proc (c: cint): void
 proc make_nav_policy_decision(self: Id; cmd: SEL; webView: Id; response: Id;
                                      decisionHandler: Block[CompletionHandler4]) =
@@ -152,12 +140,12 @@ proc make_nav_policy_decision(self: Id; cmd: SEL; webView: Id; response: Id;
     else:
       objc_msgSend(cast[Id](decisionHandler), $$"invoke", WKNavigationResponsePolicyAllow)
 
-proc webview_load_HTML*(w: Webview; html: cstring) =
-  objcr: [w.priv.webview, loadHTMLString: @($html), baseURL: nil]
+proc setHtml*(w: Webview; html: string) =
+  objcr: [w.priv.webview, loadHTMLString: @(html), baseURL: nil]
 
-proc webview_load_URL*(w: Webview; url: cstring) =
+proc navigate*(w: Webview; url: string) =
   objcr:
-    var requestURL: Id = [NSURL URLWithString: @($url)]
+    var requestURL: Id = [NSURL URLWithString: @(url)]
     [requestURL autorelease]
     var request = [NSURLRequest requestWithURL: requestURL]
     [request autorelease]
@@ -182,7 +170,7 @@ proc webview_minimize*(w: Webview) =
 proc webview_close*(w: Webview) =
   objcr: [w.priv.window close]
 
-proc webview_set_size*(w: Webview; width: int; height: int) =
+proc setSize*(w: Webview; width: int; height: int) =
   objcr:
     let f = [w.priv.window frame]
     var frame: CGRect = cast[CGRect](f)
@@ -335,7 +323,7 @@ proc webview_init*(w: Webview): cint =
     [w.priv.webview initWithFrame: r, configuration: config]
     [w.priv.webview setUIDelegate: uiDel]
     [w.priv.webview setNavigationDelegate: navDel]
-    let url = $webview_check_url(w.url)
+    let url = $(w.url)
     if "data:text/html;charset=utf-8;base64," in url:
       let html = base64.decode(url.split(",")[1])
       [w.priv.webview loadHTMLString: @(html), baseURL: nil]
@@ -350,25 +338,28 @@ proc webview_init*(w: Webview): cint =
   w.priv.should_exit = 0
   return 0
 
-proc webview_loop*(w: Webview; blocking: cint): cint =
-  objcr:
-    var until: Id = if blocking > 0: [NSDate distantFuture] else: [NSDate distantPast]
-    [NSApplication sharedApplication]
-    var event: Id = [NSApp nextEventMatchingMask: culong.high, untilDate: until, inMode: "kCFRunLoopDefaultMode", dequeue: true]
-    if cast[pointer](event) != nil:
-      [NSApp sendEvent: event]
-    return w.priv.should_exit
-
-# proc webview_eval*(w:Webview, js:cstring) :cint =
+# proc webview_loop*(w: Webview; blocking: cint): cint =
 #   objcr:
-#     var userScript:Id = [WKUserScript alloc]
-#     [userScript initWithSource: @($js),injectionTime: WKUserScriptInjectionTimeAtDocumentEnd,forMainFrameOnly: 0]
-#     var config:Id = [w.priv.webview valueForKey:"configuration"]
-#     var userContentController:Id  = [config valueForKey:"userContentController"]
-#     [userContentController addUserScript:userScript]
-#   return 0.cint
+#     var until: Id = if blocking > 0: [NSDate distantFuture] else: [NSDate distantPast]
+#     [NSApplication sharedApplication]
+#     var event: Id = [NSApp nextEventMatchingMask: culong.high, untilDate: until, inMode: "kCFRunLoopDefaultMode", dequeue: true]
+#     if cast[pointer](event) != nil:
+#       [NSApp sendEvent: event]
+#     return w.priv.should_exit
+proc run*(w:Webview) =
+  objcr:
+    var app: Id = [NSApplication sharedApplication]
+    [app run]
 
-proc webview_set_title*(w: Webview; title: cstring) =
+proc eval*(w:Webview, js:string): void =
+  objcr:
+    var userScript:Id = [WKUserScript alloc]
+    [userScript initWithSource: @(js),injectionTime: WKUserScriptInjectionTimeAtDocumentEnd,forMainFrameOnly: 0]
+    var config:Id = [w.priv.webview valueForKey:"configuration"]
+    var userContentController:Id  = [config valueForKey:"userContentController"]
+    [userContentController addUserScript:userScript]
+
+proc setTitle*(w: Webview; title: cstring) =
   objcr: [w.priv.window setTitle: @($title)]
 
 proc webview_set_fullscreen*(w: Webview; fullscreen: int) =
@@ -387,7 +378,7 @@ proc webview_set_iconify*(w: Webview; iconify: int) =
 
 proc webview_launch_external_URL*(w: Webview; uri: cstring) =
   objcr:
-    var url: Id = [NSURL URLWithString: @($webview_check_url(uri))]
+    var url: Id = [NSURL URLWithString: @($(uri))]
     [[NSWorkspace sharedWorkspace]openURL: url]
 
 proc webview_set_color*(w: Webview; r, g, b, a: uint8) =
@@ -486,9 +477,10 @@ proc webview_dispatch*[T](w: Webview; webview_dispatch_fn: T; arg: pointer) =
   var context = webview_dispatch_arg[T](w: w, fn: webview_dispatch_fn, arg: arg)
   dispatch_async_f(dispatch_get_main_queue(), context.addr, cast[pointer](webview_dispatch_cb))
 
-proc webview_exit*(w: Webview) =
+proc terminate*(w: Webview): void =
   objcr:
     var app: Id = [NSApplication sharedApplication]
     [app terminate: app]
 
-# proc webview_print_log*(s:cstring) = printf("%s\n", s)
+proc destroy*(w: Webview) =
+  w.terminate()
