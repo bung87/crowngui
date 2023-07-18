@@ -23,28 +23,8 @@ elif defined(macosx):
   {.passc: "-DOBJC_OLD_DISPATCH_PROTOTYPES=1 -DWEBVIEW_COCOA -x objective-c",
       passl: "-framework Cocoa -framework WebKit".}
 
-# type
-#   ExternalInvokeCb* = proc (w: Webview; arg: string) ## External CallBack Proc
-#   WebviewPrivObj {.importc: "struct webview_priv", header: headerC, bycopy.} = object
-#     when defined(macosx):
-#       pool: ID
-#       window: ID
-#       webview: ID
-#       windowDelegate: ID
-#       should_exit: int
-#   WebviewObj* {.importc: "struct webview", header: headerC, bycopy.} = object ## WebView Type
-#     url* {.importc: "url".}: cstring                                          ## Current URL
-#     title* {.importc: "title".}: cstring                                      ## Window Title
-#     width* {.importc: "width".}: cint                                         ## Window Width
-#     height* {.importc: "height".}: cint                                       ## Window Height
-#     resizable* {.importc: "resizable".}: cint ## `true` to Resize the Window, `false` for Fixed size Window
-#     debug* {.importc: "debug".}: cint                                         ## Debug is `true` when not build for Release
-#     external_invoke_cb {.importc: "external_invoke_cb".}: pointer                       ## Callback proc js:window.external.invoke
-#     priv {.importc: "priv".}: WebviewPrivObj
-#     userdata {.importc: "userdata".}: pointer
 type
   OnOpenFile* = proc (view: Webview; filePath: string)
-  # Webview* = ptr WebviewObj
   DispatchFn* = proc()
   DialogType {.size: sizeof(cint).} = enum
     dtOpen = 0, dtSave = 1, dtAlert = 2
