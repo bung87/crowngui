@@ -50,12 +50,12 @@ type WebviewDialogType = enum
   WEBVIEW_DIALOG_TYPE_ALERT = 2
 
 
-proc webview_terminate*(w: Webview) =
-  w.priv.should_exit = 1
+# proc webview_terminate*(w: Webview) =
+#   w.priv.should_exit = 1
 
 proc webview_window_will_close*(self: Id; cmd: SEL; notification: Id) =
   var w = getAssociatedObject(self, cast[pointer]($$"webview"))
-  webview_terminate(cast[Webview](w))
+  # webview_terminate(cast[Webview](w))
 
 proc webview_external_invoke*(self: ID; cmd: SEL; contentController: Id;
                                     message: Id) =

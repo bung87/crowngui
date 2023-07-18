@@ -60,23 +60,20 @@ proc newApplication*(entry: static[string]): ApplicationRef =
 
 
 proc run*(app: ApplicationRef) = app.webview.run
-# proc css*(app: ApplicationRef, css: cstring) = app.webview.css(css)
-# proc css*(app: ApplicationRef, css: string) = app.webview.css(css.cstring)
-# proc js*(app: ApplicationRef, js: cstring) = discard app.webview.js(js)
-# proc js*(app: ApplicationRef, js: string) = discard app.webview.js(js.cstring)
+proc css*(app: ApplicationRef, css: string) = app.webview.css(css)
 proc destroy*(app: ApplicationRef) = app.webview.destroy
 template bindProcs*(app: ApplicationRef; scope: string; n: untyped): untyped = app.webview.bindProcs(scope, n)
 
 when isMainModule:
 
   const
-    cssDark = staticRead"assets/dark.css".strip.unindent.cstring
-    cssLight = staticRead"assets/light.css".strip.unindent.cstring
+    cssDark = staticRead"assets/dark.css".strip.unindent
+    cssLight = staticRead"assets/light.css".strip.unindent
 
   let app = newApplication(staticRead("assets/demo.html"))
   when not defined(bundle):
     let theme = if "--light-theme" in commandLineParams(): cssLight else: cssDark
-    # app.css(theme)
+    app.css(theme)
 
   app.run()
   app.destroy()
