@@ -1,4 +1,6 @@
-import tables, strutils, macros, logging, json, os, base64, strformat, std/exitprocs, math
+include js_utils
+import tables, strutils, macros, logging, json, os, base64, strformat, std/exitprocs
+
 var logger = newRollingFileLogger(expandTilde("~/crowngui.log"))
 addHandler(logger)
 const headerC = currentSourcePath().substr(0, high(currentSourcePath()) - 11) & "webview.h"
@@ -20,8 +22,8 @@ elif defined(macosx):
   import platforms/macos/windowcontroller
   export webview
   var NSApp {.importc.}: ID
-  {.passc: "-DOBJC_OLD_DISPATCH_PROTOTYPES=1 -DWEBVIEW_COCOA -x objective-c",
-      passl: "-framework Cocoa -framework WebKit".}
+  # {.passc: "-DOBJC_OLD_DISPATCH_PROTOTYPES=1 -DWEBVIEW_COCOA -x objective-c",
+  #     passl: "-framework Cocoa -framework WebKit".}
 
 type
   OnOpenFile* = proc (view: Webview; filePath: string)
@@ -39,73 +41,11 @@ template dataUriHtmlHeader*(s: string): string =
 
 const
   fileLocalHeader* = "file:///" ## Use Local File as URL
-  jsTemplate = """
-    if (typeof $2 === 'undefined') {
-      $2 = {};
-    }
-    $2.$1 = (arg) => {
-      window.external.invoke(
-        JSON.stringify(
-          {scope: "$2", name: "$1", args: JSON.stringify(arg)}
-        )
-      );
-    };
-  """.strip.unindent
-  jsTemplateOnlyArg = """
-    if (typeof $2 === 'undefined') {
-      $2 = {};
-    }
-    $2.$1 = (arg) => {
-      window.external.invoke(
-        JSON.stringify(
-          {scope: "$2", name: "$1", args: JSON.stringify(arg)}
-        )
-      );
-    };
-  """.strip.unindent
-  jsTemplateNoArg = """
-    if (typeof $2 === 'undefined') {
-      $2 = {};
-    }
-    $2.$1 = () => {
-      window.external.invoke(
-        JSON.stringify(
-          {scope: "$2", name: "$1", args: ""}
-        )
-      );
-    };
-  """.strip.unindent
-  cssInjectFunction = """
-  (function(e){window.onload = function(){
-  var t=document.createElement('style'),d=document.head||document.getElementsByTagName('head')[0];
-  t.setAttribute('type','text/css');
-  t.styleSheet?t.styleSheet.cssText=e:t.appendChild(document.createTextNode(e)),d.appendChild(t);
-  }})
-  """.strip.unindent
 
 var
   eps = newTable[Webview, TableRef[string, TableRef[string, CallHook]]]()       # for bindProc
   cbs = newTable[Webview, ExternalInvokeCb]()                                   # easy callbacks
   dispatchTable = newTable[int, DispatchFn]()                                   # for dispatch
-
-proc init(w: Webview): cint = webview_init(w)
-
-func jsEncode(s: string): string =
-  result = newStringOfCap(s.len * 4) # Allocate reasonable buffer size
-  var n = s.len * 4
-  var r = 1 # At least one byte for trailing zero
-  for c in s:
-    let byte = c.uint8
-    if byte >= 0x20 and byte < 0x80 and c notin {'<', '>', '\\', '\'', '"'}:
-      if n > 0:
-        result.add c
-        dec(n)
-      r += 1
-    else:
-      if n > 0:
-        result.add "\\x" & byte.toHex(2)
-        n -= 4 # We add 4 bytes, so we want to subtract 4 from remaining space
-      r += 4
 
 proc css*(w:Webview, css: string): void =
   w.eval(cssInjectFunction & "(\"" & css.jsEncode & "\")")
@@ -279,10 +219,6 @@ macro bindProcs*(w: Webview; scope: string; n: untyped): untyped =
   result = newBlockStmt(body)
   when not defined(release): echo repr(result)
 
-# proc run*(w: Webview) {.inline.} =
-#   ## `run` starts the main UI loop until the user closes the window or `exit()` is called.
-#   while w.loop(1) == 0: discard
-
 proc run*(w: Webview; quitProc: proc () {.noconv.}; controlCProc: proc () {.noconv.}) {.inline.} =
   ## `run` starts the main UI loop until the user closes the window. Same as `run` but with extras.
   ## * `quitProc` is a function to run at exit, needs `{.noconv.}` pragma.
@@ -294,24 +230,20 @@ proc run*(w: Webview; quitProc: proc () {.noconv.}; controlCProc: proc () {.noco
 
 proc webView(title = ""; url = ""; width: Positive = 1000; height: Positive = 700; resizable: static[bool] = true;
     debug: static[bool] = not defined(release); callback: ExternalInvokeCb = nil): Webview {.inline.} =
-  result = cast[Webview](alloc0(sizeof(WebviewObj)))
-  
-  result.title = title.cstring
-  result.url = url.cstring
-  result.width = width.cint
-  result.height = height.cint
-  result.resizable = when resizable: 1 else: 0
-  result.debug = 1
+  result = create(WebviewObj)
+  result.title = title
+  result.url = url
+  result.width = width
+  result.height = height
+  result.resizable = resizable
+  result.debug = true
   result.external_invoke_cb = generalExternalInvokeCallback
   if callback != nil: result.externalInvokeCB = callback
-  if result.init() != 0: return nil
+  if result.webview_init() != 0: return nil
 
 proc newWebView*(path: static[string] = ""; title = ""; width: Positive = 1000; height: Positive = 700;
     resizable: static[bool] = true; debug: static[bool] = not defined(release); callback: ExternalInvokeCb = nil;
-        skipTaskbar: static[bool] = false; windowBorders: static[bool] = true; focus: static[bool] = false;
-            keepOnTop: static[bool] = false;
-    minimized: static[bool] = false; cssPath: static[string] = ""; trayIcon: static[cstring] = ""; fullscreen: static[
-        bool] = false): Webview =
+        cssPath: static[string] = ""; ): Webview =
   ## Create a new Window with given attributes, all arguments are optional.
   ## * `path` is the URL or Full Path to 1 HTML file, index of the Web GUI App.
   ## * `title` is the Title of the Window.
@@ -319,14 +251,7 @@ proc newWebView*(path: static[string] = ""; title = ""; width: Positive = 1000; 
   ## * `height` is the Height of the Window.
   ## * `resizable` set to `true` to allow Resize of the Window, defaults to `true`.
   ## * `debug` Debug mode, Debug is `true` when not built for Release.
-  ## * `skipTaskbar` if set to `true` the Window will not be visible on the desktop Taskbar.
-  ## * `windowBorders` if set to `false` the Window will have no Borders, no Close button, no Minimize button.
-  ## * `focus` if set to `true` the Window will force Focus.
-  ## * `keepOnTop` if set to `true` the Window will keep on top of all other windows on the desktop.
-  ## * `minimized` if set the `true` the Window will be Minimized, Iconified.
   ## * `cssPath` Full Path or URL of a CSS file to use as Style, defaults to `"dark.css"` for Dark theme, can be `"light.css"` for Light theme.
-  ## * `trayIcon` Path to a local PNG Image Icon file.
-  ## * `fullscreen` if set to `true` the Window will be forced Fullscreen.
   ## * If `--light-theme` on `commandLineParams()` then it will use Light Theme automatically.
   ## * CSS is embedded, if your app is used Offline, it will display Ok.
   ## * For templates that do CSS, remember that CSS must be injected *after DOM Ready*.
@@ -357,18 +282,11 @@ proc newWebView*(path: static[string] = ""; title = ""; width: Positive = 1000; 
     let filepath = paramStr(1)
     if filepath.len > 0:
       onOpenFile(filepath)
-  when skipTaskbar: result.setSkipTaskbar(skipTaskbar)
-  when not windowBorders: result.setBorderlessWindow(windowBorders)
-  when focus: result.setFocus()
-  when keepOnTop: result.setOnTop(keepOnTop)
-  when minimized: webviewindow.setIconify(minimized)
-  when trayIcon.len > 0: result.setTrayIcon(trayIcon, title.cstring, visible = true)
-  when fullscreen: result.setFullscreen(fullscreen)
 
   when path.endsWith".js": result.eval(readFile(path))
   when path.endsWith".nim":
     const compi = gorgeEx("nim js --out:" & path & ".js " & path & (when defined(release): " -d:release" else: "") & (
         when defined(danger): " -d:danger" else: ""))
-    const jotaese = when compi.exitCode == 0: staticRead(path & ".js").strip.cstring else: "".cstring
+    const jotaese = when compi.exitCode == 0: staticRead(path & ".js").strip else: ""
     when not defined(release): echo jotaese
     when compi.exitCode == 0: echo result.eval(jotaese)

@@ -285,7 +285,7 @@ proc webview_init*(w: Webview): cint =
     var r: CGRect = CGRectMake(0, 0, w.width, w.height)
     var style = NSWindowStyleMaskTitled or NSWindowStyleMaskClosable or
                        NSWindowStyleMaskMiniaturizable;
-    if w.resizable > 0:
+    if w.resizable:
       style = style or NSWindowStyleMaskResizable
     w.priv.window = [NSWindow alloc]
     [w.priv.window initWithContentRect: r, styleMask: style, backing: NSBackingStoreBuffered, `defer`: 0]

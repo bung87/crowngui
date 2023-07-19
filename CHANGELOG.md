@@ -1,4 +1,12 @@
 ## Release Notes  
+### 0.3.0
+
+Change apis according to https://github.com/webview/webview/blob/master/CHANGELOG.md#migrating-from-v011-to-v0100
+
+* remove `newWebView` params, `skipTaskbar` `windowBorders` `keepOnTop` `minimized` `trayIcon` `fullscreen`  
+
+* remove `webview.h`  
+
 
 ### Background story  
 
