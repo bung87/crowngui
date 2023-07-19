@@ -7,6 +7,8 @@ Change apis according to https://github.com/webview/webview/blob/master/CHANGELO
 
 * remove `webview.h`  
 
+* remove dialog's procs  
+
 
 ### Background story  
 

@@ -3,8 +3,7 @@ import tables, strutils, macros, logging, json, os, base64, strformat, std/exitp
 
 var logger = newRollingFileLogger(expandTilde("~/crowngui.log"))
 addHandler(logger)
-const headerC = currentSourcePath().substr(0, high(currentSourcePath()) - 11) & "webview.h"
-{.passc: "-DWEBVIEW_STATIC -DWEBVIEW_IMPLEMENTATION -I" & headerC.}
+
 when defined(linux):
   {.passc: "-DWEBVIEW_GTK=1 " & staticExec"pkg-config --cflags gtk+-3.0 webkit2gtk-4.0",
       passl: staticExec"pkg-config --libs gtk+-3.0 webkit2gtk-4.0".}
@@ -28,8 +27,6 @@ elif defined(macosx):
 type
   OnOpenFile* = proc (view: Webview; filePath: string)
   DispatchFn* = proc()
-  DialogType {.size: sizeof(cint).} = enum
-    dtOpen = 0, dtSave = 1, dtAlert = 2
   CallHook = proc (params: string): string # json -> proc -> json
   MethodInfo = object
     scope, name, args: string
@@ -52,49 +49,6 @@ proc css*(w:Webview, css: string): void =
 
 func dispatch(w: Webview; fn: pointer; arg: pointer) = webview_dispatch(w, fn,
     arg) # dispatch nim func,function will be executed on the UI thread
-
-func dialog(w: Webview; dlgtype: DialogType; flags: cint; title: cstring; arg: cstring; result: cstring;
-    resultsz: system.csize_t) {.importc: "webview_dialog", header: headerC.}
-
-proc dialog(w: Webview; dlgType: DialogType; dlgFlag: int; title, arg: string): string =
-  ## dialog() opens a system dialog of the given type and title.
-  ## String argument can be provided for certain dialogs, such as alert boxes.
-  ## For alert boxes argument is a message inside the dialog box.
-  const maxPath = 4096
-  let resultPtr = cast[cstring](alloc0(maxPath))
-  defer: dealloc(resultPtr)
-  w.dialog(dlgType, dlgFlag.cint, title.cstring, arg.cstring, resultPtr, system.csize_t(maxPath))
-  return $resultPtr
-
-template msg*(w: Webview; title, msg: string) =
-  ## Show one message box
-  discard w.dialog(dtAlert, 0, title, msg)
-
-template info*(w: Webview; title, msg: string) =
-  ## Show one alert box
-  discard w.dialog(dtAlert, 1 shl 1, title, msg)
-
-template warn*(w: Webview; title, msg: string) =
-  ## Show one warn box
-  discard w.dialog(dtAlert, 2 shl 1, title, msg)
-
-template error*(w: Webview; title, msg: string) =
-  ## Show one error box
-  discard w.dialog(dtAlert, 3 shl 1, title, msg)
-
-template dialogOpen*(w: Webview; title = ""): string =
-  ## Opens a dialog that requests filenames from the user. Returns ""
-  ## if the user closed the dialog without selecting a file.
-  w.dialog(dtOpen, 0.cint, title, "")
-
-template dialogSave*(w: Webview; title = ""): string =
-  ## Opens a dialog that requests a filename to save to from the user.
-  ## Returns "" if the user closed the dialog without selecting a file.
-  w.dialog(dtSave, 0.cint, title, "")
-
-template dialogOpenDir*(w: Webview; title = ""): string =
-  ## Opens a dialog that requests a Directory from the user.
-  w.dialog(dtOpen, 1.cint, title, "")
 
 proc generalExternalInvokeCallback(w: Webview; arg: cstring) {.exportc.} =
   # assign to webview.external_invoke_cb using eps,cbs store user defined proc
@@ -289,4 +243,4 @@ proc newWebView*(path: static[string] = ""; title = ""; width: Positive = 1000; 
         when defined(danger): " -d:danger" else: ""))
     const jotaese = when compi.exitCode == 0: staticRead(path & ".js").strip else: ""
     when not defined(release): echo jotaese
-    when compi.exitCode == 0: echo result.eval(jotaese)
+    when compi.exitCode == 0: result.eval(jotaese)
