@@ -47,7 +47,7 @@ var
 proc css*(w:Webview, css: string): void =
   w.eval(cssInjectFunction & "(\"" & css.jsEncode & "\")")
 
-func dispatch(w: Webview; fn: pointer; arg: pointer) = webview_dispatch(w, fn,
+proc dispatch(w: Webview; fn: pointer; arg: pointer) = webview_dispatch(w, fn,
     arg) # dispatch nim func,function will be executed on the UI thread
 
 proc generalExternalInvokeCallback(w: Webview; arg: cstring) {.exportc.} =

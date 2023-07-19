@@ -293,6 +293,7 @@ proc webview_init*(w: Webview): cint =
     [w.priv.window setTitle: nsTitle]
     [w.priv.window setDelegate: w.priv.windowDelegate]
     [w.priv.window center]
+    
 
   var PrivWKUIDelegate: Class = allocateClassPair(getClass("NSObject"), "PrivWKUIDelegate", 0)
   discard addProtocol(PrivWKUIDelegate, getProtocol("WKUIDelegate"))
@@ -351,13 +352,17 @@ proc run*(w:Webview) =
     var app: Id = [NSApplication sharedApplication]
     [app run]
 
+# proc eval*(w:Webview, js:string): void =
+#   objcr:
+#     var userScript:Id = [WKUserScript alloc]
+#     [userScript initWithSource: @(js),injectionTime: WKUserScriptInjectionTimeAtDocumentEnd,forMainFrameOnly: 0]
+#     var config:Id = [w.priv.webview valueForKey:"configuration"]
+#     var userContentController:Id  = [config valueForKey:"userContentController"]
+#     [userContentController addUserScript:userScript]
+
 proc eval*(w:Webview, js:string): void =
   objcr:
-    var userScript:Id = [WKUserScript alloc]
-    [userScript initWithSource: @(js),injectionTime: WKUserScriptInjectionTimeAtDocumentEnd,forMainFrameOnly: 0]
-    var config:Id = [w.priv.webview valueForKey:"configuration"]
-    var userContentController:Id  = [config valueForKey:"userContentController"]
-    [userContentController addUserScript:userScript]
+    [w.priv.webview evaluateJavaScript: @(js), completionHandler: nil]
 
 proc setTitle*(w: Webview; title: cstring) =
   objcr: [w.priv.window setTitle: @($title)]
@@ -454,26 +459,29 @@ proc webview_dialog*(w: Webview; dlgtype: WebviewDialogType; flags: int;
         [a runModal]
         [a release]
 
-type WebviewDispatchCtx = object
+type WebviewDispatchCtx {.pure.} = object
   w: Webview
   arg: pointer
   fn: pointer
 
-type WebviewDispatchCtx2 = object
+type WebviewDispatchCtx2 {.pure.} = object
   w: Webview
   arg: pointer
   fn: proc (w: Webview; arg: pointer)
 
-proc webview_dispatch_cb*(arg: pointer) =
-  let context = cast[ptr  WebviewDispatchCtx2](arg)
+proc webview_dispatch_cb*(arg: pointer) {.stdcall.} =
+  let context = cast[ptr WebviewDispatchCtx2](arg)
   context.fn(context.w, context.arg)
 
 proc dispatch_async_f(q: pointer; b: pointer; c: pointer){.importc, header: "<dispatch/dispatch.h>".}
 proc dispatch_get_main_queue(): pointer{.importc, header: "<dispatch/dispatch.h>".}
 
-proc webview_dispatch*(w: Webview; fn: pointer; arg: pointer) =
-  var context = WebviewDispatchCtx(w: w, fn: fn, arg: arg)
-  dispatch_async_f(dispatch_get_main_queue(), context.addr, cast[pointer](webview_dispatch_cb))
+proc webview_dispatch*(w: Webview; fn: pointer; arg: pointer) {.stdcall.} =
+  var context = create(WebviewDispatchCtx)
+  context.w = w
+  context.fn = fn
+  context.arg = arg
+  dispatch_async_f(dispatch_get_main_queue(), context, cast[pointer](webview_dispatch_cb))
 
 proc terminate*(w: Webview): void =
   objcr:
