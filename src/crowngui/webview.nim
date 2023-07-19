@@ -25,7 +25,6 @@ elif defined(macosx):
   #     passl: "-framework Cocoa -framework WebKit".}
 
 type
-  OnOpenFile* = proc (view: Webview; filePath: string)
   DispatchFn* = proc()
   CallHook = proc (params: string): string # json -> proc -> json
   MethodInfo = object
@@ -232,10 +231,10 @@ proc newWebView*(path: static[string] = ""; title = ""; width: Positive = 1000; 
       [NSApp finishLaunching]
       [NSApp activateIgnoringOtherApps: true]
 
-  when not defined(macosx) and compiles(onOpenFile(webview, "")):
+  when not defined(macosx):
     let filepath = paramStr(1)
-    if filepath.len > 0:
-      onOpenFile(filepath)
+    if filepath.len > 0 and webview.onOpenFile != nil:
+      webview.onOpenFile(webview, filepath)
 
   when path.endsWith".js": result.eval(readFile(path))
   when path.endsWith".nim":

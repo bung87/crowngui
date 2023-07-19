@@ -13,6 +13,7 @@ type
     invokeCb* : pointer                       ## Callback proc js:window.external.invoke
     priv* : WebviewPrivObj
     userdata* : pointer
+    onOpenFile*: OnOpenFile
   ExternalInvokeCb* = proc (w: Webview; arg: cstring) ## External CallBack Proc
 
   WebviewPrivObj* = object
@@ -21,3 +22,5 @@ type
     webview*: ID
     windowDelegate*: ID
     should_exit*: cint
+
+  OnOpenFile* = proc (w: Webview; filePath: string; name = ""):bool

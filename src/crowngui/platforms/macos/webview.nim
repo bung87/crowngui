@@ -49,10 +49,6 @@ type WebviewDialogType = enum
   WEBVIEW_DIALOG_TYPE_SAVE = 1,
   WEBVIEW_DIALOG_TYPE_ALERT = 2
 
-
-# proc webview_terminate*(w: Webview) =
-#   w.priv.should_exit = 1
-
 proc webview_window_will_close*(self: Id; cmd: SEL; notification: Id) =
   var w = getAssociatedObject(self, cast[pointer]($$"webview"))
   # webview_terminate(cast[Webview](w))
@@ -65,7 +61,7 @@ proc webview_external_invoke*(self: ID; cmd: SEL; contentController: Id;
 
   objcr:
     var msg = [[message body]UTF8String]
-    # cast[Webview](w).invokeCb(cast[Webview](w), cast[cstring](msg))
+    cast[proc (w: Webview; arg: cstring) {.stdcall.}](cast[Webview](w).invokeCb)(cast[Webview](w), cast[cstring](msg))
 
 type CompletionHandler = proc (Id: Id): void
 
@@ -364,8 +360,8 @@ proc eval*(w:Webview, js:string): void =
   objcr:
     [w.priv.webview evaluateJavaScript: @(js), completionHandler: nil]
 
-proc setTitle*(w: Webview; title: cstring) =
-  objcr: [w.priv.window setTitle: @($title)]
+proc setTitle*(w: Webview; title: string) =
+  objcr: [w.priv.window setTitle: @(title)]
 
 proc webview_set_fullscreen*(w: Webview; fullscreen: int) =
   objcr:
