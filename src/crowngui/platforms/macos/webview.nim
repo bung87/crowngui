@@ -454,27 +454,25 @@ proc webview_dialog*(w: Webview; dlgtype: WebviewDialogType; flags: int;
         [a runModal]
         [a release]
 
-type webview_dispatch_arg[T] = object
+type WebviewDispatchCtx = object
   w: Webview
   arg: pointer
-  fn: T
+  fn: pointer
 
-type webview_dispatch_arg2 = object
+type WebviewDispatchCtx2 = object
   w: Webview
   arg: pointer
   fn: proc (w: Webview; arg: pointer)
 
 proc webview_dispatch_cb*(arg: pointer) =
-  # struct webview_dispatch_arg *context = (struct webview_dispatch_arg *)arg;
-  let context = cast[webview_dispatch_arg2](arg)
+  let context = cast[ptr  WebviewDispatchCtx2](arg)
   context.fn(context.w, context.arg)
-  # cfree(context)
 
 proc dispatch_async_f(q: pointer; b: pointer; c: pointer){.importc, header: "<dispatch/dispatch.h>".}
 proc dispatch_get_main_queue(): pointer{.importc, header: "<dispatch/dispatch.h>".}
 
-proc webview_dispatch*[T](w: Webview; webview_dispatch_fn: T; arg: pointer) =
-  var context = webview_dispatch_arg[T](w: w, fn: webview_dispatch_fn, arg: arg)
+proc webview_dispatch*(w: Webview; fn: pointer; arg: pointer) =
+  var context = WebviewDispatchCtx(w: w, fn: fn, arg: arg)
   dispatch_async_f(dispatch_get_main_queue(), context.addr, cast[pointer](webview_dispatch_cb))
 
 proc terminate*(w: Webview): void =
