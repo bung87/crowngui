@@ -12,7 +12,7 @@ const
         )
       );
     };
-  """.strip.unindent
+  """.strip
   jsTemplateOnlyArg = """
     if (typeof $2 === 'undefined') {
       $2 = {};
@@ -24,7 +24,7 @@ const
         )
       );
     };
-  """.strip.unindent
+  """.strip
   jsTemplateNoArg = """
     if (typeof $2 === 'undefined') {
       $2 = {};
@@ -36,7 +36,7 @@ const
         )
       );
     };
-  """.strip.unindent
+  """.strip
   cssInjectFunction = """
   (function(e){window.onload = function(){
   var t=document.createElement('style'),d=document.head||document.getElementsByTagName('head')[0];

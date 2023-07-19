@@ -348,13 +348,19 @@ proc run*(w:Webview) =
     var app: Id = [NSApplication sharedApplication]
     [app run]
 
-# proc eval*(w:Webview, js:string): void =
-#   objcr:
-#     var userScript:Id = [WKUserScript alloc]
-#     [userScript initWithSource: @(js),injectionTime: WKUserScriptInjectionTimeAtDocumentEnd,forMainFrameOnly: 0]
-#     var config:Id = [w.priv.webview valueForKey:"configuration"]
-#     var userContentController:Id  = [config valueForKey:"userContentController"]
-#     [userContentController addUserScript:userScript]
+proc addUserScript(w:Webview, js:string; location: int): void =
+  objcr:
+    var userScript:Id = [WKUserScript alloc]
+    [userScript initWithSource: @(js),injectionTime: location,forMainFrameOnly: 0]
+    var config:Id = [w.priv.webview valueForKey:"configuration"]
+    var userContentController:Id  = [config valueForKey:"userContentController"]
+    [userContentController addUserScript:userScript]
+
+proc addUserScriptAtDocumentStart*(w:Webview, js:string): void =
+  w.addUserScript(js, WKUserScriptInjectionTimeAtDocumentStart)
+
+proc addUserScriptAtDocumentEnd*(w:Webview, js:string): void =
+  w.addUserScript(js, WKUserScriptInjectionTimeAtDocumentEnd)
 
 proc eval*(w:Webview, js:string): void =
   objcr:

@@ -44,7 +44,7 @@ var
   dispatchTable = newTable[int, DispatchFn]()                                   # for dispatch
 
 proc css*(w:Webview, css: string): void =
-  w.eval(cssInjectFunction & "(\"" & css.jsEncode & "\")")
+  w.addUserScriptAtDocumentStart(cssInjectFunction & "(\"" & css.jsEncode & "\")")
 
 proc dispatch(w: Webview; fn: pointer; arg: pointer) = webview_dispatch(w, fn,
     arg) # dispatch nim func,function will be executed on the UI thread
@@ -98,7 +98,7 @@ proc bindProc*[P, R](w: Webview; scope, name: string; p: (proc(param: P): R)) {.
   discard eps.hasKeyOrPut(w, newTable[string, TableRef[string, CallHook]]())
   discard hasKeyOrPut(eps[w], scope, newTable[string, CallHook]())
   eps[w][scope][name] = hook
-  w.dispatch(proc() = discard w.js(jsTemplate % [name, scope]))
+  w.dispatch(proc() = discard w.eval(jsTemplate % [name, scope]))
 
 proc bindProcNoArg*(w: Webview; scope, name: string; p: proc()) {.used.} =
   ## Do NOT use directly, see `bindProcs` macro.
@@ -109,7 +109,7 @@ proc bindProcNoArg*(w: Webview; scope, name: string; p: proc()) {.used.} =
   discard eps.hasKeyOrPut(w, newTable[string, TableRef[string, CallHook]]())
   discard hasKeyOrPut(eps[w], scope, newTable[string, CallHook]())
   eps[w][scope][name] = hook
-  w.dispatch(proc() = w.eval(jsTemplateNoArg % [name, scope]))
+  w.dispatch(proc() = w.addUserScriptAtDocumentEnd(jsTemplateNoArg % [name, scope]))
 
 proc bindProc*[P](w: Webview; scope, name: string; p: proc(arg: P)) {.used.} =
   ## Do NOT use directly, see `bindProcs` macro.
@@ -126,7 +126,7 @@ proc bindProc*[P](w: Webview; scope, name: string; p: proc(arg: P)) {.used.} =
   discard eps.hasKeyOrPut(w, newTable[string, TableRef[string, CallHook]]())
   discard hasKeyOrPut(eps[w], scope, newTable[string, CallHook]())
   eps[w][scope][name] = hook
-  w.dispatch(proc() = w.eval(jsTemplateOnlyArg % [name, scope]))
+  w.dispatch(proc() = w.addUserScriptAtDocumentEnd(jsTemplateOnlyArg % [name, scope]))
 
 macro bindProcs*(w: Webview; scope: string; n: untyped): untyped =
   ## * Functions must be `proc` or `func`; No `template` nor `macro`.
@@ -190,7 +190,7 @@ proc webView(title = ""; url = ""; width: Positive = 1000; height: Positive = 70
   result.height = height
   result.resizable = resizable
   result.debug = true
-  result.external_invoke_cb = generalExternalInvokeCallback
+  result.invokeCb = generalExternalInvokeCallback
   if callback != nil: result.externalInvokeCB = callback
   if result.webview_init() != 0: return nil
 

@@ -11,7 +11,7 @@ type
   Application* = object
     entry: string
     entryType: EntryType
-    webview: Webview
+    webview*: Webview
   ApplicationRef* = ref Application
 
 
