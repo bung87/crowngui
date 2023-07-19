@@ -1,7 +1,7 @@
+import strutils, base64
 import objc_runtime
 import darwin / [app_kit, foundation, objc/runtime, objc/blocks, core_graphics/cggeometry]
 import menu
-import macros, os, strutils, base64
 import types
 export types
 
@@ -332,7 +332,7 @@ proc webview_init*(w: Webview): cint =
     [[w.priv.window contentView]addSubview: w.priv.webview]
     [w.priv.window orderFrontRegardless]
     [[NSApplication sharedApplication]setActivationPolicy: NSApplicationActivationPolicyRegular]
-  w.priv.should_exit = 0
+
   return 0
 
 # proc webview_loop*(w: Webview; blocking: cint): cint =
@@ -438,7 +438,6 @@ proc webview_dialog*(w: Webview; dlgtype: WebviewDialogType; flags: int;
         var path: Id = [url path]
         var filename: cstring = cast[cstring]([path UTF8String])
         copyMem(result, filename, resultsz)
-        # strlcpy(result, filename, resultsz)
 
       elif (dlgtype == WEBVIEW_DIALOG_TYPE_ALERT):
         var a: Id = [NSAlert new]
@@ -446,10 +445,8 @@ proc webview_dialog*(w: Webview; dlgtype: WebviewDialogType; flags: int;
         of WEBVIEW_DIALOG_FLAG_INFO:
           [a setAlertStyle: NSAlertStyleInformational]
         of WEBVIEW_DIALOG_FLAG_WARNING:
-          # printf("Warning\n");
           [a setAlertStyle: NSAlertStyleWarning]
         of WEBVIEW_DIALOG_FLAG_ERROR:
-          # printf("Error\n");
           [a setAlertStyle: NSAlertStyleCritical]
         else:
           discard
@@ -471,7 +468,7 @@ type WebviewDispatchCtx2 {.pure.} = object
   arg: pointer
   fn: proc (w: Webview; arg: pointer)
 
-proc webview_dispatch_cb*(arg: pointer) {.stdcall.} =
+proc webview_dispatch_cb(arg: pointer) {.stdcall.} =
   let context = cast[ptr WebviewDispatchCtx2](arg)
   context.fn(context.w, context.arg)
 

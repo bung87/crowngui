@@ -21,6 +21,5 @@ type
     window*: ID
     webview*: ID
     windowDelegate*: ID
-    should_exit*: cint
 
   OnOpenFile* = proc (w: Webview; filePath: string; name = ""):bool
