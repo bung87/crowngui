@@ -127,7 +127,7 @@ proc bindProc*[P](w: Webview; scope, name: string; p: proc(arg: P)) {.used.} =
   discard eps.hasKeyOrPut(w, newTable[string, TableRef[string, CallHook]]())
   discard hasKeyOrPut(eps[w], scope, newTable[string, CallHook]())
   eps[w][scope][name] = hook
-  w.dispatch(proc() = discard w.js(jsTemplateOnlyArg % [name, scope]))
+  w.dispatch(proc() = w.eval(jsTemplateOnlyArg % [name, scope]))
 
 macro bindProcs*(w: Webview; scope: string; n: untyped): untyped =
   ## * Functions must be `proc` or `func`; No `template` nor `macro`.

@@ -61,6 +61,7 @@ proc newApplication*(entry: static[string]): ApplicationRef =
 
 proc run*(app: ApplicationRef) = app.webview.run
 proc css*(app: ApplicationRef, css: string) = app.webview.css(css)
+proc eval*(app: ApplicationRef, js: string) = app.webview.eval(js)
 proc destroy*(app: ApplicationRef) = app.webview.destroy
 template bindProcs*(app: ApplicationRef; scope: string; n: untyped): untyped = app.webview.bindProcs(scope, n)
 
