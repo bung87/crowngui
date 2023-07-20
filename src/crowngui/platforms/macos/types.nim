@@ -1,4 +1,3 @@
-import std/[os]
 import objc_runtime
 
 type

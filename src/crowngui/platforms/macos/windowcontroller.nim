@@ -1,5 +1,4 @@
 
-import std/[math]
 import objc_runtime
 import darwin / [app_kit, foundation, objc/runtime]
 import types
