@@ -20,9 +20,6 @@ elif defined(macosx):
   import platforms/macos/appdelegate
   import platforms/macos/windowcontroller
   export webview
-  var NSApp {.importc.}: ID
-  # {.passc: "-DOBJC_OLD_DISPATCH_PROTOTYPES=1 -DWEBVIEW_COCOA -x objective-c",
-  #     passl: "-framework Cocoa -framework WebKit".}
 
 type
   DispatchFn* = proc()
@@ -61,7 +58,7 @@ proc generalExternalInvokeCallback(w: Webview; arg: cstring) {.exportc.} =
     except:
       when defined(release): discard else: echo getCurrentExceptionMsg()
   elif cbs.hasKey(w):
-    cbs[w](w, $arg)
+    cbs[w](w, arg)
     handled = true
   when not defined(release):
     if unlikely(handled == false): echo "Error on External invoke: ", arg

@@ -21,12 +21,12 @@ proc applicationDidFinishLaunching(self: ID; cmd: SEL; notification: ID): void {
 proc applicationWillBecomeActive(self: ID; cmd: SEL; notification: ID): void {.cdecl.} =
   echo "applicationWillBecomeActive"
 
-proc initAppDelegate*(): Class  =
+proc initAppDelegate*(): ObjcClass =
   result = allocateClassPair(getClass("NSObject"), "AppDelegate", 0)
-  discard result.addMethod($$"applicationWillFinishLaunching:", cast[IMP](applicationWillFinishLaunching), getProcEncode(applicationWillFinishLaunching))
-  discard result.addMethod($$"applicationDidFinishLaunching:", cast[IMP](applicationDidFinishLaunching), getProcEncode(applicationDidFinishLaunching))
-  discard result.addMethod($$"applicationWillBecomeActive:", cast[IMP](applicationWillBecomeActive), getProcEncode(applicationWillBecomeActive))
-  discard result.addMethod($$"application:openFile:", cast[IMP](application), getProcEncode(application))
+  discard result.addMethod($$"applicationWillFinishLaunching:", cast[IMP](applicationWillFinishLaunching))
+  discard result.addMethod($$"applicationDidFinishLaunching:", cast[IMP](applicationDidFinishLaunching))
+  discard result.addMethod($$"applicationWillBecomeActive:", cast[IMP](applicationWillBecomeActive))
+  discard result.addMethod($$"application:openFile:", cast[IMP](application))
 
     
   discard addIvar(result, "webview", sizeof(Webview), log2(sizeof(Webview).float64).int, "@")

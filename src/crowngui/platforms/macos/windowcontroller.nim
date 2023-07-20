@@ -26,7 +26,7 @@ proc initWithCoder(self: ID; cmd: SEL; code: ID): ID {.cdecl.} =
 proc draggingEntered(self: ID; cmd: SEL; sender: NSDraggingInfo): NSDragOperation {.cdecl.} =
   return NSDragOperationCopy
 
-proc initWindowControlelr*(): Class =
+proc initWindowControlelr*(): ObjcClass =
   result = allocateClassPair(getClass("NSWindowController"), "WindowController", 0)
-  discard result.replaceMethod($$"initWithCoder:", cast[IMP](initWithCoder), getProcEncode(initWithCoder))
-  discard result.replaceMethod($$"draggingEntered:", cast[IMP](draggingEntered), getProcEncode(draggingEntered))
+  discard result.replaceMethod($$"initWithCoder:", initWithCoder)
+  discard result.replaceMethod($$"draggingEntered:", draggingEntered)

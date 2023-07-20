@@ -5,12 +5,6 @@ import menu
 import types
 export types
 
-var NSApp {.importc.}: ID
-{.passc: "-DOBJC_OLD_DISPATCH_PROTOTYPES=1 -x objective-c",
-    passl: "-framework Cocoa -framework WebKit".}
-
-const NSKeyDown = (1 shl 10)
-const NSEventModifierFlagDeviceIndependentFlagsMask = 0xffff0000.culong
 const WEBVIEW_DIALOG_FLAG_FILE = (0 shl 0)
 const WEBVIEW_DIALOG_FLAG_DIRECTORY = (1 shl 0)
 
@@ -18,31 +12,11 @@ const WEBVIEW_DIALOG_FLAG_INFO = (1 shl 1)
 const WEBVIEW_DIALOG_FLAG_WARNING = (2 shl 1)
 const WEBVIEW_DIALOG_FLAG_ERROR = (3 shl 1)
 const WEBVIEW_DIALOG_FLAG_ALERT_MASK = (3 shl 1)
-const NSAlertStyleWarning = 0
-const NSAlertStyleCritical = 2
-const NSWindowStyleMaskResizable = 8
-const NSWindowStyleMaskMiniaturizable = 4
-const NSWindowStyleMaskTitled = 1
-const NSWindowStyleMaskClosable = 2
-const NSWindowStyleMaskFullScreen = (1 shl 14)
-const NSViewWidthSizable = 2
-const NSViewHeightSizable = 16
-const NSBackingStoreBuffered = 2
-# const NSEventMaskAny = ULONG_MAX
-const NSEventModifierFlagCommand = (1 shl 20)
-const NSEventModifierFlagShift = (1 shl 17)
-const NSEventModifierFlagOption = (1 shl 19)
-const NSAlertStyleInformational = 1
-const NSAlertFirstButtonReturn = 1000
+
 const WKNavigationActionPolicyDownload = 2
-const NSModalResponseOK = 1
 const WKNavigationResponsePolicyAllow = 1
 const WKUserScriptInjectionTimeAtDocumentStart = 0
 const WKUserScriptInjectionTimeAtDocumentEnd = 1
-const NSApplicationActivationPolicyRegular = 0
-
-
-converter Bool2bool(a:Bool): bool = cast[bool](a)
 
 type WebviewDialogType = enum
   WEBVIEW_DIALOG_TYPE_OPEN = 0,
@@ -65,8 +39,6 @@ proc webview_external_invoke*(self: ID; cmd: SEL; contentController: Id;
 
 type CompletionHandler = proc (Id: Id): void
 
-proc `==`(x, y: Id): bool = cast[pointer](x) == cast[pointer](y)
-
 proc run_open_panel(self: Id; cmd: SEL; webView: Id; parameters: Id;
                            frame: Id; completionHandler: Block[CompletionHandler]) =
   objcr:
@@ -75,7 +47,7 @@ proc run_open_panel(self: Id; cmd: SEL; webView: Id; parameters: Id;
     [openPanel setCanChooseFiles: 1]
     let b2 = toBlock() do(r: Id):
       if r == cast[Id](NSModalResponseOK):
-        objc_msgSend(cast[Id](completionHandler), $$"invoke", objc_msgSend(openPanel, $$("URLs")))
+        objc_msgSend(cast[Id](completionHandler), $$"invoke", objc_msgSend(openPanel, $$"URLs"))
       else:
         objc_msgSend(cast[Id](completionHandler), $$"invoke", nil)
     [openPanel beginWithCompletionHandler: b2]
@@ -192,7 +164,7 @@ proc webview_init*(w: Webview): cint =
       let isZ: Bool = cast[Bool]([charactersIgnoringModifiers isEqualToString: @"z"])
       let isA: Bool = cast[Bool]([charactersIgnoringModifiers isEqualToString: @"a"])
       let isY: Bool = cast[Bool]([charactersIgnoringModifiers isEqualToString: @"y"])
-      if (flag.uint and NSEventModifierFlagCommand) > 0:
+      if (flag.uint and NSEventModifierFlagCommand.uint) > 0:
         if isX == Yes:
           let cut: Bool = cast[Bool]([NSApp "sendAction:cut:to": nil, `from`: NSApp])
           if cut:
@@ -213,8 +185,8 @@ proc webview_init*(w: Webview): cint =
           let selectAll: Bool = cast[Bool]([NSApp "sendAction:selectAll:to": nil, `from`: NSApp])
           if selectAll:
             return nil.ID
-      elif (flag.uint and NSEventModifierFlagDeviceIndependentFlagsMask) == (NSEventModifierFlagCommand or
-          NSEventModifierFlagShift):
+      elif (flag.uint and NSEventModifierFlagDeviceIndependentFlagsMask.uint) == (NSEventModifierFlagCommand.uint or
+          NSEventModifierFlagShift.uint):
         let isY: Bool = cast[Bool]([charactersIgnoringModifiers isEqualToString: @"y"])
         if isY:
           let redo: Bool = cast[Bool]([NSApp "sendAction:redo:to": nil, `from`: NSApp])
@@ -222,23 +194,21 @@ proc webview_init*(w: Webview): cint =
             return nil.ID
       return event
   objcr: [NSEvent addLocalMonitorForEventsMatchingMask: NSKeyDown, handler: toBlock(handler)]
-  var PrivWKScriptMessageHandler: Class = allocateClassPair(getClass("NSObject"), "PrivWKScriptMessageHandler", 0)
-  discard addMethod(PrivWKScriptMessageHandler, $$"userContentController:didReceiveScriptMessage:", cast[
-      IMP](webview_external_invoke), "v@:@@")
+  var PrivWKScriptMessageHandler: ObjcClass = allocateClassPair(getClass("NSObject"), "PrivWKScriptMessageHandler", 0)
+  discard  addMethod(PrivWKScriptMessageHandler, $$"userContentController:didReceiveScriptMessage:", webview_external_invoke)
   registerClassPair(PrivWKScriptMessageHandler)
-
   var scriptMessageHandler: Id = objcr: [PrivWKScriptMessageHandler new]
 
-  var PrivWKDownloadDelegate: Class = allocateClassPair(getClass("NSObject"), "PrivWKDownloadDelegate", 0)
+  var PrivWKDownloadDelegate: ObjcClass = allocateClassPair(getClass("NSObject"), "PrivWKDownloadDelegate", 0)
   discard addMethod(
       PrivWKDownloadDelegate,
-      registerName("_download:decideDestinationWithSuggestedFilename:completionHandler:"),
-      cast[IMP](run_save_panel), "v@:@@?");
+      $$"_download:decideDestinationWithSuggestedFilename:completionHandler:",
+      run_save_panel)
   # discard addMethod(PrivWKDownloadDelegate,registerName("_download:didFailWithError:"),cast[IMP](download_failed), "v@:@@")
   registerClassPair(PrivWKDownloadDelegate);
   var downloadDelegate: Id = objcr: [PrivWKDownloadDelegate new]
 
-  var PrivWKPreferences: Class = allocateClassPair(getClass("WKPreferences"), "PrivWKPreferences", 0)
+  var PrivWKPreferences: ObjcClass = allocateClassPair(getClass("WKPreferences"), "PrivWKPreferences", 0)
   var typ = objc_property_attribute_t(name: "T".cstring, value: "c".cstring)
   var ownership = objc_property_attribute_t(name: "N".cstring, value: "".cstring)
   replaceProperty(PrivWKPreferences, "developerExtrasEnabled", [typ, ownership])
@@ -264,10 +234,10 @@ proc webview_init*(w: Webview): cint =
     [config setUserContentController: userController]
     [config setPreferences: wkPref]
 
-  var PrivNSWindowDelegate: Class = allocateClassPair(getClass("NSObject"),
+  var PrivNSWindowDelegate: ObjcClass = allocateClassPair(getClass("NSObject"),
                                                     "PrivNSWindowDelegate", 0)
   discard addProtocol(PrivNSWindowDelegate, getProtocol("NSWindowDelegate"))
-  discard replaceMethod(PrivNSWindowDelegate, registerName("windowWillClose:"), cast[IMP](webview_window_will_close), "v@:@")
+  discard replaceMethod(PrivNSWindowDelegate, $$"windowWillClose:", webview_window_will_close)
   registerClassPair(PrivNSWindowDelegate);
 
   w.priv.windowDelegate = objc_msgSend(cast[ID](PrivNSWindowDelegate), $$"new")
@@ -291,28 +261,28 @@ proc webview_init*(w: Webview): cint =
     [w.priv.window center]
     
 
-  var PrivWKUIDelegate: Class = allocateClassPair(getClass("NSObject"), "PrivWKUIDelegate", 0)
+  var PrivWKUIDelegate: ObjcClass = allocateClassPair(getClass("NSObject"), "PrivWKUIDelegate", 0)
   discard addProtocol(PrivWKUIDelegate, getProtocol("WKUIDelegate"))
   discard addMethod(PrivWKUIDelegate,
                   $$"webView:runOpenPanelWithParameters:initiatedByFrame:completionHandler:",
-                  cast[IMP](run_open_panel), "v@:@@@?")
+                  run_open_panel)
   discard addMethod(PrivWKUIDelegate,
                   $$"webView:runJavaScriptAlertPanelWithMessage:initiatedByFrame:completionHandler:",
-                  cast[IMP](run_alert_panel), "v@:@@@?")
+                  run_alert_panel)
   discard addMethod(
       PrivWKUIDelegate,
       $$"webView:runJavaScriptConfirmPanelWithMessage:initiatedByFrame:completionHandler:",
-      cast[IMP](run_confirmation_panel), "v@:@@@?")
+      run_confirmation_panel)
   registerClassPair(PrivWKUIDelegate)
   var uiDel: Id = objcr: [PrivWKUIDelegate new]
 
-  var PrivWKNavigationDelegate: Class = allocateClassPair(
+  var PrivWKNavigationDelegate: ObjcClass = allocateClassPair(
       getClass("NSObject"), "PrivWKNavigationDelegate", 0)
   discard addProtocol(PrivWKNavigationDelegate, getProtocol("WKNavigationDelegate"))
   discard addMethod(
       PrivWKNavigationDelegate,
       $$"webView:decidePolicyForNavigationResponse:decisionHandler:",
-      cast[IMP](make_nav_policy_decision), "v@:@@?")
+      make_nav_policy_decision)
   registerClassPair(PrivWKNavigationDelegate)
   objcr:
     var navDel: Id = [PrivWKNavigationDelegate new]
@@ -328,7 +298,7 @@ proc webview_init*(w: Webview): cint =
       var nsURL: Id = [NSURL URLWithString: @(url)]
       [w.priv.webview loadRequest: [NSURLRequest requestWithURL: nsURL]]
     [w.priv.webview setAutoresizesSubviews: 1]
-    [w.priv.webview setAutoresizingMask: NSViewWidthSizable or NSViewHeightSizable]
+    [w.priv.webview setAutoresizingMask: NSViewWidthSizable.uint or NSViewHeightSizable.uint]
     [[w.priv.window contentView]addSubview: w.priv.webview]
     [w.priv.window orderFrontRegardless]
     [[NSApplication sharedApplication]setActivationPolicy: NSApplicationActivationPolicyRegular]
@@ -371,8 +341,8 @@ proc setTitle*(w: Webview; title: string) =
 
 proc webview_set_fullscreen*(w: Webview; fullscreen: int) =
   objcr:
-    var windowStyleMask: culong = cast[culong]([w.priv.window styleMask])
-    var b: int = if (windowStyleMask and NSWindowStyleMaskFullScreen) == NSWindowStyleMaskFullScreen: 1 else: 0
+    var windowStyleMask = cast[NSWindowStyleMask]([w.priv.window styleMask])
+    var b: int = if (windowStyleMask.uint and NSWindowStyleMaskFullScreen.uint) == NSWindowStyleMaskFullScreen.uint: 1 else: 0
     if b != fullscreen:
       [w.priv.window toggleFullScreen: nil]
 
@@ -383,9 +353,9 @@ proc webview_set_iconify*(w: Webview; iconify: int) =
     else:
       [w.priv.window deminiaturize: nil]
 
-proc webview_launch_external_URL*(w: Webview; uri: cstring) =
+proc webview_launch_external_URL*(w: Webview; uri: string) =
   objcr:
-    var url: Id = [NSURL URLWithString: @($(uri))]
+    var url: Id = [NSURL URLWithString: @uri]
     [[NSWorkspace sharedWorkspace]openURL: url]
 
 proc webview_set_color*(w: Webview; r, g, b, a: uint8) =

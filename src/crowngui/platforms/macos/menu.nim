@@ -1,13 +1,13 @@
 import objc_runtime
 import darwin / [app_kit, foundation]
 
-const NSEventModifierFlagCommand = (1 shl 20)
-const NSEventModifierFlagOption = (1 shl 19)
+# const NSEventModifierFlagCommand = (1 shl 20)
+# const NSEventModifierFlagOption = (1 shl 19)
 
-func createMenuItem*(title: ID|NSString, action: string, key: string): ID =
+proc createMenuItem*(title: ID|NSString, action: string, key: string): ID =
   result = objc_msgSend(getClass("NSMenuItem").ID, registerName("alloc"))
   objc_msgSend(result, registerName("initWithTitle:action:keyEquivalent:"),
-              title, if action != "": registerName(action) else: cast[SEL](nil), get_nsstring(key))
+              title, if action != "": registerName(action) else: cast[SEL](nil), @key)
   objc_msgSend(result, registerName("autorelease"))
 
 proc createMenu*() =
@@ -26,7 +26,7 @@ proc createMenu*() =
     var hideTitle = ["Hide "stringByAppendingString: appName]
     [appMenu addItem: createMenuItem(hideTitle, "hide:", "h")]
     var item = createMenuItem(@"Hide Others", "hideOtherApplications:", "h")
-    [item setKeyEquivalentModifierMask: (NSEventModifierFlagOption or NSEventModifierFlagCommand)]
+    [item setKeyEquivalentModifierMask: (NSEventModifierFlagOption.uint or NSEventModifierFlagCommand.uint)]
     [appMenu addItem: item]
     [appMenu addItem: createMenuItem(@"Show All", "unhideAllApplications:", "")]
     [appMenu addItem: [NSMenuItem separatorItem]]
