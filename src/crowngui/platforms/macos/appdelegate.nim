@@ -3,8 +3,6 @@ import objc_runtime
 import darwin / [app_kit, foundation, objc/runtime]
 import types
 
-
-
 proc application(self: ID; cmd: SEL; sender: NSApplication; openFile: NSString): Bool {.cdecl.} =
   let path = cast[cstring](objc_msgSend(cast[ID](openFile), $$"UTF8String"))
   var cls = self.getClass()
@@ -28,5 +26,4 @@ proc initAppDelegate*(): ObjcClass =
   discard result.addMethod($$"applicationWillBecomeActive:", cast[IMP](applicationWillBecomeActive))
   discard result.addMethod($$"application:openFile:", cast[IMP](application))
 
-    
   discard addIvar(result, "webview", sizeof(Webview), log2(sizeof(Webview).float64).int, "@")

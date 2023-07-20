@@ -135,15 +135,19 @@ proc webview_init*(w: Webview): cint =
   registerClassPair(PrivWKDownloadDelegate);
   var downloadDelegate: Id = objcr: [PrivWKDownloadDelegate new]
 
-  var PrivWKPreferences: ObjcClass = allocateClassPair(getClass("WKPreferences"), "PrivWKPreferences", 0)
+  var PrivWKPreferences = allocateClassPair(getClass("WKPreferences"), "PrivWKPreferences", 0)
   var typ = objc_property_attribute_t(name: "T".cstring, value: "c".cstring)
   var ownership = objc_property_attribute_t(name: "N".cstring, value: "".cstring)
   replaceProperty(PrivWKPreferences, "developerExtrasEnabled", [typ, ownership])
-  registerClassPair(PrivWKPreferences);
-  var wkPref: Id = objcr: [PrivWKPreferences new]
+  registerClassPair(PrivWKPreferences)
+  
 
   objcr:
+    var config: Id = [WKWebViewConfiguration new]
+    var wkPref = objc_msgSend(ID(getClass("PrivWKPreferences")), $$"new")
     [wkPref setValue: [NSNumber numberWithBool: w.debug], forKey: "developerExtrasEnabled"]
+    [config setPreferences: wkPref]
+
     var userController: Id = [WKUserContentController new]
     setAssociatedObject(userController, cast[pointer]($$("webview")), (Id)(w),
                             OBJC_ASSOCIATION_ASSIGN)
@@ -154,12 +158,11 @@ proc webview_init*(w: Webview): cint =
     [windowExternalOverrideScript initWithSource: @(source), injectionTime: WKUserScriptInjectionTimeAtDocumentStart,
         forMainFrameOnly: 0]
     [userController addUserScript: windowExternalOverrideScript]
-    var config: Id = [WKWebViewConfiguration new]
+    [config setUserContentController: userController]
+
     var processPool: Id = [config processPool]
     [processPool "_setDownloadDelegate": downloadDelegate]
     [config setProcessPool: processPool]
-    [config setUserContentController: userController]
-    [config setPreferences: wkPref]
 
   var PrivNSWindowDelegate: ObjcClass = allocateClassPair(getClass("NSObject"),
                                                     "PrivNSWindowDelegate", 0)

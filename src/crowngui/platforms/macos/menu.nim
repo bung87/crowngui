@@ -1,9 +1,6 @@
 import objc_runtime
 import darwin / [app_kit, foundation]
 
-# const NSEventModifierFlagCommand = (1 shl 20)
-# const NSEventModifierFlagOption = (1 shl 19)
-
 proc createMenuItem*(title: ID|NSString, action: string, key: string): ID =
   result = objc_msgSend(getClass("NSMenuItem").ID, registerName("alloc"))
   objc_msgSend(result, registerName("initWithTitle:action:keyEquivalent:"),
@@ -23,7 +20,7 @@ proc createMenu*() =
     [appMenu autorelease]
     [appMenuItem setSubmenu: appMenu]
     [menubar addItem: appMenuItem]
-    var hideTitle = ["Hide "stringByAppendingString: appName]
+    var hideTitle = ["Hide" stringByAppendingString: appName]
     [appMenu addItem: createMenuItem(hideTitle, "hide:", "h")]
     var item = createMenuItem(@"Hide Others", "hideOtherApplications:", "h")
     [item setKeyEquivalentModifierMask: (NSEventModifierFlagOption.uint or NSEventModifierFlagCommand.uint)]
