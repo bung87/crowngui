@@ -246,26 +246,26 @@ proc webview_init*(w: Webview): cint =
 #     if cast[pointer](event) != nil:
 #       [NSApp sendEvent: event]
 #     return w.priv.should_exit
-proc run*(w:Webview) =
+proc run*(w: Webview) =
   objcr:
     var app = [NSApplication sharedApplication]
     [app run]
 
-proc addUserScript(w:Webview, js:string; location: int): void =
+proc addUserScript(w: Webview, js: string; location: int): void =
   objcr:
     var userScript = [WKUserScript alloc]
-    [userScript initWithSource: @js,injectionTime: location,forMainFrameOnly: 0]
+    [userScript initWithSource: @js, injectionTime: location, forMainFrameOnly: 0]
     var config = [w.priv.webview valueForKey: "configuration"]
     var userContentController  = [config valueForKey: "userContentController"]
     [userContentController addUserScript: userScript]
 
-proc addUserScriptAtDocumentStart*(w:Webview, js:string): void =
+proc addUserScriptAtDocumentStart*(w: Webview, js: string): void =
   w.addUserScript(js, WKUserScriptInjectionTimeAtDocumentStart)
 
-proc addUserScriptAtDocumentEnd*(w:Webview, js:string): void =
+proc addUserScriptAtDocumentEnd*(w: Webview, js: string): void =
   w.addUserScript(js, WKUserScriptInjectionTimeAtDocumentEnd)
 
-proc eval*(w:Webview, js:string): void =
+proc eval*(w: Webview, js: string): void =
   objcr:
     [w.priv.webview evaluateJavaScript: @js, completionHandler: nil]
 
