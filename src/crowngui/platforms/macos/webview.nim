@@ -43,7 +43,7 @@ proc setHtml*(w: Webview; html: string) =
 
 proc navigate*(w: Webview; url: string) =
   objcr:
-    var requestURL: Id = [NSURL URLWithString: @url]
+    var requestURL = [NSURL URLWithString: @url]
     [requestURL autorelease]
     var request = [NSURLRequest requestWithURL: requestURL]
     [request autorelease]
@@ -95,7 +95,7 @@ proc webview_init*(w: Webview): cint =
       let isA = cast[Bool]([charactersIgnoringModifiers isEqualToString: @"a"])
       let isY = cast[Bool]([charactersIgnoringModifiers isEqualToString: @"y"])
       if (flag.uint and NSEventModifierFlagCommand.uint) > 0:
-        if isX == Yes:
+        if isX:
           let cut = cast[Bool]([NSApp "sendAction:cut:to": nil, `from`: NSApp])
           if cut:
             return nil
@@ -146,16 +146,16 @@ proc webview_init*(w: Webview): cint =
   
 
   objcr:
-    var config: Id = [WKWebViewConfiguration new]
+    var config = [WKWebViewConfiguration new]
     var wkPref = objc_msgSend(ID(getClass("PrivWKPreferences")), $$"new")
     [wkPref setValue: [NSNumber numberWithBool: w.debug], forKey: "developerExtrasEnabled"]
     [config setPreferences: wkPref]
 
-    var userController: Id = [WKUserContentController new]
+    var userController = [WKUserContentController new]
     setAssociatedObject(userController, cast[pointer]($$("webview")), (Id)(w),
                             OBJC_ASSOCIATION_ASSIGN)
     [userController addScriptMessageHandler: scriptMessageHandler, name: "invoke"]
-    var windowExternalOverrideScript: Id = [WKUserScript alloc]
+    var windowExternalOverrideScript = [WKUserScript alloc]
     const source = """window.external = this; invoke = function(arg){ 
                    webkit.messageHandlers.invoke.postMessage(arg); };"""
     [windowExternalOverrideScript initWithSource: @(source), injectionTime: WKUserScriptInjectionTimeAtDocumentStart,
@@ -163,7 +163,7 @@ proc webview_init*(w: Webview): cint =
     [userController addUserScript: windowExternalOverrideScript]
     [config setUserContentController: userController]
 
-    var processPool: Id = [config processPool]
+    var processPool = [config processPool]
     [processPool "_setDownloadDelegate": downloadDelegate]
     [config setProcessPool: processPool]
 
@@ -207,7 +207,7 @@ proc webview_init*(w: Webview): cint =
       $$"webView:runJavaScriptConfirmPanelWithMessage:initiatedByFrame:completionHandler:",
       run_confirmation_panel)
   registerClassPair(PrivWKUIDelegate)
-  var uiDel: Id = objcr: [PrivWKUIDelegate new]
+  var uiDel = objcr: [PrivWKUIDelegate new]
 
   var PrivWKNavigationDelegate = allocateClassPair(
       getClass("NSObject"), "PrivWKNavigationDelegate", 0)
@@ -218,7 +218,7 @@ proc webview_init*(w: Webview): cint =
       make_nav_policy_decision)
   registerClassPair(PrivWKNavigationDelegate)
   objcr:
-    var navDel: Id = [PrivWKNavigationDelegate new]
+    var navDel = [PrivWKNavigationDelegate new]
     w.priv.webview = [WKWebView alloc]
     [w.priv.webview initWithFrame: r, configuration: config]
     [w.priv.webview setUIDelegate: uiDel]
@@ -228,7 +228,7 @@ proc webview_init*(w: Webview): cint =
       let html = base64.decode(url.split(",")[1])
       [w.priv.webview loadHTMLString: @html, baseURL: nil]
     else:
-      var nsURL: Id = [NSURL URLWithString: @url]
+      var nsURL = [NSURL URLWithString: @url]
       [w.priv.webview loadRequest: [NSURLRequest requestWithURL: nsURL]]
     [w.priv.webview setAutoresizesSubviews: 1]
     [w.priv.webview setAutoresizingMask: NSViewWidthSizable.uint or NSViewHeightSizable.uint]
@@ -240,23 +240,23 @@ proc webview_init*(w: Webview): cint =
 
 # proc webview_loop*(w: Webview; blocking: cint): cint =
 #   objcr:
-#     var until: Id = if blocking > 0: [NSDate distantFuture] else: [NSDate distantPast]
+#     var until = if blocking > 0: [NSDate distantFuture] else: [NSDate distantPast]
 #     [NSApplication sharedApplication]
-#     var event: Id = [NSApp nextEventMatchingMask: culong.high, untilDate: until, inMode: "kCFRunLoopDefaultMode", dequeue: true]
+#     var event = [NSApp nextEventMatchingMask: culong.high, untilDate: until, inMode: "kCFRunLoopDefaultMode", dequeue: true]
 #     if cast[pointer](event) != nil:
 #       [NSApp sendEvent: event]
 #     return w.priv.should_exit
 proc run*(w:Webview) =
   objcr:
-    var app: Id = [NSApplication sharedApplication]
+    var app = [NSApplication sharedApplication]
     [app run]
 
 proc addUserScript(w:Webview, js:string; location: int): void =
   objcr:
-    var userScript:Id = [WKUserScript alloc]
+    var userScript = [WKUserScript alloc]
     [userScript initWithSource: @js,injectionTime: location,forMainFrameOnly: 0]
-    var config:Id = [w.priv.webview valueForKey: "configuration"]
-    var userContentController:Id  = [config valueForKey: "userContentController"]
+    var config = [w.priv.webview valueForKey: "configuration"]
+    var userContentController  = [config valueForKey: "userContentController"]
     [userContentController addUserScript: userScript]
 
 proc addUserScriptAtDocumentStart*(w:Webview, js:string): void =
@@ -286,11 +286,11 @@ proc webview_set_iconify*(w: Webview; iconify: int) {.objcr.}  =
     [w.priv.window deminiaturize: nil]
 
 proc webview_launch_external_URL*(w: Webview; uri: string) {.objcr.} =
-  var url: Id = [NSURL URLWithString: @uri]
+  var url = [NSURL URLWithString: @uri]
   [[NSWorkspace sharedWorkspace]openURL: url]
 
 proc webview_set_color*(w: Webview; r, g, b, a: uint8) {.objcr.} =
-  var color: Id = [NSColor colorWithRed: r.float64 / 255.0, green: g.float64 / 255.0, blue: b.float64 / 255.0,
+  var color = [NSColor colorWithRed: r.float64 / 255.0, green: g.float64 / 255.0, blue: b.float64 / 255.0,
       alpha: a.float64 / 255.0]
   [w.priv.window setBackgroundColor: color]
 
