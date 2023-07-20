@@ -6,6 +6,9 @@ import types
 export types
 import dialog
 
+{.passc: "-DOBJC_OLD_DISPATCH_PROTOTYPES=1 -x objective-c",
+    passl: "-framework Cocoa -framework WebKit".}
+
 const WKNavigationActionPolicyDownload = 2
 const WKNavigationResponsePolicyAllow = 1
 const WKUserScriptInjectionTimeAtDocumentStart = 0
@@ -17,13 +20,13 @@ proc webview_window_will_close*(self: Id; cmd: SEL; notification: Id) =
 
 proc webview_external_invoke*(self: ID; cmd: SEL; contentController: Id;
                                     message: Id) =
-  var w = getAssociatedObject(contentController, cast[pointer]($$"webview"))
-  if (cast[pointer](w) == nil or cast[Webview](w).invokeCb == nil):
+  var w = cast[Webview](getAssociatedObject(contentController, cast[pointer]($$"webview")))
+  if (cast[pointer](w) == nil or w.invokeCb == nil):
     return
 
   objcr:
     var msg = [[message body]UTF8String]
-    cast[proc (w: Webview; arg: cstring) {.stdcall.}](cast[Webview](w).invokeCb)(cast[Webview](w), cast[cstring](msg))
+    cast[proc (w: Webview; arg: cstring) {.stdcall.}](w.invokeCb)(w, cast[cstring](msg))
 
 type CompletionHandler4 = proc (): void
 # type CompletionHandler5 = proc (c: cint): void
@@ -36,11 +39,11 @@ proc make_nav_policy_decision(self: Id; cmd: SEL; webView: Id; response: Id;
       objc_msgSend(cast[Id](decisionHandler), $$"invoke", WKNavigationResponsePolicyAllow)
 
 proc setHtml*(w: Webview; html: string) =
-  objcr: [w.priv.webview, loadHTMLString: @(html), baseURL: nil]
+  objcr: [w.priv.webview, loadHTMLString: @html, baseURL: nil]
 
 proc navigate*(w: Webview; url: string) =
   objcr:
-    var requestURL: Id = [NSURL URLWithString: @(url)]
+    var requestURL: Id = [NSURL URLWithString: @url]
     [requestURL autorelease]
     var request = [NSURLRequest requestWithURL: requestURL]
     [request autorelease]
@@ -85,54 +88,54 @@ proc webview_init*(w: Webview): cint =
     objcr:
       var flag: NSUInteger = cast[NSUInteger]([event modifierFlags])
       var charactersIgnoringModifiers = [event charactersIgnoringModifiers]
-      let isX: Bool = cast[Bool]([charactersIgnoringModifiers isEqualToString: @"x"])
-      let isC: Bool = cast[Bool]([charactersIgnoringModifiers isEqualToString: @"c"])
-      let isV: Bool = cast[Bool]([charactersIgnoringModifiers isEqualToString: @"v"])
-      let isZ: Bool = cast[Bool]([charactersIgnoringModifiers isEqualToString: @"z"])
-      let isA: Bool = cast[Bool]([charactersIgnoringModifiers isEqualToString: @"a"])
-      let isY: Bool = cast[Bool]([charactersIgnoringModifiers isEqualToString: @"y"])
+      let isX = cast[Bool]([charactersIgnoringModifiers isEqualToString: @"x"])
+      let isC = cast[Bool]([charactersIgnoringModifiers isEqualToString: @"c"])
+      let isV = cast[Bool]([charactersIgnoringModifiers isEqualToString: @"v"])
+      let isZ = cast[Bool]([charactersIgnoringModifiers isEqualToString: @"z"])
+      let isA = cast[Bool]([charactersIgnoringModifiers isEqualToString: @"a"])
+      let isY = cast[Bool]([charactersIgnoringModifiers isEqualToString: @"y"])
       if (flag.uint and NSEventModifierFlagCommand.uint) > 0:
         if isX == Yes:
-          let cut: Bool = cast[Bool]([NSApp "sendAction:cut:to": nil, `from`: NSApp])
+          let cut = cast[Bool]([NSApp "sendAction:cut:to": nil, `from`: NSApp])
           if cut:
-            return nil.ID
+            return nil
         elif isC:
-          let copy: Bool = cast[Bool]([NSApp "sendAction:copy:to": nil, `from`: NSApp])
+          let copy = cast[Bool]([NSApp "sendAction:copy:to": nil, `from`: NSApp])
           if copy:
-            return nil.ID
+            return nil
         elif isV:
-          let paste: Bool = cast[Bool]([NSApp "sendAction:paste:t:": nil, `from`: NSApp])
+          let paste = cast[Bool]([NSApp "sendAction:paste:t:": nil, `from`: NSApp])
           if paste:
-            return nil.ID
+            return nil
         elif isZ:
-          let undo: Bool = cast[Bool]([NSApp "sendAction:undo:to": nil, `from`: NSApp])
+          let undo = cast[Bool]([NSApp "sendAction:undo:to": nil, `from`: NSApp])
           if undo:
-            return nil.ID
+            return nil
         elif isA:
-          let selectAll: Bool = cast[Bool]([NSApp "sendAction:selectAll:to": nil, `from`: NSApp])
+          let selectAll = cast[Bool]([NSApp "sendAction:selectAll:to": nil, `from`: NSApp])
           if selectAll:
-            return nil.ID
+            return nil
       elif (flag.uint and NSEventModifierFlagDeviceIndependentFlagsMask.uint) == (NSEventModifierFlagCommand.uint or
           NSEventModifierFlagShift.uint):
-        let isY: Bool = cast[Bool]([charactersIgnoringModifiers isEqualToString: @"y"])
+        let isY = cast[Bool]([charactersIgnoringModifiers isEqualToString: @"y"])
         if isY:
-          let redo: Bool = cast[Bool]([NSApp "sendAction:redo:to": nil, `from`: NSApp])
+          let redo = cast[Bool]([NSApp "sendAction:redo:to": nil, `from`: NSApp])
           if redo:
-            return nil.ID
+            return nil
       return event
   objcr: [NSEvent addLocalMonitorForEventsMatchingMask: NSKeyDown, handler: toBlock(handler)]
-  var PrivWKScriptMessageHandler: ObjcClass = allocateClassPair(getClass("NSObject"), "PrivWKScriptMessageHandler", 0)
+  var PrivWKScriptMessageHandler = allocateClassPair(getClass("NSObject"), "PrivWKScriptMessageHandler", 0)
   discard  addMethod(PrivWKScriptMessageHandler, $$"userContentController:didReceiveScriptMessage:", webview_external_invoke)
   registerClassPair(PrivWKScriptMessageHandler)
   var scriptMessageHandler: Id = objcr: [PrivWKScriptMessageHandler new]
 
-  var PrivWKDownloadDelegate: ObjcClass = allocateClassPair(getClass("NSObject"), "PrivWKDownloadDelegate", 0)
+  var PrivWKDownloadDelegate = allocateClassPair(getClass("NSObject"), "PrivWKDownloadDelegate", 0)
   discard addMethod(
       PrivWKDownloadDelegate,
       $$"_download:decideDestinationWithSuggestedFilename:completionHandler:",
       run_save_panel)
   # discard addMethod(PrivWKDownloadDelegate,registerName("_download:didFailWithError:"),cast[IMP](download_failed), "v@:@@")
-  registerClassPair(PrivWKDownloadDelegate);
+  registerClassPair(PrivWKDownloadDelegate)
   var downloadDelegate: Id = objcr: [PrivWKDownloadDelegate new]
 
   var PrivWKPreferences = allocateClassPair(getClass("WKPreferences"), "PrivWKPreferences", 0)
@@ -164,13 +167,13 @@ proc webview_init*(w: Webview): cint =
     [processPool "_setDownloadDelegate": downloadDelegate]
     [config setProcessPool: processPool]
 
-  var PrivNSWindowDelegate: ObjcClass = allocateClassPair(getClass("NSObject"),
+  var PrivNSWindowDelegate = allocateClassPair(getClass("NSObject"),
                                                     "PrivNSWindowDelegate", 0)
   discard addProtocol(PrivNSWindowDelegate, getProtocol("NSWindowDelegate"))
   discard replaceMethod(PrivNSWindowDelegate, $$"windowWillClose:", webview_window_will_close)
   registerClassPair(PrivNSWindowDelegate);
 
-  w.priv.windowDelegate = objc_msgSend(cast[ID](PrivNSWindowDelegate), $$"new")
+  w.priv.windowDelegate = objcr: [PrivNSWindowDelegate new]
 
   setAssociatedObject(w.priv.windowDelegate, cast[pointer]($$"webview"), (Id)(w),
                            OBJC_ASSOCIATION_ASSIGN)
@@ -191,7 +194,7 @@ proc webview_init*(w: Webview): cint =
     [w.priv.window center]
     
 
-  var PrivWKUIDelegate: ObjcClass = allocateClassPair(getClass("NSObject"), "PrivWKUIDelegate", 0)
+  var PrivWKUIDelegate = allocateClassPair(getClass("NSObject"), "PrivWKUIDelegate", 0)
   discard addProtocol(PrivWKUIDelegate, getProtocol("WKUIDelegate"))
   discard addMethod(PrivWKUIDelegate,
                   $$"webView:runOpenPanelWithParameters:initiatedByFrame:completionHandler:",
@@ -206,7 +209,7 @@ proc webview_init*(w: Webview): cint =
   registerClassPair(PrivWKUIDelegate)
   var uiDel: Id = objcr: [PrivWKUIDelegate new]
 
-  var PrivWKNavigationDelegate: ObjcClass = allocateClassPair(
+  var PrivWKNavigationDelegate = allocateClassPair(
       getClass("NSObject"), "PrivWKNavigationDelegate", 0)
   discard addProtocol(PrivWKNavigationDelegate, getProtocol("WKNavigationDelegate"))
   discard addMethod(
@@ -223,9 +226,9 @@ proc webview_init*(w: Webview): cint =
     let url = $(w.url)
     if "data:text/html;charset=utf-8;base64," in url:
       let html = base64.decode(url.split(",")[1])
-      [w.priv.webview loadHTMLString: @(html), baseURL: nil]
+      [w.priv.webview loadHTMLString: @html, baseURL: nil]
     else:
-      var nsURL: Id = [NSURL URLWithString: @(url)]
+      var nsURL: Id = [NSURL URLWithString: @url]
       [w.priv.webview loadRequest: [NSURLRequest requestWithURL: nsURL]]
     [w.priv.webview setAutoresizesSubviews: 1]
     [w.priv.webview setAutoresizingMask: NSViewWidthSizable.uint or NSViewHeightSizable.uint]
@@ -251,10 +254,10 @@ proc run*(w:Webview) =
 proc addUserScript(w:Webview, js:string; location: int): void =
   objcr:
     var userScript:Id = [WKUserScript alloc]
-    [userScript initWithSource: @(js),injectionTime: location,forMainFrameOnly: 0]
-    var config:Id = [w.priv.webview valueForKey:"configuration"]
-    var userContentController:Id  = [config valueForKey:"userContentController"]
-    [userContentController addUserScript:userScript]
+    [userScript initWithSource: @js,injectionTime: location,forMainFrameOnly: 0]
+    var config:Id = [w.priv.webview valueForKey: "configuration"]
+    var userContentController:Id  = [config valueForKey: "userContentController"]
+    [userContentController addUserScript: userScript]
 
 proc addUserScriptAtDocumentStart*(w:Webview, js:string): void =
   w.addUserScript(js, WKUserScriptInjectionTimeAtDocumentStart)
@@ -264,10 +267,10 @@ proc addUserScriptAtDocumentEnd*(w:Webview, js:string): void =
 
 proc eval*(w:Webview, js:string): void =
   objcr:
-    [w.priv.webview evaluateJavaScript: @(js), completionHandler: nil]
+    [w.priv.webview evaluateJavaScript: @js, completionHandler: nil]
 
 proc setTitle*(w: Webview; title: string) =
-  objcr: [w.priv.window setTitle: @(title)]
+  objcr: [w.priv.window setTitle: @title]
 
 proc webview_set_fullscreen*(w: Webview; fullscreen: int) =
   objcr:
@@ -276,32 +279,29 @@ proc webview_set_fullscreen*(w: Webview; fullscreen: int) =
     if b != fullscreen:
       [w.priv.window toggleFullScreen: nil]
 
-proc webview_set_iconify*(w: Webview; iconify: int) =
-  objcr:
-    if iconify > 0:
-      [w.priv.window miniaturize: nil]
-    else:
-      [w.priv.window deminiaturize: nil]
+proc webview_set_iconify*(w: Webview; iconify: int) {.objcr.}  =
+  if iconify > 0:
+    [w.priv.window miniaturize: nil]
+  else:
+    [w.priv.window deminiaturize: nil]
 
-proc webview_launch_external_URL*(w: Webview; uri: string) =
-  objcr:
-    var url: Id = [NSURL URLWithString: @uri]
-    [[NSWorkspace sharedWorkspace]openURL: url]
+proc webview_launch_external_URL*(w: Webview; uri: string) {.objcr.} =
+  var url: Id = [NSURL URLWithString: @uri]
+  [[NSWorkspace sharedWorkspace]openURL: url]
 
-proc webview_set_color*(w: Webview; r, g, b, a: uint8) =
-  objcr:
-    var color: Id = [NSColor colorWithRed: r.float64 / 255.0, green: g.float64 / 255.0, blue: b.float64 / 255.0,
-        alpha: a.float64 / 255.0]
-    [w.priv.window setBackgroundColor: color]
+proc webview_set_color*(w: Webview; r, g, b, a: uint8) {.objcr.} =
+  var color: Id = [NSColor colorWithRed: r.float64 / 255.0, green: g.float64 / 255.0, blue: b.float64 / 255.0,
+      alpha: a.float64 / 255.0]
+  [w.priv.window setBackgroundColor: color]
 
-    if (0.5 >= ((r.float64 / 255.0 * 299.0) + (g.float64 / 255.0 * 587.0) + (b.float64 / 255.0 * 114.0)) /
-                  1000.0):
-      [w.priv.window setAppearance: [NSAppearance appearanceNamed: "NSAppearanceNameVibrantDark"]]
-    else:
-      [w.priv.window setAppearance: [NSAppearance appearanceNamed: "NSAppearanceNameVibrantLight"]]
-      [w.priv.window setOpaque: 0]
-      [w.priv.window setTitlebarAppearsTransparent: 1]
-      [w.priv.window "_setDrawsBackground": 0]
+  if (0.5 >= ((r.float64 / 255.0 * 299.0) + (g.float64 / 255.0 * 587.0) + (b.float64 / 255.0 * 114.0)) /
+                1000.0):
+    [w.priv.window setAppearance: [NSAppearance appearanceNamed: "NSAppearanceNameVibrantDark"]]
+  else:
+    [w.priv.window setAppearance: [NSAppearance appearanceNamed: "NSAppearanceNameVibrantLight"]]
+    [w.priv.window setOpaque: 0]
+    [w.priv.window setTitlebarAppearsTransparent: 1]
+    [w.priv.window "_setDrawsBackground": 0]
 
 
 
