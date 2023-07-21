@@ -5,8 +5,7 @@ author        = "bung87"
 description   = "Web Technologies based Crossplatform GUI Framework"
 license       = "MIT"
 srcDir        = "src"
-installExt    = @["nim","h"]
-# bin           = @["crowngui"]
+installExt    = @["nim"]
 
 # Dependencies
 

@@ -67,16 +67,4 @@ proc setOnOpenFile*(app: ApplicationRef; fn: OnOpenFile) = app.webview.onOpenFil
 
 template bindProcs*(app: ApplicationRef; scope: string; n: untyped): untyped = app.webview.bindProcs(scope, n)
 
-when isMainModule:
 
-  const
-    cssDark = staticRead"assets/dark.css".strip.unindent
-    cssLight = staticRead"assets/light.css".strip.unindent
-
-  let app = newApplication(staticRead("assets/demo.html"))
-  when not defined(bundle):
-    let theme = if "--light-theme" in commandLineParams(): cssLight else: cssDark
-    app.css(theme)
-
-  app.run()
-  app.destroy()
