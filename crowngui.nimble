@@ -1,6 +1,6 @@
 # Package
 
-version       = "0.2.10"
+version       = "0.2.11"
 author        = "bung87"
 description   = "Web Technologies based Crossplatform GUI Framework"
 license       = "MIT"
@@ -16,15 +16,14 @@ requires "nim >= 1.1.1"
 requires "regex"
 requires "static_server >= 2.2.1"
 requires "jsonschema"
-requires "objc_runtime >= 0.1.2"
+requires "objc_runtime >= 0.1.5"
 requires "darwin"
 requires "winim"
 
 task docs,"a":
   exec "nim doc --project src/crowngui.nim"
   exec "mv src/htmldocs/theindex.html src/htmldocs/index.html"
-# task macos,"build macos":
-#   exec "crowncli build --target macos"
+
 task ghpage,"gh page":
   cd "src/htmldocs" 
   exec "git init"
