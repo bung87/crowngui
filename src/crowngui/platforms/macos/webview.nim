@@ -7,8 +7,7 @@ export types
 import dialog
 import event
 
-{.passc: "-DOBJC_OLD_DISPATCH_PROTOTYPES=1 -x objective-c",
-    passl: "-framework Cocoa -framework WebKit".}
+{.passl: "-framework Cocoa -framework WebKit".}
 
 const WKNavigationActionPolicyDownload = 2
 const WKNavigationResponsePolicyAllow = 1

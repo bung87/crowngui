@@ -9,8 +9,8 @@ when defined(linux):
       passl: staticExec"pkg-config --libs gtk+-3.0 webkit2gtk-4.0".}
 elif defined(windows):
   {.passc: "-DWEBVIEW_WINAPI=1", passl: "-lole32 -lcomctl32 -loleaut32 -luuid -lgdi32".}
-  import platforms/win/webview
-  export webview
+  import platforms/win/webview2
+  export webview2
   import winim
 elif defined(macosx):
   import objc_runtime
