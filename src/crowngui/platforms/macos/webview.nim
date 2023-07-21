@@ -6,6 +6,7 @@ import types
 export types
 import dialog
 import event
+import bundle
 
 {.passl: "-framework Cocoa -framework WebKit".}
 
@@ -60,7 +61,6 @@ proc setSize*(w: Webview; width: int; height: int) =
 proc webview_init*(w: Webview): cint =
   objcr:
     w.priv.pool = [NSAutoreleasePool new]
-    [NSApplication sharedApplication]
 
   # objcr: [NSEvent addLocalMonitorForEventsMatchingMask: NSKeyDown, handler: toBlock(handler)]
   var PrivWKScriptMessageHandler = allocateClassPair(getClass("NSObject"), "PrivWKScriptMessageHandler", 0)
@@ -178,8 +178,9 @@ proc webview_init*(w: Webview): cint =
     # [[w.priv.window contentView]addSubview: w.priv.webview]
     [w.priv.window setContentView: w.priv.webview]
     [w.priv.window orderFrontRegardless]
-    [[NSApplication sharedApplication]setActivationPolicy: NSApplicationActivationPolicyRegular]
-    # [[NSApplication sharedApplication]activateIgnoringOtherApps: YES]
+    if not isAppBundled():
+      [NSApp setActivationPolicy: NSApplicationActivationPolicyRegular]
+      [NSApp activateIgnoringOtherApps: YES]
 
   return 0
 
