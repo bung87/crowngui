@@ -179,7 +179,7 @@ proc webview_init*(w: Webview): cint =
     [w.priv.window setContentView: w.priv.webview]
     [w.priv.window orderFrontRegardless]
     [[NSApplication sharedApplication]setActivationPolicy: NSApplicationActivationPolicyRegular]
-    [[NSApplication sharedApplication]activateIgnoringOtherApps: YES]
+    # [[NSApplication sharedApplication]activateIgnoringOtherApps: YES]
 
   return 0
 
