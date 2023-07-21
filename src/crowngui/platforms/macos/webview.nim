@@ -58,15 +58,12 @@ proc setSize*(w: Webview; width: int; height: int) =
     frame.size.height = height.CGFloat
     [w.priv.window setFrame: frame, display: true]
 
-proc webview_set_developer_tools_enabled*(w: Webview; enabled: bool) =
-  objcr: [[w.priv.window configuration]"_setDeveloperExtrasEnabled": enabled]
-
 proc webview_init*(w: Webview): cint =
   objcr:
     w.priv.pool = [NSAutoreleasePool new]
     [NSApplication sharedApplication]
 
-  objcr: [NSEvent addLocalMonitorForEventsMatchingMask: NSKeyDown, handler: toBlock(handler)]
+  # objcr: [NSEvent addLocalMonitorForEventsMatchingMask: NSKeyDown, handler: toBlock(handler)]
   var PrivWKScriptMessageHandler = allocateClassPair(getClass("NSObject"), "PrivWKScriptMessageHandler", 0)
   discard  addMethod(PrivWKScriptMessageHandler, $$"userContentController:didReceiveScriptMessage:", webview_external_invoke)
   registerClassPair(PrivWKScriptMessageHandler)
@@ -87,13 +84,15 @@ proc webview_init*(w: Webview): cint =
   replaceProperty(PrivWKPreferences, "developerExtrasEnabled", [typ, ownership])
   registerClassPair(PrivWKPreferences)
   
-
   objcr:
     var config = [WKWebViewConfiguration new]
-    var wkPref = objc_msgSend(ID(getClass("PrivWKPreferences")), $$"new")
-    [wkPref setValue: [NSNumber numberWithBool: w.debug], forKey: "developerExtrasEnabled"]
-    [config setPreferences: wkPref]
-
+    # var wkPref = objc_msgSend(ID(getClass("PrivWKPreferences")), $$"new")
+    # [wkPref setValue: [NSNumber numberWithBool: w.debug], forKey: "developerExtrasEnabled"]
+    # [config setPreferences: wkPref]
+    [[config preferences] setValue: [NSNumber numberWithBool: w.debug], forKey: @"developerExtrasEnabled"]
+    # [[config preferences] setValue: [NSNumber numberWithBool: YES], forKey: @"fullScreenEnabled"]
+    [[config preferences] setValue: [NSNumber numberWithBool: YES], forKey: @"javaScriptCanAccessClipboard"]
+    [[config preferences] setValue: [NSNumber numberWithBool: YES], forKey: @"DOMPasteAllowed"]
     var userController = [WKUserContentController new]
     setAssociatedObject(userController, cast[pointer]($$("webview")), (Id)(w),
                             OBJC_ASSOCIATION_ASSIGN)
@@ -110,16 +109,17 @@ proc webview_init*(w: Webview): cint =
     [processPool "_setDownloadDelegate": downloadDelegate]
     [config setProcessPool: processPool]
 
-  var PrivNSWindowDelegate = allocateClassPair(getClass("NSObject"),
-                                                    "PrivNSWindowDelegate", 0)
-  discard addProtocol(PrivNSWindowDelegate, getProtocol("NSWindowDelegate"))
-  discard replaceMethod(PrivNSWindowDelegate, $$"windowWillClose:", webview_window_will_close)
-  registerClassPair(PrivNSWindowDelegate);
+  # var PrivNSWindowDelegate = allocateClassPair(getClass("NSObject"),
+  #                                                   "PrivNSWindowDelegate", 0)
+  # discard addProtocol(PrivNSWindowDelegate, getProtocol("NSWindowDelegate"))
+  # discard replaceMethod(PrivNSWindowDelegate, $$"windowWillClose:", webview_window_will_close)
+  # registerClassPair(PrivNSWindowDelegate)
 
-  w.priv.windowDelegate = objcr: [PrivNSWindowDelegate new]
+  # w.priv.windowDelegate = objcr: [PrivNSWindowDelegate new]
 
-  setAssociatedObject(w.priv.windowDelegate, cast[pointer]($$"webview"), (Id)(w),
-                           OBJC_ASSOCIATION_ASSIGN)
+  # setAssociatedObject(w.priv.windowDelegate, cast[pointer]($$"webview"), (Id)(w),
+  #                          OBJC_ASSOCIATION_ASSIGN)
+
   proc CGRectMake(x, y, w, h: SomeNumber): CGRect =
     result = CGRect(origin: CGPoint(x: x.CGFloat, y: y.CGFloat), size: CGSize(width: w.CGFloat, height: h.CGFloat))
   objcr:
@@ -133,7 +133,7 @@ proc webview_init*(w: Webview): cint =
     [w.priv.window initWithContentRect: r, styleMask: style, backing: NSBackingStoreBuffered, `defer`: 0]
     [w.priv.window autorelease]
     [w.priv.window setTitle: nsTitle]
-    [w.priv.window setDelegate: w.priv.windowDelegate]
+    # [w.priv.window setDelegate: w.priv.windowDelegate]
     [w.priv.window center]
     
 
@@ -173,11 +173,14 @@ proc webview_init*(w: Webview): cint =
     else:
       var nsURL = [NSURL URLWithString: @url]
       [w.priv.webview loadRequest: [NSURLRequest requestWithURL: nsURL]]
-    [w.priv.webview setAutoresizesSubviews: 1]
+    
     [w.priv.webview setAutoresizingMask: NSViewWidthSizable.uint or NSViewHeightSizable.uint]
-    [[w.priv.window contentView]addSubview: w.priv.webview]
+    # [w.priv.webview setAutoresizesSubviews: 1]
+    # [[w.priv.window contentView]addSubview: w.priv.webview]
+    [w.priv.window setContentView: w.priv.webview]
     [w.priv.window orderFrontRegardless]
     [[NSApplication sharedApplication]setActivationPolicy: NSApplicationActivationPolicyRegular]
+    [[NSApplication sharedApplication]activateIgnoringOtherApps: YES]
 
   return 0
 

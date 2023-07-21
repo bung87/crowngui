@@ -62,3 +62,6 @@ proc webview_set_color*(w: Webview; r, g, b, a: uint8) {.objcr.} =
     [w.priv.window setOpaque: 0]
     [w.priv.window setTitlebarAppearsTransparent: 1]
     [w.priv.window "_setDrawsBackground": 0]
+
+proc webview_set_developer_tools_enabled*(w: Webview; enabled: bool) =
+  objcr: [[w.priv.window configuration]"_setDeveloperExtrasEnabled": enabled]
