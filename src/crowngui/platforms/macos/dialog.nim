@@ -165,3 +165,30 @@ proc warning*(title: string; description: string) =
 
 proc error*(title: string; description: string) = 
   basicDialog(title, description, error)
+
+proc chooseFile*(root: string = ""; completionHandler: Block[CompletionHandler] = nil) =
+  objcr:
+    var openPanel = [NSOpenPanel openPanel]
+    # [openPanel setAllowsMultipleSelection, [parameters allowsMultipleSelection]]
+    [openPanel setCanChooseFiles: 1]
+    let b2 = toBlock() do(r: Id):
+      if r == cast[Id](NSModalResponseOK):
+        objc_msgSend(cast[Id](completionHandler), $$"invoke", objc_msgSend(openPanel, $$"URLs"))
+      else:
+        objc_msgSend(cast[Id](completionHandler), $$"invoke", nil)
+    [openPanel beginWithCompletionHandler: b2]
+
+proc saveFile*(root: string = ""; completionHandler: Block[CompletionHandler2] = nil) =
+  objcr:
+    var savePanel = [NSSavePanel savePanel]
+    [savePanel setCanCreateDirectories: 1]
+    # [savePanel setNameFieldStringValue: filename]
+    let blk = toBlock() do(r: Id):
+      if r == cast[Id](NSModalResponseOK):
+        var url: Id = objc_msgSend(savePanel, $$"URL")
+        var path: Id = objc_msgSend(url, $$"path")
+        objc_msgSend(cast[Id](completionHandler), $$"invoke", 1, path)
+      else:
+        objc_msgSend(cast[Id](completionHandler), $$"invoke", No, nil)
+
+    [savePanel beginWithCompletionHandler: blk]

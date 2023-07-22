@@ -77,6 +77,8 @@ when isMainModule:
     proc info(data:DialogData) =  info(data.title,data.description)
     proc warning(data:DialogData) = warning(data.title,data.description)
     proc error(data:DialogData) = error(data.title,data.description)
+    proc chooseFile() = dialog.chooseFile()
+    proc saveFile() = dialog.saveFile()
   const js = staticRead("assets/test.js")
   app.webview.addUserScriptAtDocumentEnd js
   app.run()

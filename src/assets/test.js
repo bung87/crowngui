@@ -19,3 +19,11 @@ document.getElementById("btn3").addEventListener('click', e => {
     description: "error description"
   });
 });
+
+document.getElementById("btn4").addEventListener('click', e => {
+  api.chooseFile();
+});
+
+document.getElementById("btn5").addEventListener('click', e => {
+  api.saveFile();
+});
