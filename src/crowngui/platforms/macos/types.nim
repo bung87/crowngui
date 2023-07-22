@@ -13,7 +13,6 @@ type
     priv* : WebviewPrivObj
     userdata* : pointer
     onOpenFile*: OnOpenFile
-  ExternalInvokeCb* = proc (w: Webview; arg: cstring) ## External CallBack Proc
 
   WebviewPrivObj* = object
     pool*: ID

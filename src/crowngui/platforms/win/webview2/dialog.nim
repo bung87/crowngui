@@ -1,80 +1,84 @@
 import winim
+import winaux
+import os
+
+const bufferSize = MAX_PATH
 
 proc info*(title: string, description: string) =
-  discard messageBoxA(0, description, title, MB_OK or MB_ICONINFORMATION)
+  discard MessageBoxA(0, description, title, MB_OK or MB_ICONINFORMATION)
 
 proc warning*(title: string, description: string) =
-  discard messageBoxA(0, description, title, MB_OK or MB_ICONWARNING)
+  discard MessageBoxA(0, description, title, MB_OK or MB_ICONWARNING)
 
 proc error*(title: string, description: string) =
-  discard messageBoxA(0, description, title, MB_OK or MB_ICONERROR)
+  discard MessageBoxA(0, description, title, MB_OK or MB_ICONERROR)
 
 proc chooseFile*(root: string = "", description: string = ""): string =
   var
-    opf: TOPENFILENAME
-    buf: array[0..2047, char]
+    opf: OPENFILENAMEW
+    buf = newWString(bufferSize)
   opf.lStructSize = sizeof(opf).int32
   if root.len > 0:
     opf.lpstrInitialDir = root
   opf.lpstrFilter = "All Files\0*.*\0\0"
-  opf.flags = OFN_FILEMUSTEXIST
-  opf.lpstrFile = addr buf
+  opf.Flags = OFN_FILEMUSTEXIST
+  opf.lpstrFile = &buf
   opf.nMaxFile = sizeof(buf).int32
-  var res = getOpenFileName(addr(opf))
+  var res = GetOpenFileName(addr(opf))
   if res != 0:
-    result = $(addr buf)
+    result = $(&buf)
   else:
     result = ""
 
 proc chooseFiles*(root: string = "", description: string = ""): seq[string] =
   var
-    opf: TOPENFILENAME
-    buf: array[0..2047*4, char]
+    opf: OPENFILENAMEW
+    buf = newWString(bufferSize)
   opf.lStructSize = sizeof(opf).int32
   if root.len > 0:
     opf.lpstrInitialDir = root
   opf.lpstrFilter = "All Files\0*.*\0\0"
-  opf.flags = OFN_FILEMUSTEXIST or OFN_ALLOWMULTISELECT or OFN_EXPLORER
-  opf.lpstrFile = addr buf
+  opf.Flags = OFN_FILEMUSTEXIST or OFN_ALLOWMULTISELECT or OFN_EXPLORER
+  opf.lpstrFile = &buf
   opf.nMaxFile = sizeof(buf).int32
-  var res = getOpenFileName(addr(opf))
+  var res = GetOpenFileName(addr(opf))
   result = @[]
   if res != 0:
     var
       i = 0
       s: string
       path = ""
-    while buf[i] != '\0':
+    while buf[i] != '\0'.WCHAR:
       add(path, buf[i])
       inc(i)
     inc(i)
-    if buf[i] != '\0':
+    if buf[i] != '\0'.WCHAR:
       while true:
         s = ""
-        while buf[i] != '\0':
+        while buf[i] != '\0'.WCHAR:
           add(s, buf[i])
           inc(i)
         add(result, s)
         inc(i)
-        if buf[i] == '\0': break
+        if buf[i] == '\0'.WCHAR: break
       for i in 0..result.len-1: result[i] = os.joinPath(path, result[i])
     else:
       add(result, path)
 
 proc saveFile*(root: string = "", description: string = ""): string =
   var
-    opf: TOPENFILENAME
-    buf: array[0..2047, char]
+    opf: OPENFILENAMEW
+    buf = newWString(bufferSize)
   opf.lStructSize = sizeof(opf).int32
   if root.len > 0:
     opf.lpstrInitialDir = root
   opf.lpstrFilter = "All Files\0*.*\0\0"
-  opf.flags = OFN_OVERWRITEPROMPT
-  opf.lpstrFile = addr buf
+  opf.Flags = OFN_OVERWRITEPROMPT
+  opf.lpstrFile = &buf
   opf.nMaxFile = sizeof(buf).int32
   var res = getSaveFileName(addr(opf))
   if res != 0:
-    result = $(addr buf)
+    result = $(&buf)
   else:
     result = ""
 
@@ -91,4 +95,4 @@ proc chooseDir*(root: string = "", description: string = ""): string =
   if lpItemId != nil:
     discard shGetPathFromIDList(lpItemID, addr tempPath)
     result = $(addr tempPath)
-    discard globalFreePtr(lpItemID)    
+    discard globalFreePtr(lpItemID)

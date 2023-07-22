@@ -1,8 +1,10 @@
-import webview2/[types,webview,browser,context]
+import webview2/[types,webview,browser,context,dialog]
 import winim
 import winim/inc/winuser
 import winim/[utils]
 import std/[os]
+export types,webview,dialog
+
 
 const classname = "WebView"
 
@@ -61,8 +63,8 @@ proc  webview_init*(w: Webview): cint =
   style = WS_OVERLAPPEDWINDOW
   # if not w.resizable:
   #   style = WS_OVERLAPPED or WS_CAPTION or WS_MINIMIZEBOX or WS_SYSMENU
-  rect.left = 0
   rect.top = 0
+  rect.left = 0
   rect.right = w.window.config.width
   rect.bottom = w.window.config.height
   AdjustWindowRect(&rect, WS_OVERLAPPEDWINDOW, 0)
@@ -95,12 +97,15 @@ proc  webview_init*(w: Webview): cint =
 proc run*(w: Webview) =
   ## `run` starts the main UI loop until the user closes the window or `exit()` is called.
   var msg: MSG
-  while GetMessage(msg.addr, 0, 0, 0) != -1: 
+  while GetMessage(msg.addr, 0, 0, 0) != -1:
     if msg.hwnd != 0:
       TranslateMessage(msg.addr)
       DispatchMessage(msg.addr)
       continue
     case msg.message:
+    of WM_APP:
+      let f = cast[proc(): void {.stdcall.}](msg.lParam)
+      f()
     of WM_QUIT:
       return
     of WM_COMMAND,
@@ -108,6 +113,8 @@ proc run*(w: Webview) =
       WM_KEYUP:
       if (msg.wParam == VK_F5):
         return
+    else:
+      discard
 
 proc terminate*(w: Webview): void =
   PostQuitMessage(0)
@@ -152,6 +159,16 @@ proc setSize*(w: Webview; width: int; height: int; hints: int): void =
     discard SetWindowPos(w.browser.ctx.windowHandle, 0.HWND, r.left, r.top, r.right - r.left, r.bottom - r.top,
         SWP_NOZORDER or SWP_NOACTIVATE or SWP_NOMOVE or SWP_FRAMECHANGED)
     w.browser.resize(w.browser.ctx.windowHandle)
+
+proc addUserScriptAtDocumentStart*(w: Webview, js: string): void =
+  w.browser.AddScriptToExecuteOnDocumentCreated(js)
+
+proc webview_dispatch*(w: Webview; fn: pointer; arg: pointer) {.stdcall.} =
+  let mainThread = GetCurrentThreadId()
+  PostThreadMessage(mainThread, WM_APP, 0, cast[LPARAM](fn))
+
+proc addUserScriptAtDocumentEnd*(w: Webview, js: string): void =
+  w.browser.AddScriptToExecuteOnDocumentCreated(js)
 
 when isMainModule:
   SetCurrentProcessExplicitAppUserModelID("webview2 app")

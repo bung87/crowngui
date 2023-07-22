@@ -5,7 +5,7 @@ import winim
 
 
 proc newWebView*():WebView =
-  result = new WebView
+  result = create(WebviewObj)
   var windowConfig = WindowConfig(width:640,height:480,title:"Webview")
   var window = Window(config:windowConfig)
   var browserConfig = BrowserConfig(

@@ -123,6 +123,10 @@ proc AddScriptToExecuteOnDocumentCreated*(b: Browser; script: string) =
 proc ExecuteScript*(b: Browser; script: string) =
   discard b.ctx.view.lpVtbl.ExecuteScript(b.ctx.view[], newWideCString(script), NUll)
 
+proc addUserScriptAtiptAtDocumentEnd*(b: Browser; script: string) =
+  discard b.ctx.view.lpVtbl.AddScriptToExecuteOnDocumentCreated(b.ctx.view[],
+      newWideCString(script), NUll)
+
 # proc saveSetting*(b: Browser;setter:pointer; enabled: bool) =
 #   var flag:clong = 0
 

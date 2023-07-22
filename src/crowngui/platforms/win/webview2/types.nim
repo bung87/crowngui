@@ -40,7 +40,17 @@ type
   Window* = ref WindowObj
 
 type
-  WebViewObj = object
+  WebView* = ptr WebViewObj
+  OnOpenFile* = proc (w: Webview; filePath: string; name = ""):bool
+  WebViewObj* = object
     window*: Window
     browser*: Browser
-  WebView* = ref WebViewObj
+    onOpenFile*: OnOpenFile
+    url* : string
+    title* : string
+    width* : int
+    height* : int
+    resizable*: bool
+    debug* : bool
+    invokeCb* : pointer
+

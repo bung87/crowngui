@@ -26,6 +26,7 @@ type
   CallHook = proc (params: string): string # json -> proc -> json
   MethodInfo = object
     scope, name, args: string
+  ExternalInvokeCb* = proc (w: Webview; arg: cstring) ## External CallBack Proc
 
 template dataUriHtmlHeader*(s: string): string =
   ## Data URI for HTML UTF-8 header string. For Mac uses Base64, `import base64` to use.
@@ -207,9 +208,8 @@ proc newWebView*(path: static[string] = ""; title = ""; width: Positive = 1000; 
   ## * For templates that do CSS, remember that CSS must be injected *after DOM Ready*.
   ## * Is up to the developer to guarantee access to the HTML URL or File of the GUI.
 
-  result = webView(title, path, width, height, resizable, debug, callback)
+  var webview = webView(title, path, width, height, resizable, debug, callback)
   when defined(macosx):
-    let webview = result
     let MyAppDelegateClass = initAppDelegate()
     MyAppDelegateClass.registerClassPair()
 
@@ -230,7 +230,7 @@ proc newWebView*(path: static[string] = ""; title = ""; width: Positive = 1000; 
   when not defined(macosx):
     let filepath = paramStr(1)
     if filepath.len > 0 and webview.onOpenFile != nil:
-      webview.onOpenFile(webview, filepath)
+      discard webview.onOpenFile(webview, filepath)
 
   when path.endsWith".js": result.eval(readFile(path))
   when path.endsWith".nim":
@@ -239,3 +239,4 @@ proc newWebView*(path: static[string] = ""; title = ""; width: Positive = 1000; 
     const jotaese = when compi.exitCode == 0: staticRead(path & ".js").strip else: ""
     when not defined(release): echo jotaese
     when compi.exitCode == 0: result.eval(jotaese)
+  return webview

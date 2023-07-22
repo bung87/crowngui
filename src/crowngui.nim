@@ -74,9 +74,9 @@ type DialogData = object
 when isMainModule:
   let app = newApplication(staticRead("assets/test.html"))
   app.bindProcs("api"):
-    proc info(data:DialogData) =  info(data.title,data.description)
-    proc warning(data:DialogData) = warning(data.title,data.description)
-    proc error(data:DialogData) = error(data.title,data.description)
+    proc info(data:DialogData) =  dialog.info(data.title,data.description)
+    proc warning(data:DialogData) = dialog.warning(data.title,data.description)
+    proc error(data:DialogData) = dialog.error(data.title,data.description)
     proc chooseFile() = dialog.chooseFile()
     proc saveFile() = dialog.saveFile()
   const js = staticRead("assets/test.js")
