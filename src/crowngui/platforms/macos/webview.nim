@@ -5,6 +5,7 @@ import menu
 import types
 export types
 import dialog
+export dialog
 import event
 import bundle
 

@@ -14,6 +14,12 @@ type WebviewDialogType = enum
   WEBVIEW_DIALOG_TYPE_OPEN = 0,
   WEBVIEW_DIALOG_TYPE_SAVE = 1,
   WEBVIEW_DIALOG_TYPE_ALERT = 2
+
+type DialogType = enum
+  info = 0,
+  warning = 1,
+  error = 2
+
 type CompletionHandler = proc (Id: Id): void
 
 proc run_open_panel*(self: Id; cmd: SEL; webView: Id; parameters: Id;
@@ -67,7 +73,7 @@ proc run_alert_panel*(self: Id; cmd: SEL; webView: Id; message: Id; frame: Id;
                             completionHandler: Block[CompletionHandler4]) =
   objcr:
     var alert: Id = [NSAlert new]
-    [alert setIcon: [NSImage imageNamed: NSCaution]]
+    [alert setIcon: [NSImage imageNamed: NSImageNameCaution]]
     [alert setShowsHelp: 0]
     [alert setInformativeText: message]
     [alert addButtonWithTitle: "OK"]
@@ -129,3 +135,33 @@ proc webview_dialog*(w: Webview; dlgtype: WebviewDialogType; flags: int;
         [a addButtonWithTitle: "OK"]
         [a runModal]
         [a release]
+
+proc basicDialog(title: string; description: string; dt: DialogType) =
+  objcr:
+    var a: Id = [NSAlert new]
+    case dt:
+      of info:
+        [a setAlertStyle: NSAlertStyleInformational]
+        [a setIcon: NSImage.imageNamed(NSImageNameInfo)]
+      of warning:
+        [a setAlertStyle: NSAlertStyleWarning]
+        [a setIcon: NSImage.imageNamed(NSImageNameCaution)]
+      of error:
+        [a setAlertStyle: NSAlertStyleCritical]
+        # [a setIcon: NSImage.imageNamed(NSImageNameStatusUnavailable)]
+    [a setShowsHelp: 0]
+    [a setShowsSuppressionButton: 0]
+    [a setMessageText: @title]
+    [a setInformativeText: @description]
+    [a addButtonWithTitle: "OK"]
+    [a runModal]
+    [a release]
+
+proc info*(title: string; description: string) = 
+  basicDialog(title, description, info)
+
+proc warning*(title: string; description: string) = 
+  basicDialog(title, description, warning)
+
+proc error*(title: string; description: string) = 
+  basicDialog(title, description, error)

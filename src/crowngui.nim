@@ -67,4 +67,17 @@ proc setOnOpenFile*(app: ApplicationRef; fn: OnOpenFile) = app.webview.onOpenFil
 
 template bindProcs*(app: ApplicationRef; scope: string; n: untyped): untyped = app.webview.bindProcs(scope, n)
 
+type DialogData = object
+  title: string
+  description: string
 
+when isMainModule:
+  let app = newApplication(staticRead("assets/test.html"))
+  app.bindProcs("api"):
+    proc info(data:DialogData) =  info(data.title,data.description)
+    proc warning(data:DialogData) = warning(data.title,data.description)
+    proc error(data:DialogData) = error(data.title,data.description)
+  const js = staticRead("assets/test.js")
+  app.webview.addUserScriptAtDocumentEnd js
+  app.run()
+  app.destroy()
