@@ -2,7 +2,7 @@ import winim
 import winaux
 import os
 
-const bufferSize = MAX_PATH
+const bufferSize = 2048
 
 proc info*(title: string, description: string) =
   discard MessageBoxA(0, description, title, MB_OK or MB_ICONINFORMATION)
@@ -13,16 +13,16 @@ proc warning*(title: string, description: string) =
 proc error*(title: string, description: string) =
   discard MessageBoxA(0, description, title, MB_OK or MB_ICONERROR)
 
-proc chooseFile*(root: string = "", description: string = ""): string =
+proc chooseFile*(root: string = "", description: string = ""): string {.discardable.} =
   var
     opf: OPENFILENAMEW
-    buf = newWString(bufferSize)
+    buf = newString(bufferSize)
   opf.lStructSize = sizeof(opf).int32
   if root.len > 0:
     opf.lpstrInitialDir = root
   opf.lpstrFilter = "All Files\0*.*\0\0"
   opf.Flags = OFN_FILEMUSTEXIST
-  opf.lpstrFile = &buf
+  opf.lpstrFile = buf
   opf.nMaxFile = sizeof(buf).int32
   var res = GetOpenFileName(addr(opf))
   if res != 0:
@@ -30,16 +30,16 @@ proc chooseFile*(root: string = "", description: string = ""): string =
   else:
     result = ""
 
-proc chooseFiles*(root: string = "", description: string = ""): seq[string] =
+proc chooseFiles*(root: string = "", description: string = ""): seq[string] {.discardable.}  =
   var
     opf: OPENFILENAMEW
-    buf = newWString(bufferSize)
+    buf = newString(bufferSize)
   opf.lStructSize = sizeof(opf).int32
   if root.len > 0:
     opf.lpstrInitialDir = root
   opf.lpstrFilter = "All Files\0*.*\0\0"
   opf.Flags = OFN_FILEMUSTEXIST or OFN_ALLOWMULTISELECT or OFN_EXPLORER
-  opf.lpstrFile = &buf
+  opf.lpstrFile = buf
   opf.nMaxFile = sizeof(buf).int32
   var res = GetOpenFileName(addr(opf))
   result = @[]
@@ -48,51 +48,51 @@ proc chooseFiles*(root: string = "", description: string = ""): seq[string] =
       i = 0
       s: string
       path = ""
-    while buf[i] != '\0'.WCHAR:
+    while buf[i] != '\0':
       add(path, buf[i])
       inc(i)
     inc(i)
-    if buf[i] != '\0'.WCHAR:
+    if buf[i] != '\0':
       while true:
         s = ""
-        while buf[i] != '\0'.WCHAR:
+        while buf[i] != '\0':
           add(s, buf[i])
           inc(i)
         add(result, s)
         inc(i)
-        if buf[i] == '\0'.WCHAR: break
+        if buf[i] == '\0': break
       for i in 0..result.len-1: result[i] = os.joinPath(path, result[i])
     else:
       add(result, path)
 
-proc saveFile*(root: string = "", description: string = ""): string =
+proc saveFile*(root: string = "", description: string = ""): string {.discardable.} =
   var
     opf: OPENFILENAMEW
-    buf = newWString(bufferSize)
+    buf = newString(bufferSize)
   opf.lStructSize = sizeof(opf).int32
   if root.len > 0:
     opf.lpstrInitialDir = root
   opf.lpstrFilter = "All Files\0*.*\0\0"
   opf.Flags = OFN_OVERWRITEPROMPT
-  opf.lpstrFile = &buf
+  opf.lpstrFile = buf
   opf.nMaxFile = sizeof(buf).int32
-  var res = getSaveFileName(addr(opf))
+  var res = GetSaveFileName(addr(opf))
   if res != 0:
     result = $(&buf)
   else:
     result = ""
 
-proc chooseDir*(root: string = "", description: string = ""): string =
+proc chooseDir*(root: string = "", description: string = ""): string {.discardable.} =
   var
     lpItemID: PItemIDList
     browseInfo: BrowseInfo
-    displayName: array[0..MAX_PATH, char]
-    tempPath: array[0..MAX_PATH, char]
+    displayName = T(MAX_PATH)
+    tempPath = T(MAX_PATH)
   result = ""
-  browseInfo.pszDisplayName = addr displayName
+  browseInfo.pszDisplayName = &displayName
   browseInfo.ulFlags = 1 #BIF_RETURNONLYFSDIRS
-  lpItemID = shBrowseForFolder(addr(browseInfo))
+  lpItemID = SHBrowseForFolder(addr(browseInfo))
   if lpItemId != nil:
-    discard shGetPathFromIDList(lpItemID, addr tempPath)
-    result = $(addr tempPath)
+    discard SHGetPathFromIDList(lpItemID, &tempPath)
+    result = $tempPath
     discard globalFreePtr(lpItemID)

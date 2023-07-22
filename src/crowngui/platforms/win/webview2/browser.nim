@@ -117,6 +117,7 @@ proc navigate*(b: Browser; url: string) =
 
 
 proc AddScriptToExecuteOnDocumentCreated*(b: Browser; script: string) =
+  assert b.ctx.view != nil
   discard b.ctx.view.lpVtbl.AddScriptToExecuteOnDocumentCreated(b.ctx.view[],
       newWideCString(script), NUll)
 

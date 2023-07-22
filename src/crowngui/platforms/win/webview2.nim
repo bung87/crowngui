@@ -17,6 +17,16 @@ const WEBVIEW_HINT_FIXED = 3 # Window size can not be changed by a user
 var m_maxsz: POINT
 var m_minsz: POINT
 
+type WebviewDispatchCtx {.pure.} = object
+  w: Webview
+  arg: pointer
+  fn: pointer
+
+type WebviewDispatchCtx2 {.pure.} = object
+  w: Webview
+  arg: pointer
+  fn: proc (w: Webview; arg: pointer)
+
 proc terminate*(w: Webview): void
 
 proc wndproc(hwnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): LRESULT {.stdcall.} =
@@ -104,8 +114,8 @@ proc run*(w: Webview) =
       continue
     case msg.message:
     of WM_APP:
-      let f = cast[proc(): void {.stdcall.}](msg.lParam)
-      f()
+      let fn = cast[proc(a:pointer):void {.stdcall.}](msg.lParam)
+      fn(cast[pointer](msg.wParam))
     of WM_QUIT:
       return
     of WM_COMMAND,
@@ -163,9 +173,17 @@ proc setSize*(w: Webview; width: int; height: int; hints: int): void =
 proc addUserScriptAtDocumentStart*(w: Webview, js: string): void =
   w.browser.AddScriptToExecuteOnDocumentCreated(js)
 
+proc webview_dispatch_cb(arg: pointer) {.stdcall.} =
+  let context = cast[ptr WebviewDispatchCtx2](arg)
+  context.fn(context.w, context.arg)
+
 proc webview_dispatch*(w: Webview; fn: pointer; arg: pointer) {.stdcall.} =
   let mainThread = GetCurrentThreadId()
-  PostThreadMessage(mainThread, WM_APP, 0, cast[LPARAM](fn))
+  var context = create(WebviewDispatchCtx)
+  context.w = w
+  context.fn = fn
+  context.arg = arg
+  PostThreadMessage(mainThread, WM_APP, cast[WPARAM](context), cast[LPARAM](webview_dispatch_cb))
 
 proc addUserScriptAtDocumentEnd*(w: Webview, js: string): void =
   w.browser.AddScriptToExecuteOnDocumentCreated(js)
