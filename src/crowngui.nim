@@ -79,7 +79,7 @@ when isMainModule:
     proc error(data:DialogData) = dialog.error(data.title,data.description)
     proc chooseFile() = dialog.chooseFile()
     proc saveFile() = dialog.saveFile()
-  # const js = staticRead("assets/test.js")
-  # app.webview.addUserScriptAtDocumentEnd js
+  const js = staticRead("assets/test.js")
+  app.webview.addUserScriptAtDocumentEnd js
   app.run()
   app.destroy()

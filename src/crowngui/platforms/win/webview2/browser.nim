@@ -5,13 +5,15 @@ import types
 from environment_completed_handler import nil
 from controller_completed_handler import nil
 from environment_options import nil
-import std/[os, atomics,pathnorm,sugar]
+from web_message_received_handler import nil
+import std/[os, atomics,pathnorm,sugar,json]
 import loader
 
 const  IID_ICoreWebView2Controller2 = DEFINE_GUID"C979903E-D4CA-4228-92EB-47EE3FA96EAB"
 
 using
   self: ptr ICoreWebView2CreateCoreWebView2ControllerCompletedHandler
+
 
 proc newControllerCompletedHandler(hwnd: HWND;controller: ptr ICoreWebView2Controller;view: ptr ICoreWebView2; settings: ptr ICoreWebView2Settings): ptr ICoreWebView2CreateCoreWebView2ControllerCompletedHandler =
   result = create(type result[])
@@ -46,8 +48,29 @@ proc newControllerCompletedHandler(hwnd: HWND;controller: ptr ICoreWebView2Contr
     discard w.browser.ctx.settings.lpVtbl.PutAreDefaultScriptDialogsEnabled(w.browser.ctx.settings, true)
     discard w.browser.ctx.settings.lpVtbl.PutIsWebMessageEnabled(w.browser.ctx.settings, true)
     discard w.browser.ctx.settings.lpVtbl.PutAreDevToolsEnabled(w.browser.ctx.settings, true)
+    var webMesssageReceivedHandler = create(ICoreWebView2WebMessageReceivedEventHandler)
+    webMesssageReceivedHandler.lpVtbl = create(ICoreWebView2WebMessageReceivedEventHandlerVTBL)
+    webMesssageReceivedHandler.windowHandle = self.windowHandle
+    webMesssageReceivedHandler.lpVtbl.QueryInterface = web_message_received_handler.QueryInterface
+    webMesssageReceivedHandler.lpVtbl.AddRef = web_message_received_handler.AddRef
+    webMesssageReceivedHandler.lpVtbl.Release = web_message_received_handler.Release
+    webMesssageReceivedHandler.lpVtbl.Invoke = proc (self: ptr ICoreWebView2WebMessageReceivedEventHandler;
+        sender: ptr ICoreWebView2; args: ptr ICoreWebView2WebMessageReceivedEventArgs) {.stdcall.} = 
+      var w = cast[Webview](GetWindowLongPtr(self.windowHandle, GWLP_USERDATA))
+      if (cast[pointer](w) == nil or w.invokeCb == nil):
+        return
+      var source: LPWSTR
+      discard args.lpVtbl.TryGetWebMessageAsString(args, &source)
+      cast[proc (w: Webview; arg: cstring) {.stdcall.}](w.invokeCb)(w, ($source).cstring)
+      CoTaskMemFree(source)
     
-    discard w.browser.ctx.view.lpVtbl.Navigate(w.browser.ctx.view, L"https://nim-lang.org")
+    var token: EventRegistrationToken
+    discard w.browser.ctx.view.lpVtbl.add_WebMessageReceived(w.browser.ctx.view, webMesssageReceivedHandler, token)
+    var script = T"""window.external = this; invoke = function(arg){ 
+                   window.chrome.webview.postMessage(arg);
+                    };"""
+    discard w.browser.ctx.view.lpVtbl.AddScriptToExecuteOnDocumentCreated(w.browser.ctx.view, &script, NULL)
+    discard w.browser.ctx.view.lpVtbl.Navigate(w.browser.ctx.view, L(w.url))
     return S_OK
 
 proc newEnvironmentCompletedHandler*(hwnd: HWND;controllerCompletedHandler: ptr ICoreWebView2CreateCoreWebView2ControllerCompletedHandler): ptr ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler =
@@ -116,15 +139,15 @@ proc embed*(b: Browser; wv: WebView) =
     DispatchMessage(msg.addr)
 
 proc navigate*(b: Browser; url: string) =
-  discard b.ctx.view.lpVtbl.Navigate(b.ctx.view[], +$(url))
-
+  discard b.ctx.view.lpVtbl.Navigate(b.ctx.view, +$(url))
 
 proc AddScriptToExecuteOnDocumentCreated*(b: Browser; script: string) =
-  discard b.ctx.view.lpVtbl.AddScriptToExecuteOnDocumentCreated(b.ctx.view[],
-      newWideCString(script), NUll)
+  var script = T(script)
+  discard b.ctx.view.lpVtbl.AddScriptToExecuteOnDocumentCreated(b.ctx.view, &script, NULL)
 
 proc ExecuteScript*(b: Browser; script: string) =
-  discard b.ctx.view.lpVtbl.ExecuteScript(b.ctx.view[], newWideCString(script), NUll)
+  var script = T(script)
+  discard b.ctx.view.lpVtbl.ExecuteScript(b.ctx.view, &script, NUll)
 
 proc addUserScriptAtiptAtDocumentEnd*(b: Browser; script: string) =
   b.AddScriptToExecuteOnDocumentCreated(script)

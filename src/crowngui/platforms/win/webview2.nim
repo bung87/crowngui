@@ -104,11 +104,6 @@ proc  webview_init*(w: Webview): cint =
   w.browser.embed(w)
   return 0
 
-type DispatchProc = proc (w: Webview; arg: pointer){.stdcall.}
-type DispatchArg = tuple
-  fn: DispatchProc
-  arg: pointer
-
 proc run*(w: Webview) =
   ## `run` starts the main UI loop until the user closes the window or `exit()` is called.
   var msg: MSG
@@ -119,8 +114,8 @@ proc run*(w: Webview) =
       continue
     case msg.message:
     of WM_APP:
-      let ctx = cast[ptr DispatchArg](msg.lParam)
-      ctx.fn(w, ctx.arg)
+      let fn = cast[proc(env:pointer):void {.stdcall.}](msg.lParam)
+      fn(cast[pointer](msg.wParam))
     of WM_QUIT:
       return
     of WM_COMMAND,
@@ -178,15 +173,10 @@ proc setSize*(w: Webview; width: int; height: int; hints: int): void =
 proc addUserScriptAtDocumentStart*(w: Webview, js: string): void =
   w.browser.AddScriptToExecuteOnDocumentCreated(js)
 
-proc webview_dispatch_cb(arg: pointer) {.stdcall.} =
-  let context = cast[ptr WebviewDispatchCtx2](arg)
-  context.fn(context.w, context.arg)
-
 proc webview_dispatch*(w: Webview; fn: pointer; arg: pointer) {.stdcall.} =
   let mainThread = GetCurrentThreadId()
-  var t: DispatchArg = (cast[DispatchProc](fn), arg)
-  let success = PostThreadMessage(mainThread, WM_APP, 0, cast[LPARAM](t.addr))
-  doAssert success.bool == true
+  var cb = proc() = cast[proc (w: Webview;arg: pointer){.stdcall.}](fn)(w, arg)
+  PostThreadMessage(mainThread, WM_APP, cast[WPARAM](cb.rawEnv), cast[LPARAM](cb.rawProc))
 
 proc addUserScriptAtDocumentEnd*(w: Webview, js: string): void =
   assert w.browser != nil

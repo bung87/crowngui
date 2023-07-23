@@ -79,7 +79,7 @@ type
     remove_PermissionRequested*: proc(): HRESULT {.stdcall.}
     add_ProcessFailed*: proc(): HRESULT {.stdcall.}
     remove_ProcessFailed*: proc(): HRESULT {.stdcall.}
-    AddScriptToExecuteOnDocumentCreated * : proc (self: ICoreWebView2;
+    AddScriptToExecuteOnDocumentCreated * : proc (self: ptr ICoreWebView2;
         javaScript: LPCWSTR;
         handler: ptr ICoreWebView2AddScriptToExecuteOnDocumentCreatedCompletedHandler): HRESULT {.stdcall.}
     RemoveScriptToExecuteOnDocumentCreated*: proc(): HRESULT {.stdcall.}
@@ -89,11 +89,11 @@ type
     Reload*: proc (self: ptr ICoreWebView2): HRESULT {.stdcall.}
     PostWebMessageAsJson*: proc(): HRESULT {.stdcall.}
     PostWebMessageAsString*: proc(): HRESULT {.stdcall.}
-    add_WebMessageReceived*: proc(): HRESULT {.stdcall.}
+    add_WebMessageReceived*: proc(self: ptr ICoreWebView2; handler: ptr ICoreWebView2WebMessageReceivedEventHandler; token: ptr EventRegistrationToken): HRESULT {.stdcall.}
     remove_WebMessageReceived*: proc(): HRESULT {.stdcall.}
     CallDevToolsProtocolMethod*: proc(): HRESULT {.stdcall.}
-    get_BrowserProcessId*: proc(): HRESULT {.stdcall.}
-    get_CanGoBack*: proc(): HRESULT {.stdcall.}
+    get_BrowserProcessId*: proc(self: ptr ICoreWebView2; value: var uint32): HRESULT {.stdcall.}
+    get_CanGoBack*: proc(self: ptr ICoreWebView2; value: var BOOL): HRESULT {.stdcall.}
     get_CanGoForward*: proc(): HRESULT {.stdcall.}
     GoBack*: proc (self: ptr ICoreWebView2): HRESULT {.stdcall.}
     GoForward*: proc (self: ptr ICoreWebView2): HRESULT {.stdcall.}
@@ -120,7 +120,7 @@ type
     add_WebResourceResponseReceived*: proc(): HRESULT {.stdcall.}
     remove_WebResourceResponseReceived*: proc(): HRESULT {.stdcall.}
     NavigateWithWebResourceRequest*: proc(): HRESULT {.stdcall.}
-    add_DOMContentLoaded*: proc(): HRESULT {.stdcall.}
+    add_DOMContentLoaded*: proc(self: ptr ICoreWebView2;): HRESULT {.stdcall.}
     remove_DOMContentLoaded*: proc(): HRESULT {.stdcall.}
     get_CookieManager*: proc(): HRESULT {.stdcall.}
     get_Environment*: proc(): HRESULT {.stdcall.}
@@ -263,7 +263,26 @@ type
     # ICoreWebView2Controller4
     get_AllowExternalDrop*: proc (): HRESULT {.stdcall.}
     put_AllowExternalDrop*: proc (): HRESULT {.stdcall.}
+  ICoreWebView2WebMessageReceivedEventHandler* {.pure.} = object
+    lpVtbl*: ptr ICoreWebView2WebMessageReceivedEventHandlerVTBL
+    windowHandle*: HWND
 
+  ICoreWebView2WebMessageReceivedEventArgs* {.pure.} = object
+    lpVtbl*: ptr ICoreWebView2WebMessageReceivedEventArgsVTBL
+  ICoreWebView2WebMessageReceivedEventArgsVTBL* = object of IUnknownVtbl
+    get_Source*: proc (self: ptr ICoreWebView2WebMessageReceivedEventArgs; source: ptr LPWSTR): HRESULT {.stdcall.}
+    get_WebMessageAsJson*: proc (self: ptr ICoreWebView2WebMessageReceivedEventArgs; source: ptr LPWSTR): HRESULT {.stdcall.}
+    TryGetWebMessageAsString*: proc (self: ptr ICoreWebView2WebMessageReceivedEventArgs; source: ptr LPWSTR): HRESULT {.stdcall.}
+
+  ICoreWebView2WebMessageReceivedEventHandlerVTBL* {.pure.} = object
+    QueryInterface*: proc(self: ptr ICoreWebView2WebMessageReceivedEventHandler;
+        riid: REFIID; ppvObject: ptr pointer): HRESULT {.stdcall.}
+    AddRef*: proc (self: ptr ICoreWebView2WebMessageReceivedEventHandler): ULONG {.stdcall.}
+    Release*: proc (self: ptr ICoreWebView2WebMessageReceivedEventHandler): ULONG {.stdcall.}
+    Invoke*: proc (self:ptr ICoreWebView2WebMessageReceivedEventHandler;
+        sender: ptr ICoreWebView2; args: ptr ICoreWebView2WebMessageReceivedEventArgs) {.stdcall.}
+  EventRegistrationToken* {.pure.} = object
+    value*: int64
   ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler* {.pure, inheritable.} = object
     lpVtbl*: ptr ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandlerVTBL
     windowHandle*: HWND
