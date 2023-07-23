@@ -44,9 +44,6 @@ var
 proc css*(w:Webview, css: string): void =
   w.addUserScriptAtDocumentStart(cssInjectFunction & "(\"" & css.jsEncode & "\")")
 
-proc dispatch(w: Webview; fn: pointer; arg: pointer) = webview_dispatch(w, fn,
-    arg) # dispatch nim func,function will be executed on the UI thread
-
 proc generalExternalInvokeCallback(w: Webview; arg: cstring) {.exportc.} =
   # assign to webview.external_invoke_cb using eps,cbs store user defined proc
   var handled = false
@@ -77,7 +74,7 @@ proc dispatch*(w: Webview; fn: DispatchFn) {.inline.} =
   ## Explicitly force dispatch a function, for advanced users only
   let idx = dispatchTable.len() + 1
   dispatchTable[idx] = fn
-  dispatch(w, generalDispatchProc, cast[pointer](idx))
+  webview_dispatch(w, generalDispatchProc, cast[pointer](idx))
 
 proc bindProc*[P, R](w: Webview; scope, name: string; p: (proc(param: P): R)) {.used.} =
   ## Do NOT use directly, see `bindProcs` macro.
@@ -168,7 +165,7 @@ macro bindProcs*(w: Webview; scope: string; n: untyped): untyped =
     if params.len > 2: error("Argument must be proc or func of 0 or 1 arguments", def)
     body.add(newCall("bindProc", w, scope, newLit(fname), newIdentNode(fname)))
   result = newBlockStmt(body)
-  when not defined(release): echo repr(result)
+  # when not defined(release): echo repr(result)
 
 proc run*(w: Webview; quitProc: proc () {.noconv.}; controlCProc: proc () {.noconv.}) {.inline.} =
   ## `run` starts the main UI loop until the user closes the window. Same as `run` but with extras.

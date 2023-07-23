@@ -28,7 +28,7 @@ proc newControllerCompletedHandler(hwnd: HWND;controller: ptr ICoreWebView2Contr
     assert createdController != nil
     # discard createdController.lpVtbl.QueryInterface(createdController, IID_ICoreWebView2Controller2.unsafeAddr, cast[ptr pointer](controller))
     var w = cast[Webview](GetWindowLongPtr(self.windowHandle, GWLP_USERDATA))
-
+    
     w.browser.ctx.controller = createdController
     var bounds: RECT
     GetClientRect(self.windowHandle, bounds)
@@ -39,14 +39,15 @@ proc newControllerCompletedHandler(hwnd: HWND;controller: ptr ICoreWebView2Contr
     discard w.browser.ctx.view.lpVtbl.AddRef(w.browser.ctx.view)
     if S_OK != hr:
       return hr
+    w.created = true
     doAssert w.browser.ctx.view != nil
     let hr1 = w.browser.ctx.view.lpVtbl.get_Settings(w.browser.ctx.view, w.browser.ctx.settings.addr)
     discard w.browser.ctx.settings.lpVtbl.PutIsScriptEnabled(w.browser.ctx.settings, true)
     discard w.browser.ctx.settings.lpVtbl.PutAreDefaultScriptDialogsEnabled(w.browser.ctx.settings, true)
     discard w.browser.ctx.settings.lpVtbl.PutIsWebMessageEnabled(w.browser.ctx.settings, true)
     discard w.browser.ctx.settings.lpVtbl.PutAreDevToolsEnabled(w.browser.ctx.settings, true)
-
-    # discard w.browser.ctx.view.lpVtbl.Navigate(w.browser.ctx.view, L"https://nim-lang.org")
+    
+    discard w.browser.ctx.view.lpVtbl.Navigate(w.browser.ctx.view, L"https://nim-lang.org")
     return S_OK
 
 proc newEnvironmentCompletedHandler*(hwnd: HWND;controllerCompletedHandler: ptr ICoreWebView2CreateCoreWebView2ControllerCompletedHandler): ptr ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler =
@@ -108,9 +109,9 @@ proc embed*(b: Browser; wv: WebView) =
   doAssert r1 == S_OK, "failed to call CreateCoreWebView2EnvironmentWithOptions"
   # simulate synchronous
   # https://github.com/MicrosoftEdge/WebView2Feedback/issues/740
-  assert b.ctx.view == nil
+  assert wv.created == false
   var msg: MSG
-  while b.ctx.view == nil and GetMessage(msg.addr, 0, 0, 0).bool:
+  while wv.created == false and GetMessage(msg.addr, 0, 0, 0).bool:
     TranslateMessage(msg.addr)
     DispatchMessage(msg.addr)
 
@@ -119,7 +120,6 @@ proc navigate*(b: Browser; url: string) =
 
 
 proc AddScriptToExecuteOnDocumentCreated*(b: Browser; script: string) =
-
   discard b.ctx.view.lpVtbl.AddScriptToExecuteOnDocumentCreated(b.ctx.view[],
       newWideCString(script), NUll)
 
@@ -127,8 +127,7 @@ proc ExecuteScript*(b: Browser; script: string) =
   discard b.ctx.view.lpVtbl.ExecuteScript(b.ctx.view[], newWideCString(script), NUll)
 
 proc addUserScriptAtiptAtDocumentEnd*(b: Browser; script: string) =
-  discard b.ctx.view.lpVtbl.AddScriptToExecuteOnDocumentCreated(b.ctx.view[],
-      newWideCString(script), NUll)
+  b.AddScriptToExecuteOnDocumentCreated(script)
 
 # proc saveSetting*(b: Browser;setter:pointer; enabled: bool) =
 #   var flag:clong = 0

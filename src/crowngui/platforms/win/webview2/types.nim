@@ -53,4 +53,5 @@ type
     resizable*: bool
     debug* : bool
     invokeCb* : pointer
+    created*: bool
 
