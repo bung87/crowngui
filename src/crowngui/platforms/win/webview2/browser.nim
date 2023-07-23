@@ -46,7 +46,7 @@ proc newControllerCompletedHandler(hwnd: HWND;controller: ptr ICoreWebView2Contr
     discard w.browser.ctx.settings.lpVtbl.PutIsWebMessageEnabled(w.browser.ctx.settings, true)
     discard w.browser.ctx.settings.lpVtbl.PutAreDevToolsEnabled(w.browser.ctx.settings, true)
 
-    discard w.browser.ctx.view.lpVtbl.Navigate(w.browser.ctx.view, L"https://nim-lang.org")
+    # discard w.browser.ctx.view.lpVtbl.Navigate(w.browser.ctx.view, L"https://nim-lang.org")
     return S_OK
 
 proc newEnvironmentCompletedHandler*(hwnd: HWND;controllerCompletedHandler: ptr ICoreWebView2CreateCoreWebView2ControllerCompletedHandler): ptr ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler =
@@ -106,18 +106,20 @@ proc embed*(b: Browser; wv: WebView) =
   # let folder = "C:\\Program Files (x86)\\Microsoft\\EdgeWebView\\Application\\104.0.1293.70"
 
   doAssert r1 == S_OK, "failed to call CreateCoreWebView2EnvironmentWithOptions"
+  # simulate synchronous
+  # https://github.com/MicrosoftEdge/WebView2Feedback/issues/740
+  assert b.ctx.view == nil
   var msg: MSG
-  while GetMessage(msg.addr, 0, 0, 0) < 0:
-    break
-  TranslateMessage(msg.addr)
-  DispatchMessage(msg.addr)
+  while b.ctx.view == nil and GetMessage(msg.addr, 0, 0, 0).bool:
+    TranslateMessage(msg.addr)
+    DispatchMessage(msg.addr)
 
 proc navigate*(b: Browser; url: string) =
   discard b.ctx.view.lpVtbl.Navigate(b.ctx.view[], +$(url))
 
 
 proc AddScriptToExecuteOnDocumentCreated*(b: Browser; script: string) =
-  assert b.ctx.view != nil
+
   discard b.ctx.view.lpVtbl.AddScriptToExecuteOnDocumentCreated(b.ctx.view[],
       newWideCString(script), NUll)
 

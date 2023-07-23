@@ -114,8 +114,9 @@ proc run*(w: Webview) =
       continue
     case msg.message:
     of WM_APP:
-      let fn = cast[proc(a:pointer):void {.stdcall.}](msg.lParam)
-      fn(cast[pointer](msg.wParam))
+      let fn = cast[proc():void {.stdcall.}](msg.lParam)
+      assert fn != nil
+      fn()
     of WM_QUIT:
       return
     of WM_COMMAND,
@@ -179,13 +180,15 @@ proc webview_dispatch_cb(arg: pointer) {.stdcall.} =
 
 proc webview_dispatch*(w: Webview; fn: pointer; arg: pointer) {.stdcall.} =
   let mainThread = GetCurrentThreadId()
-  var context = create(WebviewDispatchCtx)
-  context.w = w
-  context.fn = fn
-  context.arg = arg
-  PostThreadMessage(mainThread, WM_APP, cast[WPARAM](context), cast[LPARAM](webview_dispatch_cb))
+  # var context = create(WebviewDispatchCtx)
+  # context.w = w
+  # context.fn = fn
+  # context.arg = arg
+  var cb = proc() = cast[proc (w: Webview;arg: pointer){.stdcall.}](fn)(w, arg)
+  PostThreadMessage(mainThread, WM_APP, 0, cast[LPARAM](cb.rawProc))
 
 proc addUserScriptAtDocumentEnd*(w: Webview, js: string): void =
+  assert w.browser != nil
   w.browser.AddScriptToExecuteOnDocumentCreated(js)
 
 when isMainModule:
