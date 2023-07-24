@@ -1,11 +1,13 @@
 import macros
 import winim/inc/windef
+import sequtils
 
 macro define_COM_interface*(stmts: untyped) =
   result = stmts
   var vtbls = newSeq[NimNode]()
   var ignoreLens = newSeq[int]()
   var originLen: int
+  var methods = newSeq[NimNode]()
   for st in result:
     expectKind(st,nnkTypeSection)
     originLen = st.len
@@ -43,6 +45,24 @@ macro define_COM_interface*(stmts: untyped) =
         expectKind(formalParams[1], nnkIdentDefs)
         # self type
         formalParams[1][1] = nnkPtrTy.newTree(newIdentNode(name))
+        var params  = d[^2].params.copy
+        var pragma = d[^2].pragma.copy
+        var procName = d[0][^1].copy
+        var call = nnkCall.newTree(
+            nnkDotExpr.newTree(
+              nnkDotExpr.newTree(
+                newIdentNode("self"),
+                newIdentNode("lpVtbl")
+              ),
+              procName
+            ),
+          )
+        let fpLen = formalParams.len
+        for i in 1 ..< fpLen:
+          call.add(formalParams[i][0].copy)
+        var body = nnkStmtList.newTree(call)
+        expectKind d[0], nnkPostfix
+        methods.add newProc(d[0].copy, toSeq(params.children), body, pragmas = pragma)
       ignoreLens.add ignoreLen
       vtbl = t.copy
       vtbl[0][0][^1] = newIdentNode(name & "VTBL")
@@ -64,10 +84,12 @@ macro define_COM_interface*(stmts: untyped) =
     expectKind fields,nnkRecList
     let ll = fields.len
     fields.del(1, ll - (ignoreLen))
+  for m in methods:
+    result.add m
 
 when isMainModule:
+
   expandMacros:
-    #   define_COM_interface:
     define_COM_interface:
       type
         AA* {.pure.} = object
