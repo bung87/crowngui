@@ -17,7 +17,8 @@ using
 
 proc newControllerCompletedHandler(hwnd: HWND;controller: ptr ICoreWebView2Controller;view: ptr ICoreWebView2; settings: ptr ICoreWebView2Settings): ptr ICoreWebView2CreateCoreWebView2ControllerCompletedHandler =
   result = create(type result[])
-  result.windowHandle = hwnd
+  # result.windowHandle = hwnd
+  let windowHandle = hwnd
   result.lpVtbl = create(ICoreWebView2CreateCoreWebView2ControllerCompletedHandlerVTBL)
   result.lpVtbl.QueryInterface = controller_completed_handler.QueryInterface
   result.lpVtbl.AddRef = controller_completed_handler.AddRef
@@ -28,12 +29,13 @@ proc newControllerCompletedHandler(hwnd: HWND;controller: ptr ICoreWebView2Contr
     if errorCode != S_OK:
       return errorCode
     assert createdController != nil
+    let windowHandle = windowHandle
     # discard createdController.lpVtbl.QueryInterface(createdController, IID_ICoreWebView2Controller2.unsafeAddr, cast[ptr pointer](controller))
-    var w = cast[Webview](GetWindowLongPtr(self.windowHandle, GWLP_USERDATA))
+    var w = cast[Webview](GetWindowLongPtr(windowHandle, GWLP_USERDATA))
     
     w.browser.ctx.controller = createdController
     var bounds: RECT
-    GetClientRect(self.windowHandle, bounds)
+    GetClientRect(windowHandle, bounds)
     discard w.browser.ctx.controller.lpVtbl.AddRef(w.browser.ctx.controller)
     discard w.browser.ctx.controller.lpVtbl.put_Bounds(w.browser.ctx.controller, bounds)
     discard w.browser.ctx.controller.lpVtbl.put_IsVisible(w.browser.ctx.controller, true)
@@ -50,13 +52,13 @@ proc newControllerCompletedHandler(hwnd: HWND;controller: ptr ICoreWebView2Contr
     discard w.browser.ctx.settings.lpVtbl.PutAreDevToolsEnabled(w.browser.ctx.settings, true)
     var webMesssageReceivedHandler = create(ICoreWebView2WebMessageReceivedEventHandler)
     webMesssageReceivedHandler.lpVtbl = create(ICoreWebView2WebMessageReceivedEventHandlerVTBL)
-    webMesssageReceivedHandler.windowHandle = self.windowHandle
+    # webMesssageReceivedHandler.windowHandle = self.windowHandle
     webMesssageReceivedHandler.lpVtbl.QueryInterface = web_message_received_handler.QueryInterface
     webMesssageReceivedHandler.lpVtbl.AddRef = web_message_received_handler.AddRef
     webMesssageReceivedHandler.lpVtbl.Release = web_message_received_handler.Release
     webMesssageReceivedHandler.lpVtbl.Invoke = proc (self: ptr ICoreWebView2WebMessageReceivedEventHandler;
-        sender: ptr ICoreWebView2; args: ptr ICoreWebView2WebMessageReceivedEventArgs) {.stdcall.} = 
-      var w = cast[Webview](GetWindowLongPtr(self.windowHandle, GWLP_USERDATA))
+        sender: ptr ICoreWebView2; args: ptr ICoreWebView2WebMessageReceivedEventArgs) {.stdcall.} =
+      var w = cast[Webview](GetWindowLongPtr(windowHandle, GWLP_USERDATA))
       if (cast[pointer](w) == nil or w.invokeCb == nil):
         return
       var source: LPWSTR
@@ -66,7 +68,7 @@ proc newControllerCompletedHandler(hwnd: HWND;controller: ptr ICoreWebView2Contr
     
     var token: EventRegistrationToken
     discard w.browser.ctx.view.lpVtbl.add_WebMessageReceived(w.browser.ctx.view, webMesssageReceivedHandler, token)
-    var script = T"""window.external = this; invoke = function(arg){ 
+    var script = T"""window.external = this; invoke = function(arg){
                    window.chrome.webview.postMessage(arg);
                     };"""
     discard w.browser.ctx.view.lpVtbl.AddScriptToExecuteOnDocumentCreated(w.browser.ctx.view, &script, NULL)
@@ -75,8 +77,8 @@ proc newControllerCompletedHandler(hwnd: HWND;controller: ptr ICoreWebView2Contr
 
 proc newEnvironmentCompletedHandler*(hwnd: HWND;controllerCompletedHandler: ptr ICoreWebView2CreateCoreWebView2ControllerCompletedHandler): ptr ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler =
   result = create(type result[])
-  result.windowHandle = hwnd
-  result.controllerCompletedHandler = controllerCompletedHandler
+  let windowHandle = hwnd
+  let controllerCompletedHandler = controllerCompletedHandler
   result.lpVtbl = create(ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandlerVTBL)
   result.lpVtbl.QueryInterface = environment_completed_handler.QueryInterface
   result.lpVtbl.AddRef = environment_completed_handler.AddRef
@@ -87,7 +89,7 @@ proc newEnvironmentCompletedHandler*(hwnd: HWND;controllerCompletedHandler: ptr 
     if errorCode != S_OK:
       return errorCode
     let hr = createdEnvironment.lpVtbl.CreateCoreWebView2Controller(
-        createdEnvironment, self.windowHandle, self.controllerCompletedHandler)
+        createdEnvironment, windowHandle, controllerCompletedHandler)
     assert hr == S_OK
     return hr
 
