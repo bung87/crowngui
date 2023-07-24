@@ -35,9 +35,9 @@ proc wndproc(hwnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): LRESULT {.s
     case msg
       of WM_SIZE:
 
-        if w.browser.ctx.controller != nil:
+        if w.priv.controller != nil:
           # SetWindowLongPtr trigger WM_SIZE too, controller has not initlization yet
-          w.browser.resize(hwnd)
+          w.resize(hwnd)
       of WM_CREATE:
         var
           pCreate = cast[ptr CREATESTRUCT](lParam)
@@ -75,8 +75,8 @@ proc  webview_init*(w: Webview): cint =
   #   style = WS_OVERLAPPED or WS_CAPTION or WS_MINIMIZEBOX or WS_SYSMENU
   rect.top = 0
   rect.left = 0
-  rect.right = w.window.config.width
-  rect.bottom = w.window.config.height
+  rect.right = w.width.LONG
+  rect.bottom = w.height.LONG
   AdjustWindowRect(&rect, WS_OVERLAPPEDWINDOW, 0)
 
   GetClientRect(GetDesktopWindow(), &clientRect)
@@ -86,22 +86,28 @@ proc  webview_init*(w: Webview): cint =
   rect.left = left
   rect.bottom = rect.bottom - rect.top + top
   rect.top = top
-  w.window.handle = CreateWindowW(classname, w.window.config.title, style, rect.left, rect.top,
+  w.priv.windowHandle = CreateWindowW(classname, w.title, style, rect.left, rect.top,
     rect.right - rect.left, rect.bottom - rect.top,
     HWND_DESKTOP, cast[HMENU](NULL), hInstance, cast[LPVOID](w))
-  if (w.window.handle == 0):
+  if (w.priv.windowHandle == 0):
     OleUninitialize()
     return -1
 
-  # SetWindowLongPtr(w.window.handle, GWLP_USERDATA, cast[LONG_PTR](w))
-  # webviewContext.set(w.window.handle, w)
+  # SetWindowLongPtr(w.priv.windowHandle, GWLP_USERDATA, cast[LONG_PTR](w))
+  # webviewContext.set(w.priv.windowHandle, w)
   # discard DisplayHTMLPage(w)
 
-  SetWindowText(w.window.handle, w.window.config.title)
-  ShowWindow(w.window.handle, SW_SHOW)
-  UpdateWindow(w.window.handle)
-  SetFocus(w.window.handle)
-  w.browser.embed(w)
+  SetWindowText(w.priv.windowHandle, w.title)
+  ShowWindow(w.priv.windowHandle, SW_SHOW)
+  UpdateWindow(w.priv.windowHandle)
+  SetFocus(w.priv.windowHandle)
+  try:
+    if CoInitializeEx(nil, COINIT_APARTMENTTHREADED).FAILED: raise
+    defer: CoUninitialize()
+  except:
+    discard
+
+  w.embed()
   return 0
 
 proc run*(w: Webview) =
@@ -133,25 +139,25 @@ proc destroy*(w: Webview): void =
   w.terminate()
 
 proc setTitle*(w: Webview; title: string ): void =
-  discard SetWindowTextW(w.browser.ctx.windowHandle, +$(title))
+  discard SetWindowTextW(w.priv.windowHandle, +$(title))
 
 proc navigate*(w: Webview; urlOrData: string ): void =
-  discard w.browser.ctx.view.lpVtbl.Navigate(w.browser.ctx.view, +$(urlOrData))
+  discard w.priv.view.Navigate(T(urlOrData))
 
 proc setHtml*(w: Webview; html: string): void =
-  discard w.browser.ctx.view.lpVtbl.NavigateToString(w.browser.ctx.view, +$(html))
+  discard w.priv.view.NavigateToString(T(html))
 
 proc eval*(w: Webview; js: string): void =
-  discard w.browser.ctx.view.lpVtbl.ExecuteScript(w.browser.ctx.view, +$(js), nil)
+  discard w.priv.view.ExecuteScript(T(js), nil)
 
 proc setSize*(w: Webview; width: int; height: int; hints: int): void =
-  var style = GetWindowLong(w.browser.ctx.windowHandle, GWL_STYLE)
+  var style = GetWindowLong(w.priv.windowHandle, GWL_STYLE)
   if hints == WEBVIEW_HINT_FIXED:
     style = style and not(WS_THICKFRAME or WS_MAXIMIZEBOX)
   else:
     style = style or (WS_THICKFRAME or WS_MAXIMIZEBOX)
 
-  SetWindowLong(w.browser.ctx.windowHandle, GWL_STYLE, style)
+  SetWindowLong(w.priv.windowHandle, GWL_STYLE, style)
 
   if hints == WEBVIEW_HINT_MAX:
     m_maxsz.x = width.LONG
@@ -166,12 +172,12 @@ proc setSize*(w: Webview; width: int; height: int; hints: int): void =
     r.right = width.LONG
     r.bottom = height.LONG
     AdjustWindowRect(r.addr, WS_OVERLAPPEDWINDOW, 0)
-    discard SetWindowPos(w.browser.ctx.windowHandle, 0.HWND, r.left, r.top, r.right - r.left, r.bottom - r.top,
+    discard SetWindowPos(w.priv.windowHandle, 0.HWND, r.left, r.top, r.right - r.left, r.bottom - r.top,
         SWP_NOZORDER or SWP_NOACTIVATE or SWP_NOMOVE or SWP_FRAMECHANGED)
-    w.browser.resize(w.browser.ctx.windowHandle)
+    w.resize(w.priv.windowHandle)
 
 proc addUserScriptAtDocumentStart*(w: Webview, js: string): void =
-  w.browser.AddScriptToExecuteOnDocumentCreated(js)
+  w.AddScriptToExecuteOnDocumentCreated(js)
 
 proc webview_dispatch*(w: Webview; fn: pointer; arg: pointer) {.stdcall.} =
   let mainThread = GetCurrentThreadId()
@@ -179,8 +185,8 @@ proc webview_dispatch*(w: Webview; fn: pointer; arg: pointer) {.stdcall.} =
   PostThreadMessage(mainThread, WM_APP, cast[WPARAM](cb.rawEnv), cast[LPARAM](cb.rawProc))
 
 proc addUserScriptAtDocumentEnd*(w: Webview, js: string): void =
-  assert w.browser != nil
-  w.browser.addUserScriptAtiptAtDocumentEnd(js)
+  assert w != nil
+  w.addUserScriptAtiptAtDocumentEnd(js)
 
 when isMainModule:
   SetCurrentProcessExplicitAppUserModelID("webview2 app")

@@ -25,23 +25,23 @@ proc newControllerCompletedHandler(hwnd: HWND;controller: ptr ICoreWebView2Contr
     assert createdController != nil
     var w = cast[Webview](GetWindowLongPtr(self.windowHandle, GWLP_USERDATA))
     
-    w.browser.ctx.controller = createdController
+    w.priv.controller = createdController
     var bounds: RECT
     GetClientRect(self.windowHandle, bounds)
-    discard w.browser.ctx.controller.AddRef()
-    discard w.browser.ctx.controller.put_Bounds( bounds)
-    discard w.browser.ctx.controller.put_IsVisible( true)
-    let hr = w.browser.ctx.controller.get_CoreWebView2( w.browser.ctx.view.addr)
-    discard w.browser.ctx.view.AddRef()
+    discard w.priv.controller.AddRef()
+    discard w.priv.controller.put_Bounds( bounds)
+    discard w.priv.controller.put_IsVisible( true)
+    let hr = w.priv.controller.get_CoreWebView2( w.priv.view.addr)
+    discard w.priv.view.AddRef()
     if S_OK != hr:
       return hr
     w.created = true
-    doAssert w.browser.ctx.view != nil
-    let hr1 = w.browser.ctx.view.get_Settings( w.browser.ctx.settings.addr)
-    discard w.browser.ctx.settings.PutIsScriptEnabled(true)
-    discard w.browser.ctx.settings.PutAreDefaultScriptDialogsEnabled(true)
-    discard w.browser.ctx.settings.PutIsWebMessageEnabled(true)
-    discard w.browser.ctx.settings.PutAreDevToolsEnabled(true)
+    doAssert w.priv.view != nil
+    let hr1 = w.priv.view.get_Settings( w.priv.settings.addr)
+    discard w.priv.settings.PutIsScriptEnabled(true)
+    discard w.priv.settings.PutAreDefaultScriptDialogsEnabled(true)
+    discard w.priv.settings.PutIsWebMessageEnabled(true)
+    discard w.priv.settings.PutAreDevToolsEnabled(true)
     var webMesssageReceivedHandler = create(ICoreWebView2WebMessageReceivedEventHandler)
     webMesssageReceivedHandler.lpVtbl = create(ICoreWebView2WebMessageReceivedEventHandlerVTBL)
     webMesssageReceivedHandler.windowHandle = self.windowHandle
@@ -59,12 +59,12 @@ proc newControllerCompletedHandler(hwnd: HWND;controller: ptr ICoreWebView2Contr
       CoTaskMemFree(source)
     
     var token: EventRegistrationToken
-    discard w.browser.ctx.view.add_WebMessageReceived(webMesssageReceivedHandler, token.addr)
+    discard w.priv.view.add_WebMessageReceived(webMesssageReceivedHandler, token.addr)
     var script = T"""window.external = this; invoke = function(arg){
                    window.chrome.webview.postMessage(arg);
                     };"""
-    discard w.browser.ctx.view.AddScriptToExecuteOnDocumentCreated(&script, NULL)
-    discard w.browser.ctx.view.Navigate(T(w.url))
+    discard w.priv.view.AddScriptToExecuteOnDocumentCreated(&script, NULL)
+    discard w.priv.view.Navigate(T(w.url))
     return S_OK
 
 proc newEnvironmentCompletedHandler*(hwnd: HWND;controllerCompletedHandler: ptr ICoreWebView2CreateCoreWebView2ControllerCompletedHandler): ptr ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler =
@@ -84,15 +84,14 @@ proc newEnvironmentCompletedHandler*(hwnd: HWND;controllerCompletedHandler: ptr 
     assert hr == S_OK
     return hr
 
-proc resize*(b: Browser, hwnd: HWND): void =
+proc resize*(w: WebView; hwnd: HWND): void =
   var bounds: RECT
   let g = GetClientRect(hwnd, bounds)
   doAssert g == TRUE, $GetLastError()
-  doAssert b.ctx.controller != nil
-  discard b.ctx.controller.put_Bounds(bounds)
+  doAssert w.priv.controller != nil
+  discard w.priv.controller.put_Bounds(bounds)
 
-proc embed*(b: Browser; wv: WebView) =
-  b.ctx.windowHandle = wv.window[].handle
+proc embed*( w: WebView) =
   let exePath = getAppFilename()
   var (dir, name, ext) = splitFile(exePath)
   var dataPath = normalizePath(getEnv("AppData") / name)
@@ -101,8 +100,8 @@ proc embed*(b: Browser; wv: WebView) =
   # GetAvailableCoreWebView2BrowserVersionString(NULL, versionInfo.addr)
   # echo versionInfo
   # CoTaskMemFree(versionInfo)
-  var controllerCompletedHandler = newControllerCompletedHandler(b.ctx.windowHandle, b.ctx.controller, b.ctx.view, b.ctx.settings)
-  var environmentCompletedHandler = newEnvironmentCompletedHandler(b.ctx.windowHandle, controllerCompletedHandler)
+  var controllerCompletedHandler = newControllerCompletedHandler(w.priv.windowHandle, w.priv.controller, w.priv.view, w.priv.settings)
+  var environmentCompletedHandler = newEnvironmentCompletedHandler(w.priv.windowHandle, controllerCompletedHandler)
   var options = create(ICoreWebView2EnvironmentOptions)
   options.lpVtbl = create(ICoreWebView2EnvironmentOptionsVTBL)
   options.lpVtbl.QueryInterface = environment_options.QueryInterface
@@ -124,24 +123,24 @@ proc embed*(b: Browser; wv: WebView) =
   doAssert r1 == S_OK, "failed to call CreateCoreWebView2EnvironmentWithOptions"
   # simulate synchronous
   # https://github.com/MicrosoftEdge/WebView2Feedback/issues/740
-  assert wv.created == false
+  assert w.created == false
   var msg: MSG
-  while wv.created == false and GetMessage(msg.addr, 0, 0, 0).bool:
+  while w.created == false and GetMessage(msg.addr, 0, 0, 0).bool:
     TranslateMessage(msg.addr)
     DispatchMessage(msg.addr)
 
-proc navigate*(b: Browser; url: string) =
-  discard b.ctx.view.Navigate(T(url))
+proc navigate*(w: WebView; url: string) =
+  discard w.priv.view.Navigate(T(url))
 
-proc AddScriptToExecuteOnDocumentCreated*(b: Browser; script: string) =
+proc AddScriptToExecuteOnDocumentCreated*(w: WebView; script: string) =
   var script = T(script)
-  discard b.ctx.view.AddScriptToExecuteOnDocumentCreated(&script, NULL)
+  discard w.priv.view.AddScriptToExecuteOnDocumentCreated(&script, NULL)
 
-proc ExecuteScript*(b: Browser; script: string) =
+proc ExecuteScript*(w: WebView; script: string) =
   var script = T(script)
-  discard b.ctx.view.ExecuteScript(&script, NUll)
+  discard w.priv.view.ExecuteScript(&script, NUll)
 
-proc addUserScriptAtiptAtDocumentEnd*(b: Browser; script: string) =
+proc addUserScriptAtiptAtDocumentEnd*(w: WebView; script: string) =
   var token: EventRegistrationToken
   var handler = create(ICoreWebView2DOMContentLoadedEventHandler)
   handler.lpVtbl = create(ICoreWebView2DOMContentLoadedEventHandlerVTBL)
@@ -155,7 +154,7 @@ proc addUserScriptAtiptAtDocumentEnd*(b: Browser; script: string) =
     var script = T(self.script)
     sender.ExecuteScript(&script, NUll)
 
-  discard b.ctx.view.add_DOMContentLoaded(handler, token.addr)
+  discard w.priv.view.add_DOMContentLoaded(handler, token.addr)
 
 # proc saveSetting*(b: Browser;setter:pointer; enabled: bool) =
 #   var flag:clong = 0

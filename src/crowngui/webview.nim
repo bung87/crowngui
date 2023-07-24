@@ -190,7 +190,7 @@ proc run*(w: Webview; quitProc: proc () {.noconv.}; controlCProc: proc () {.noco
 
 proc webView(title = ""; url = ""; width: Positive = 1000; height: Positive = 700; resizable: static[bool] = true;
     debug: static[bool] = not defined(release); callback: ExternalInvokeCb = nil): Webview {.inline.} =
-  result = when defined(windows): newWebview() else: create(WebviewObj)
+  result = create(WebviewObj)
   result.title = title
   result.url = url
   result.width = width
