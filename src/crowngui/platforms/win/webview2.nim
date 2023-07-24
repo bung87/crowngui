@@ -1,9 +1,9 @@
-import webview2/[types,webview,browser,context,dialog]
+import webview2/[types,controllers,context,dialog,com,environment_options,loader]
 import winim
 import winim/inc/winuser
 import winim/[utils]
-import std/[os]
-export types,webview,dialog
+import std/[os, pathnorm]
+export types,dialog
 
 
 const classname = "WebView"
@@ -28,16 +28,16 @@ type WebviewDispatchCtx2 {.pure.} = object
   fn: proc (w: Webview; arg: pointer)
 
 proc terminate*(w: Webview): void
+proc resize*(w: WebView;): void
+proc embed*( w: WebView)
 
 proc wndproc(hwnd: HWND, msg: UINT, wParam: WPARAM, lParam: LPARAM): LRESULT {.stdcall.} =
     var w = cast[Webview](GetWindowLongPtr(hwnd, GWLP_USERDATA))
-
     case msg
       of WM_SIZE:
-
         if w.priv.controller != nil:
           # SetWindowLongPtr trigger WM_SIZE too, controller has not initlization yet
-          w.resize(hwnd)
+          w.resize()
       of WM_CREATE:
         var
           pCreate = cast[ptr CREATESTRUCT](lParam)
@@ -139,16 +139,16 @@ proc destroy*(w: Webview): void =
   w.terminate()
 
 proc setTitle*(w: Webview; title: string ): void =
-  discard SetWindowTextW(w.priv.windowHandle, +$(title))
+  discard SetWindowTextW(w.priv.windowHandle, &T(title))
 
 proc navigate*(w: Webview; urlOrData: string ): void =
-  discard w.priv.view.Navigate(T(urlOrData))
+  discard w.priv.view.Navigate(&T(urlOrData))
 
 proc setHtml*(w: Webview; html: string): void =
-  discard w.priv.view.NavigateToString(T(html))
+  discard w.priv.view.NavigateToString(&T(html))
 
 proc eval*(w: Webview; js: string): void =
-  discard w.priv.view.ExecuteScript(T(js), nil)
+  discard w.priv.view.ExecuteScript(&T(js), nil)
 
 proc setSize*(w: Webview; width: int; height: int; hints: int): void =
   var style = GetWindowLong(w.priv.windowHandle, GWL_STYLE)
@@ -174,19 +174,77 @@ proc setSize*(w: Webview; width: int; height: int; hints: int): void =
     AdjustWindowRect(r.addr, WS_OVERLAPPEDWINDOW, 0)
     discard SetWindowPos(w.priv.windowHandle, 0.HWND, r.left, r.top, r.right - r.left, r.bottom - r.top,
         SWP_NOZORDER or SWP_NOACTIVATE or SWP_NOMOVE or SWP_FRAMECHANGED)
-    w.resize(w.priv.windowHandle)
-
-proc addUserScriptAtDocumentStart*(w: Webview, js: string): void =
-  w.AddScriptToExecuteOnDocumentCreated(js)
+    w.resize()
 
 proc webview_dispatch*(w: Webview; fn: pointer; arg: pointer) {.stdcall.} =
   let mainThread = GetCurrentThreadId()
   var cb = proc() = cast[proc (w: Webview;arg: pointer){.stdcall.}](fn)(w, arg)
   PostThreadMessage(mainThread, WM_APP, cast[WPARAM](cb.rawEnv), cast[LPARAM](cb.rawProc))
 
-proc addUserScriptAtDocumentEnd*(w: Webview, js: string): void =
-  assert w != nil
-  w.addUserScriptAtiptAtDocumentEnd(js)
+proc resize*(w: WebView;): void =
+  var bounds: RECT
+  let g = GetClientRect(w.priv.windowHandle, bounds)
+  doAssert g == TRUE, $GetLastError()
+  doAssert w.priv.controller != nil
+  discard w.priv.controller.put_Bounds(bounds)
+
+proc embed*( w: WebView) =
+  let exePath = getAppFilename()
+  var (dir, name, ext) = splitFile(exePath)
+  var dataPath = normalizePath(getEnv("AppData") / name)
+  createDir(dataPath)
+  # var versionInfo: LPWSTR
+  # GetAvailableCoreWebView2BrowserVersionString(NULL, versionInfo.addr)
+  # echo versionInfo
+  # CoTaskMemFree(versionInfo)
+  var controllerCompletedHandler = newControllerCompletedHandler(w.priv.windowHandle, w.priv.controller, w.priv.view, w.priv.settings)
+  var environmentCompletedHandler = newEnvironmentCompletedHandler(w.priv.windowHandle, controllerCompletedHandler)
+  var options = create(ICoreWebView2EnvironmentOptions)
+  options.lpVtbl = create(ICoreWebView2EnvironmentOptionsVTBL)
+  options.lpVtbl.QueryInterface = environment_options.QueryInterface
+  options.lpVtbl.AddRef = environment_options.AddRef
+  options.lpVtbl.Release = environment_options.Release
+  options.lpVtbl.get_AdditionalBrowserArguments = environment_options.get_AdditionalBrowserArguments
+  options.lpVtbl.put_AdditionalBrowserArguments = environment_options.put_AdditionalBrowserArguments
+  options.lpVtbl.get_Language = environment_options.get_Language
+  options.lpVtbl.put_Language = environment_options.put_Language
+  options.lpVtbl.get_TargetCompatibleBrowserVersion = environment_options.get_TargetCompatibleBrowserVersion
+  options.lpVtbl.put_TargetCompatibleBrowserVersion = environment_options.put_TargetCompatibleBrowserVersion
+  options.lpVtbl.get_AllowSingleSignOnUsingOSPrimaryAccount = environment_options.get_AllowSingleSignOnUsingOSPrimaryAccount
+  options.lpVtbl.put_AllowSingleSignOnUsingOSPrimaryAccount = environment_options.put_AllowSingleSignOnUsingOSPrimaryAccount
+  options.lpVtbl.get_ExclusiveUserDataFolderAccess = environment_options.get_ExclusiveUserDataFolderAccess
+  options.lpVtbl.put_ExclusiveUserDataFolderAccess = environment_options.put_ExclusiveUserDataFolderAccess
+
+  let r1 = CreateCoreWebView2EnvironmentWithOptions("", dataPath, options, environmentCompletedHandler)
+
+  doAssert r1 == S_OK, "failed to call CreateCoreWebView2EnvironmentWithOptions"
+  # simulate synchronous
+  # https://github.com/MicrosoftEdge/WebView2Feedback/issues/740
+  assert w.created == false
+  var msg: MSG
+  while w.created == false and GetMessage(msg.addr, 0, 0, 0).bool:
+    TranslateMessage(msg.addr)
+    DispatchMessage(msg.addr)
+
+proc addUserScriptAtDocumentStart*(w: WebView; script: string) =
+  var script = T(script)
+  discard w.priv.view.AddScriptToExecuteOnDocumentCreated(&script, NULL)
+
+proc addUserScriptAtDocumentEnd*(w: WebView; script: string) =
+  var token: EventRegistrationToken
+  var handler = create(ICoreWebView2DOMContentLoadedEventHandler)
+  handler.lpVtbl = create(ICoreWebView2DOMContentLoadedEventHandlerVTBL)
+  handler.lpVtbl.QueryInterface = icorewebview2domcontentloadedeventhandler.QueryInterface
+  handler.lpVtbl.AddRef = icorewebview2domcontentloadedeventhandler.AddRef
+  handler.lpVtbl.Release = icorewebview2domcontentloadedeventhandler.Release
+  handler.script = script
+  handler.lpVtbl.Invoke = proc (self: ptr ICoreWebView2DOMContentLoadedEventHandler;
+      sender: ptr ICoreWebView2;
+      args: ptr ICoreWebView2DOMContentLoadedEventArgs): HRESULT {.stdcall.} =
+    var script = T(self.script)
+    sender.ExecuteScript(&script, NUll)
+
+  discard w.priv.view.add_DOMContentLoaded(handler, token.addr)
 
 when isMainModule:
   SetCurrentProcessExplicitAppUserModelID("webview2 app")

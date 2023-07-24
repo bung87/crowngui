@@ -10,7 +10,7 @@ from com/icorewebview2domcontentloadedeventhandler import nil
 import std/[os, atomics,pathnorm,sugar,json]
 import loader
 
-proc newControllerCompletedHandler(hwnd: HWND;controller: ptr ICoreWebView2Controller;view: ptr ICoreWebView2; settings: ptr ICoreWebView2Settings): ptr ICoreWebView2CreateCoreWebView2ControllerCompletedHandler =
+proc newControllerCompletedHandler*(hwnd: HWND;controller: ptr ICoreWebView2Controller;view: ptr ICoreWebView2; settings: ptr ICoreWebView2Settings): ptr ICoreWebView2CreateCoreWebView2ControllerCompletedHandler =
   result = create(type result[])
   result.windowHandle = hwnd
   result.lpVtbl = create(ICoreWebView2CreateCoreWebView2ControllerCompletedHandlerVTBL)
@@ -84,77 +84,6 @@ proc newEnvironmentCompletedHandler*(hwnd: HWND;controllerCompletedHandler: ptr 
     assert hr == S_OK
     return hr
 
-proc resize*(w: WebView; hwnd: HWND): void =
-  var bounds: RECT
-  let g = GetClientRect(hwnd, bounds)
-  doAssert g == TRUE, $GetLastError()
-  doAssert w.priv.controller != nil
-  discard w.priv.controller.put_Bounds(bounds)
-
-proc embed*( w: WebView) =
-  let exePath = getAppFilename()
-  var (dir, name, ext) = splitFile(exePath)
-  var dataPath = normalizePath(getEnv("AppData") / name)
-  createDir(dataPath)
-  # var versionInfo: LPWSTR
-  # GetAvailableCoreWebView2BrowserVersionString(NULL, versionInfo.addr)
-  # echo versionInfo
-  # CoTaskMemFree(versionInfo)
-  var controllerCompletedHandler = newControllerCompletedHandler(w.priv.windowHandle, w.priv.controller, w.priv.view, w.priv.settings)
-  var environmentCompletedHandler = newEnvironmentCompletedHandler(w.priv.windowHandle, controllerCompletedHandler)
-  var options = create(ICoreWebView2EnvironmentOptions)
-  options.lpVtbl = create(ICoreWebView2EnvironmentOptionsVTBL)
-  options.lpVtbl.QueryInterface = environment_options.QueryInterface
-  options.lpVtbl.AddRef = environment_options.AddRef
-  options.lpVtbl.Release = environment_options.Release
-  options.lpVtbl.get_AdditionalBrowserArguments = environment_options.get_AdditionalBrowserArguments
-  options.lpVtbl.put_AdditionalBrowserArguments = environment_options.put_AdditionalBrowserArguments
-  options.lpVtbl.get_Language = environment_options.get_Language
-  options.lpVtbl.put_Language = environment_options.put_Language
-  options.lpVtbl.get_TargetCompatibleBrowserVersion = environment_options.get_TargetCompatibleBrowserVersion
-  options.lpVtbl.put_TargetCompatibleBrowserVersion = environment_options.put_TargetCompatibleBrowserVersion
-  options.lpVtbl.get_AllowSingleSignOnUsingOSPrimaryAccount = environment_options.get_AllowSingleSignOnUsingOSPrimaryAccount
-  options.lpVtbl.put_AllowSingleSignOnUsingOSPrimaryAccount = environment_options.put_AllowSingleSignOnUsingOSPrimaryAccount
-  options.lpVtbl.get_ExclusiveUserDataFolderAccess = environment_options.get_ExclusiveUserDataFolderAccess
-  options.lpVtbl.put_ExclusiveUserDataFolderAccess = environment_options.put_ExclusiveUserDataFolderAccess
-
-  let r1 = CreateCoreWebView2EnvironmentWithOptions("", dataPath, options, environmentCompletedHandler)
-
-  doAssert r1 == S_OK, "failed to call CreateCoreWebView2EnvironmentWithOptions"
-  # simulate synchronous
-  # https://github.com/MicrosoftEdge/WebView2Feedback/issues/740
-  assert w.created == false
-  var msg: MSG
-  while w.created == false and GetMessage(msg.addr, 0, 0, 0).bool:
-    TranslateMessage(msg.addr)
-    DispatchMessage(msg.addr)
-
-proc navigate*(w: WebView; url: string) =
-  discard w.priv.view.Navigate(T(url))
-
-proc AddScriptToExecuteOnDocumentCreated*(w: WebView; script: string) =
-  var script = T(script)
-  discard w.priv.view.AddScriptToExecuteOnDocumentCreated(&script, NULL)
-
-proc ExecuteScript*(w: WebView; script: string) =
-  var script = T(script)
-  discard w.priv.view.ExecuteScript(&script, NUll)
-
-proc addUserScriptAtiptAtDocumentEnd*(w: WebView; script: string) =
-  var token: EventRegistrationToken
-  var handler = create(ICoreWebView2DOMContentLoadedEventHandler)
-  handler.lpVtbl = create(ICoreWebView2DOMContentLoadedEventHandlerVTBL)
-  handler.lpVtbl.QueryInterface = icorewebview2domcontentloadedeventhandler.QueryInterface
-  handler.lpVtbl.AddRef = icorewebview2domcontentloadedeventhandler.AddRef
-  handler.lpVtbl.Release = icorewebview2domcontentloadedeventhandler.Release
-  handler.script = script
-  handler.lpVtbl.Invoke = proc (self: ptr ICoreWebView2DOMContentLoadedEventHandler;
-      sender: ptr ICoreWebView2;
-      args: ptr ICoreWebView2DOMContentLoadedEventArgs): HRESULT {.stdcall.} =
-    var script = T(self.script)
-    sender.ExecuteScript(&script, NUll)
-
-  discard w.priv.view.add_DOMContentLoaded(handler, token.addr)
 
 # proc saveSetting*(b: Browser;setter:pointer; enabled: bool) =
 #   var flag:clong = 0

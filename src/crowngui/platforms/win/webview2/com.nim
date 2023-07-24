@@ -7,7 +7,8 @@ import ./com/[
 icorewebview2createcorewebview2controllercompletedhandler,
   icorewebview2webmessagereceivedeventargs,
   icorewebview2createcorewebview2environmentcompletedhandler,
-  icorewebview2domcontentloadedeventargs
+  icorewebview2domcontentloadedeventargs,
+  icorewebview2domcontentloadedeventhandler
   ]
 export
   icorewebview2,
@@ -17,4 +18,5 @@ export
   icorewebview2createcorewebview2controllercompletedhandler,
   icorewebview2webmessagereceivedeventargs,
   icorewebview2createcorewebview2environmentcompletedhandler,
-  icorewebview2domcontentloadedeventargs
+  icorewebview2domcontentloadedeventargs,
+  icorewebview2domcontentloadedeventhandler
