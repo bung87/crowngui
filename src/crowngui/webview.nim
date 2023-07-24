@@ -91,7 +91,6 @@ proc bindProc[P, R](w: Webview; scope, name: string; p: (proc(param: P): R)): st
   discard eps.hasKeyOrPut(w, newTable[string, TableRef[string, CallHook]]())
   discard hasKeyOrPut(eps[w], scope, newTable[string, CallHook]())
   eps[w][scope][name] = hook
-  # w.dispatch(proc() = discard w.addUserScriptAtDocumentEnd(jsTemplate % [name, scope]))
   return jsTemplate % [name, scope]
 
 proc bindProcNoArg(w: Webview; scope, name: string; p: proc()): string {.used.} =
@@ -102,7 +101,6 @@ proc bindProcNoArg(w: Webview; scope, name: string; p: proc()): string {.used.} 
   discard eps.hasKeyOrPut(w, newTable[string, TableRef[string, CallHook]]())
   discard hasKeyOrPut(eps[w], scope, newTable[string, CallHook]())
   eps[w][scope][name] = hook
-  # w.dispatch(proc() = w.addUserScriptAtDocumentEnd(jsTemplateNoArg % [name, scope]))
   return jsTemplateNoArg % [name, scope]
 
 proc bindProc[P](w: Webview; scope, name: string; p: proc(arg: P)): string {.used.} =
@@ -120,7 +118,6 @@ proc bindProc[P](w: Webview; scope, name: string; p: proc(arg: P)): string {.use
   discard eps.hasKeyOrPut(w, newTable[string, TableRef[string, CallHook]]())
   discard hasKeyOrPut(eps[w], scope, newTable[string, CallHook]())
   eps[w][scope][name] = hook
-  # w.dispatch(proc() = w.addUserScriptAtDocumentEnd(jsTemplateOnlyArg % [name, scope]))
   return jsTemplateOnlyArg % [name, scope]
 
 macro bindProcs*(w: Webview; scope: string; n: untyped): untyped =
