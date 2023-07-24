@@ -3,18 +3,17 @@ import ../com_wrapper
 import ./icorewebview2settings
 import ./icorewebview2addscripttoexecuteondocumentcreatedcompletedhandler
 import ./icorewebview2executescriptcompletedhandler
-# import ./icorewebview2webmessagereceivedeventhandler
 import ./icorewebview2webmessagereceivedeventargs
+import ./icorewebview2domcontentloadedeventargs
+
 type
   EventRegistrationToken* {.pure.} = object
     value*: int64
-define_COM_interface:
 
+define_COM_interface:
     type
-    # # https://learn.microsoft.com/en-us/microsoft-edge/webview2/reference/win32/icorewebview2?view=webview2-1.0.1823.32
-    # ICoreWebView2* {.pure.} = object
-    #     lpVtbl*: ptr ICoreWebView2VTBL
       ICoreWebView2* {.pure.} = object
+        #   https://learn.microsoft.com/en-us/microsoft-edge/webview2/reference/win32/icorewebview2?view=webview2-1.0.1823.32
         QueryInterface*: proc(self: ptr ICoreWebView2;
             riid: REFIID; ppvObject: ptr pointer): HRESULT {.stdcall.}
         AddRef*: proc (self: ptr ICoreWebView2): ULONG {.stdcall.}
@@ -87,7 +86,7 @@ define_COM_interface:
         add_WebResourceResponseReceived*: proc(self): HRESULT {.stdcall.}
         remove_WebResourceResponseReceived*: proc(self): HRESULT {.stdcall.}
         NavigateWithWebResourceRequest*: proc(self): HRESULT {.stdcall.}
-        add_DOMContentLoaded*: proc(self: ptr ICoreWebView2;): HRESULT {.stdcall.}
+        add_DOMContentLoaded*: proc(self; eventHandler: ptr ICoreWebView2DOMContentLoadedEventHandler; token: ptr EventRegistrationToken): HRESULT {.stdcall.}
         remove_DOMContentLoaded*: proc(self): HRESULT {.stdcall.}
         get_CookieManager*: proc(self): HRESULT {.stdcall.}
         get_Environment*: proc(self): HRESULT {.stdcall.}
@@ -168,3 +167,10 @@ define_COM_interface:
         Release*: proc (self): ULONG {.stdcall.}
         Invoke*: proc (self; sender: ptr ICoreWebView2; args: ptr ICoreWebView2WebMessageReceivedEventArgs) {.stdcall.}
         windowHandle*: HWND
+
+      ICoreWebView2DOMContentLoadedEventHandler* {.pure.} = object
+        QueryInterface*: proc(self; riid: REFIID; ppvObject: ptr pointer): HRESULT {.stdcall.}
+        AddRef*: proc (self): ULONG {.stdcall.}
+        Release*: proc (self): ULONG {.stdcall.}
+        Invoke*: proc (self; sender: ptr ICoreWebView2; args: ptr ICoreWebView2DOMContentLoadedEventArgs): HRESULT {.stdcall.}
+        script*: string

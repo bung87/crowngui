@@ -6,6 +6,7 @@ from environment_completed_handler import nil
 from controller_completed_handler import nil
 from environment_options import nil
 from web_message_received_handler import nil
+from com/icorewebview2domcontentloadedeventhandler import nil
 import std/[os, atomics,pathnorm,sugar,json]
 import loader
 
@@ -65,7 +66,7 @@ proc newControllerCompletedHandler(hwnd: HWND;controller: ptr ICoreWebView2Contr
       CoTaskMemFree(source)
     
     var token: EventRegistrationToken
-    discard w.browser.ctx.view.lpVtbl.add_WebMessageReceived(w.browser.ctx.view, webMesssageReceivedHandler, token)
+    discard w.browser.ctx.view.lpVtbl.add_WebMessageReceived(w.browser.ctx.view, webMesssageReceivedHandler, token.addr)
     var script = T"""window.external = this; invoke = function(arg){
                    window.chrome.webview.postMessage(arg);
                     };"""
@@ -150,7 +151,21 @@ proc ExecuteScript*(b: Browser; script: string) =
   discard b.ctx.view.lpVtbl.ExecuteScript(b.ctx.view, &script, NUll)
 
 proc addUserScriptAtiptAtDocumentEnd*(b: Browser; script: string) =
-  b.AddScriptToExecuteOnDocumentCreated(script)
+  var token: EventRegistrationToken
+  var handler = create(ICoreWebView2DOMContentLoadedEventHandler)
+  handler.lpVtbl = create(ICoreWebView2DOMContentLoadedEventHandlerVTBL)
+  handler.lpVtbl.QueryInterface = icorewebview2domcontentloadedeventhandler.QueryInterface
+  handler.lpVtbl.AddRef = icorewebview2domcontentloadedeventhandler.AddRef
+  handler.lpVtbl.Release = icorewebview2domcontentloadedeventhandler.Release
+  handler.script = script
+  handler.lpVtbl.Invoke = proc (self: ptr ICoreWebView2DOMContentLoadedEventHandler;
+      sender: ptr ICoreWebView2;
+      args: ptr ICoreWebView2DOMContentLoadedEventArgs): HRESULT {.stdcall.} =
+    var script = T(self.script)
+    echo self.script
+    sender.lpVtbl.ExecuteScript(sender, &script, NUll)
+
+  discard b.ctx.view.lpVtbl.add_DOMContentLoaded(b.ctx.view, handler , token.addr)
 
 # proc saveSetting*(b: Browser;setter:pointer; enabled: bool) =
 #   var flag:clong = 0

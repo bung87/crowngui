@@ -1,4 +1,4 @@
-window.addEventListener("DOMContentLoaded", (event) => {
+// window.addEventListener("DOMContentLoaded", (event) => {
   
 document.getElementById("btn1").addEventListener('click', e => {
   api.info({
@@ -30,4 +30,4 @@ document.getElementById("btn5").addEventListener('click', e => {
 api.saveFile();
 });
 
-});
+// });
