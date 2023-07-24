@@ -64,7 +64,7 @@ proc newControllerCompletedHandler(hwnd: HWND;controller: ptr ICoreWebView2Contr
                    window.chrome.webview.postMessage(arg);
                     };"""
     discard w.browser.ctx.view.AddScriptToExecuteOnDocumentCreated(&script, NULL)
-    discard w.browser.ctx.view.Navigate(L(w.url))
+    discard w.browser.ctx.view.Navigate(T(w.url))
     return S_OK
 
 proc newEnvironmentCompletedHandler*(hwnd: HWND;controllerCompletedHandler: ptr ICoreWebView2CreateCoreWebView2ControllerCompletedHandler): ptr ICoreWebView2CreateCoreWebView2EnvironmentCompletedHandler =
@@ -131,7 +131,7 @@ proc embed*(b: Browser; wv: WebView) =
     DispatchMessage(msg.addr)
 
 proc navigate*(b: Browser; url: string) =
-  discard b.ctx.view.Navigate(+$(url))
+  discard b.ctx.view.Navigate(T(url))
 
 proc AddScriptToExecuteOnDocumentCreated*(b: Browser; script: string) =
   var script = T(script)

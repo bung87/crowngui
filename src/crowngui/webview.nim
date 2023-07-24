@@ -75,8 +75,7 @@ proc dispatch*(w: Webview; fn: DispatchFn) {.inline.} =
   dispatchTable[idx] = fn
   webview_dispatch(w, generalDispatchProc, cast[pointer](idx))
 
-proc bindProc*[P, R](w: Webview; scope, name: string; p: (proc(param: P): R)) {.used.} =
-  ## Do NOT use directly, see `bindProcs` macro.
+proc bindProc[P, R](w: Webview; scope, name: string; p: (proc(param: P): R)): string {.used.} =
   assert name.len > 0, "Name must not be empty string"
   proc hook(hookParam: string): string =
     var paramVal: P
@@ -92,10 +91,10 @@ proc bindProc*[P, R](w: Webview; scope, name: string; p: (proc(param: P): R)) {.
   discard eps.hasKeyOrPut(w, newTable[string, TableRef[string, CallHook]]())
   discard hasKeyOrPut(eps[w], scope, newTable[string, CallHook]())
   eps[w][scope][name] = hook
-  w.dispatch(proc() = discard w.eval(jsTemplate % [name, scope]))
+  # w.dispatch(proc() = discard w.addUserScriptAtDocumentEnd(jsTemplate % [name, scope]))
+  return jsTemplate % [name, scope]
 
-proc bindProcNoArg*(w: Webview; scope, name: string; p: proc()) {.used.} =
-  ## Do NOT use directly, see `bindProcs` macro.
+proc bindProcNoArg(w: Webview; scope, name: string; p: proc()): string {.used.} =
   assert name.len > 0, "Name must not be empty string"
   proc hook(hookParam: string): string =
     p()
@@ -103,9 +102,10 @@ proc bindProcNoArg*(w: Webview; scope, name: string; p: proc()) {.used.} =
   discard eps.hasKeyOrPut(w, newTable[string, TableRef[string, CallHook]]())
   discard hasKeyOrPut(eps[w], scope, newTable[string, CallHook]())
   eps[w][scope][name] = hook
-  w.dispatch(proc() = w.addUserScriptAtDocumentEnd(jsTemplateNoArg % [name, scope]))
+  # w.dispatch(proc() = w.addUserScriptAtDocumentEnd(jsTemplateNoArg % [name, scope]))
+  return jsTemplateNoArg % [name, scope]
 
-proc bindProc*[P](w: Webview; scope, name: string; p: proc(arg: P)) {.used.} =
+proc bindProc[P](w: Webview; scope, name: string; p: proc(arg: P)): string {.used.} =
   ## Do NOT use directly, see `bindProcs` macro.
   assert name.len > 0, "Name must not be empty string"
   proc hook(hookParam: string): string =
@@ -120,7 +120,8 @@ proc bindProc*[P](w: Webview; scope, name: string; p: proc(arg: P)) {.used.} =
   discard eps.hasKeyOrPut(w, newTable[string, TableRef[string, CallHook]]())
   discard hasKeyOrPut(eps[w], scope, newTable[string, CallHook]())
   eps[w][scope][name] = hook
-  w.dispatch(proc() = w.addUserScriptAtDocumentEnd(jsTemplateOnlyArg % [name, scope]))
+  # w.dispatch(proc() = w.addUserScriptAtDocumentEnd(jsTemplateOnlyArg % [name, scope]))
+  return jsTemplateOnlyArg % [name, scope]
 
 macro bindProcs*(w: Webview; scope: string; n: untyped): untyped =
   ## * Functions must be `proc` or `func`; No `template` nor `macro`.
@@ -152,19 +153,34 @@ macro bindProcs*(w: Webview; scope: string; n: untyped): untyped =
   ##
   ## The only limitation is `1` string argument only, but you can just use JSON.
   expectKind(n, nnkStmtList)
+  result = nnkStmtList.newTree()
   let body = n
+  var jsIdent = genSym(nskVar)
+  var jsStr = nnkVarSection.newTree(
+    nnkIdentDefs.newTree(
+      jsIdent,
+      newIdentNode("string"),
+      newLit("")
+    )
+  )
+  result.add jsStr
   for def in n:
     expectKind(def, {nnkProcDef, nnkFuncDef, nnkLambda})
     let params = def.params()
     let fname = $def[0]
     # expectKind(params[0], nnkSym)
     if params.len() == 1 and params[0].kind() == nnkEmpty: # no args
-      body.add(newCall("bindProcNoArg", w, scope, newLit(fname), newIdentNode(fname)))
+      var bindCall = newCall(bindSym"bindProcNoArg", w, scope, newLit(fname), newIdentNode(fname))
+      body.add(newCall("add", jsIdent, bindCall))
       continue
     if params.len > 2: error("Argument must be proc or func of 0 or 1 arguments", def)
-    body.add(newCall("bindProc", w, scope, newLit(fname), newIdentNode(fname)))
-  result = newBlockStmt(body)
-  # when not defined(release): echo repr(result)
+    var bindCall = newCall(bindSym"bindProc", w, scope, newLit(fname), newIdentNode(fname))
+    body.add(newCall("add", jsIdent, bindCall))
+  result.add newBlockStmt(body)
+  let w2 = w
+  result.add(quote do:
+    `w2`.dispatch(proc() = `w2`.addUserScriptAtDocumentEnd(`jsIdent`))
+  )
 
 proc run*(w: Webview; quitProc: proc () {.noconv.}; controlCProc: proc () {.noconv.}) {.inline.} =
   ## `run` starts the main UI loop until the user closes the window. Same as `run` but with extras.
