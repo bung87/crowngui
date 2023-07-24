@@ -45,9 +45,14 @@ macro define_COM_interface*(stmts: untyped) =
         expectKind(formalParams[1], nnkIdentDefs)
         # self type
         formalParams[1][1] = nnkPtrTy.newTree(newIdentNode(name))
+        # wrap vtbl methods to ptr type
+        var procName = d[0][^1].copy
+        if procName.strVal == "Invoke":
+          # Invoke called from com side, by passing handler, no need wrap
+          continue
         var params  = d[^2].params.copy
         var pragma = d[^2].pragma.copy
-        var procName = d[0][^1].copy
+        
         var call = nnkCall.newTree(
             nnkDotExpr.newTree(
               nnkDotExpr.newTree(
