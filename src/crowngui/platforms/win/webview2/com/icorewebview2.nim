@@ -167,3 +167,4 @@ define_COM_interface:
         AddRef*: proc (self): ULONG {.stdcall.}
         Release*: proc (self): ULONG {.stdcall.}
         Invoke*: proc (self; sender: ptr ICoreWebView2; args: ptr ICoreWebView2WebMessageReceivedEventArgs) {.stdcall.}
+        windowHandle*: HWND

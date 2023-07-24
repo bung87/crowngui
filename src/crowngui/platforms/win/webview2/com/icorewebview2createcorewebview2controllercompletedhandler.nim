@@ -9,3 +9,4 @@ define_COM_interface:
       AddRef*: proc (self): ULONG {.stdcall.}
       Release*: proc (self): ULONG {.stdcall.}
       Invoke*: proc (self; errorCode: HRESULT; createdController: ptr ICoreWebView2Controller): HRESULT {.stdcall.}
+      windowHandle*: HWND
