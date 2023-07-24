@@ -6,8 +6,6 @@ const GUID = DEFINE_GUID"6C4819F3-C9B7-4260-8127-C9F5BDE7F68C"
 using
   self: ptr ICoreWebView2CreateCoreWebView2ControllerCompletedHandler
 
-
-
 proc AddRef*(self): ULONG {.stdcall.} =
   return 1
 

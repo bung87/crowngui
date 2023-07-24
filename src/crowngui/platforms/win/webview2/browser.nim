@@ -10,12 +10,6 @@ from com/icorewebview2domcontentloadedeventhandler import nil
 import std/[os, atomics,pathnorm,sugar,json]
 import loader
 
-const  IID_ICoreWebView2Controller2 = DEFINE_GUID"C979903E-D4CA-4228-92EB-47EE3FA96EAB"
-
-using
-  self: ptr ICoreWebView2CreateCoreWebView2ControllerCompletedHandler
-
-
 proc newControllerCompletedHandler(hwnd: HWND;controller: ptr ICoreWebView2Controller;view: ptr ICoreWebView2; settings: ptr ICoreWebView2Settings): ptr ICoreWebView2CreateCoreWebView2ControllerCompletedHandler =
   result = create(type result[])
   result.windowHandle = hwnd
@@ -29,7 +23,6 @@ proc newControllerCompletedHandler(hwnd: HWND;controller: ptr ICoreWebView2Contr
     if errorCode != S_OK:
       return errorCode
     assert createdController != nil
-    # discard createdController.lpVtbl.QueryInterface(createdController, IID_ICoreWebView2Controller2.unsafeAddr, cast[ptr pointer](controller))
     var w = cast[Webview](GetWindowLongPtr(self.windowHandle, GWLP_USERDATA))
     
     w.browser.ctx.controller = createdController
@@ -162,7 +155,6 @@ proc addUserScriptAtiptAtDocumentEnd*(b: Browser; script: string) =
       sender: ptr ICoreWebView2;
       args: ptr ICoreWebView2DOMContentLoadedEventArgs): HRESULT {.stdcall.} =
     var script = T(self.script)
-    echo self.script
     sender.lpVtbl.ExecuteScript(sender, &script, NUll)
 
   discard b.ctx.view.lpVtbl.add_DOMContentLoaded(b.ctx.view, handler , token.addr)

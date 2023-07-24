@@ -7,7 +7,6 @@ const GUID = DEFINE_GUID"2FDE08A8-1E9A-4766-8C05-95A9CEB9D1C5"
 using
   self: ptr ICoreWebView2EnvironmentOptions
 
-
 proc QueryInterface*(self; riid: REFIID; ppvObject: ptr pointer): HRESULT {.stdcall.} =
   if ppvObject == nil:
     return E_NOINTERFACE
