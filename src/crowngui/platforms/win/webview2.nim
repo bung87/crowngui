@@ -171,6 +171,7 @@ proc setSize*(w: Webview; width: int; height: int; hints: int): void =
     w.browser.resize(w.browser.ctx.windowHandle)
 
 proc addUserScriptAtDocumentStart*(w: Webview, js: string): void =
+  echo js
   w.browser.AddScriptToExecuteOnDocumentCreated(js)
 
 proc webview_dispatch*(w: Webview; fn: pointer; arg: pointer) {.stdcall.} =

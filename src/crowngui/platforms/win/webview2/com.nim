@@ -1,6 +1,7 @@
 import winim/inc/windef
 
-import ./com/icorewebview2environmentoptions
+import ./com/[icorewebview2environmentoptions,icorewebview2settings]
+export icorewebview2environmentoptions,icorewebview2settings
 
 type
   # https://learn.microsoft.com/en-us/microsoft-edge/webview2/reference/win32/icorewebview2?view=webview2-1.0.1823.32
@@ -157,7 +158,12 @@ type
   ICoreWebView2Environment* {.pure.} = object
     lpVtbl*: ptr ICoreWebView2EnvironmentVTBL
 
-  ICoreWebView2EnvironmentVTBL* = object of IUnknownVtbl
+  ICoreWebView2EnvironmentVTBL* = object
+    QueryInterface*: proc(self: ptr ICoreWebView2Environment;
+        riid: REFIID; ppvObject: ptr pointer): HRESULT {.stdcall.}
+    AddRef*: proc (self: ptr ICoreWebView2Environment): ULONG {.stdcall.}
+    Release*: proc (self: ptr ICoreWebView2Environment): ULONG {.stdcall.}
+
     CreateCoreWebView2Controller*: proc (self: ptr ICoreWebView2Environment;
         parentWindow: HWND;
         handler: ptr ICoreWebView2CreateCoreWebView2ControllerCompletedHandler): HRESULT {.stdcall.}
@@ -228,7 +234,11 @@ type
 
   ICoreWebView2WebMessageReceivedEventArgs* {.pure.} = object
     lpVtbl*: ptr ICoreWebView2WebMessageReceivedEventArgsVTBL
-  ICoreWebView2WebMessageReceivedEventArgsVTBL* = object of IUnknownVtbl
+  ICoreWebView2WebMessageReceivedEventArgsVTBL* = object
+    QueryInterface*: proc(self: ptr ICoreWebView2WebMessageReceivedEventArgs;
+        riid: REFIID; ppvObject: ptr pointer): HRESULT {.stdcall.}
+    AddRef*: proc (self: ptr ICoreWebView2WebMessageReceivedEventArgs): ULONG {.stdcall.}
+    Release*: proc (self: ptr ICoreWebView2WebMessageReceivedEventArgs): ULONG {.stdcall.}
     get_Source*: proc (self: ptr ICoreWebView2WebMessageReceivedEventArgs; source: ptr LPWSTR): HRESULT {.stdcall.}
     get_WebMessageAsJson*: proc (self: ptr ICoreWebView2WebMessageReceivedEventArgs; source: ptr LPWSTR): HRESULT {.stdcall.}
     TryGetWebMessageAsString*: proc (self: ptr ICoreWebView2WebMessageReceivedEventArgs; source: ptr LPWSTR): HRESULT {.stdcall.}
@@ -265,10 +275,19 @@ type
     lpVtbl*: ptr ICoreWebView2ExecuteScriptCompletedHandlerVTBL
   ICoreWebView2AddScriptToExecuteOnDocumentCreatedCompletedHandler* {.pure.} = object
     lpVtbl*: ptr ICoreWebView2AddScriptToExecuteOnDocumentCreatedCompletedHandlerVTBL
-  ICoreWebView2AddScriptToExecuteOnDocumentCreatedCompletedHandlerVTBL* = object of IUnknownVtbl
+  ICoreWebView2AddScriptToExecuteOnDocumentCreatedCompletedHandlerVTBL* = object
+    QueryInterface*: proc(self: ptr ICoreWebView2AddScriptToExecuteOnDocumentCreatedCompletedHandler;
+        riid: REFIID; ppvObject: ptr pointer): HRESULT {.stdcall.}
+    AddRef*: proc (self: ptr ICoreWebView2AddScriptToExecuteOnDocumentCreatedCompletedHandler): ULONG {.stdcall.}
+    Release*: proc (self: ptr ICoreWebView2AddScriptToExecuteOnDocumentCreatedCompletedHandler): ULONG {.stdcall.}
+
     Invoke*: proc (self: ptr ICoreWebView2AddScriptToExecuteOnDocumentCreatedCompletedHandler;
         errorCode: HRESULT; id: LPCWSTR) {.stdcall.}
-  ICoreWebView2ExecuteScriptCompletedHandlerVTBL * = object of IUnknownVtbl
+  ICoreWebView2ExecuteScriptCompletedHandlerVTBL * = object
+    QueryInterface*: proc(self: ptr ICoreWebView2ExecuteScriptCompletedHandler;
+        riid: REFIID; ppvObject: ptr pointer): HRESULT {.stdcall.}
+    AddRef*: proc (self: ptr ICoreWebView2ExecuteScriptCompletedHandler): ULONG {.stdcall.}
+    Release*: proc (self: ptr ICoreWebView2ExecuteScriptCompletedHandler): ULONG {.stdcall.}
     Invoke*: proc (self: ICoreWebView2ExecuteScriptCompletedHandler;
         errorCode: HRESULT; resultObjectAsJson: LPCWSTR) {.stdcall.}
 
@@ -282,42 +301,4 @@ type
   ICoreWebView2CreateCoreWebView2ControllerCompletedHandlerInvoke* = proc (
       i: ptr ICoreWebView2CreateCoreWebView2ControllerCompletedHandler;
       errorCode: HRESULT; createdController: ptr ICoreWebView2Controller): HRESULT {.stdcall.}
-  ICoreWebView2SettingsVTBL* = object of IUnknownVtbl
-    GetIsScriptEnabled*: proc (self: ptr ICoreWebView2Settings;
-        enabled: ptr bool): HRESULT {.stdcall.}
-    PutIsScriptEnabled*: proc (self: ptr ICoreWebView2Settings;
-        enabled: bool): HRESULT {.stdcall.}
-    GetIsWebMessageEnabled*: proc (self: ptr ICoreWebView2Settings;
-        enabled: ptr bool): HRESULT {.stdcall.}
-    PutIsWebMessageEnabled*: proc (self: ptr ICoreWebView2Settings;
-        enabled: bool): HRESULT {.stdcall.}
-    GetAreDefaultScriptDialogsEnabled*: proc (self: ptr ICoreWebView2Settings;
-        enabled: ptr bool): HRESULT {.stdcall.}
-    PutAreDefaultScriptDialogsEnabled*: proc (self: ptr ICoreWebView2Settings;
-        enabled: bool): HRESULT {.stdcall.}
-    GetIsStatusBarEnabled*: proc (self: ptr ICoreWebView2Settings;
-        enabled: ptr bool): HRESULT {.stdcall.}
-    PutIsStatusBarEnabled*: proc (self: ptr ICoreWebView2Settings;
-        enabled: bool): HRESULT {.stdcall.}
-    GetAreDevToolsEnabled*: proc (self: ptr ICoreWebView2Settings;
-        areDevToolsEnabled: ptr bool): HRESULT {.stdcall.}
-    PutAreDevToolsEnabled*: proc (self: ptr ICoreWebView2Settings;
-        areDevToolsEnabled: bool): HRESULT
-    GetAreDefaultContextMenusEnabled*: proc (self: ptr ICoreWebView2Settings;
-        enabled: ptr bool): HRESULT {.stdcall.}
-    PutAreDefaultContextMenusEnabled*: proc (self: ptr ICoreWebView2Settings;
-        enabled: bool): HRESULT {.stdcall.}
-    GetAreHostObjectsAllowed*: proc (self: ptr ICoreWebView2Settings;
-        allowed: ptr bool): HRESULT {.stdcall.}
-    PutAreHostObjectsAllowed*: proc (self: ptr ICoreWebView2Settings;
-        allowed: bool): HRESULT {.stdcall.}
-    GetIsZoomControlEnabled*: proc (self: ptr ICoreWebView2Settings;
-        enabled: ptr bool): HRESULT {.stdcall.}
-    PutIsZoomControlEnabled*: proc (self: ptr ICoreWebView2Settings;
-        enabled: bool): HRESULT {.stdcall.}
-    GetIsBuiltInErrorPageEnabled*: proc (self: ptr ICoreWebView2Settings;
-        enabled: ptr bool): HRESULT {.stdcall.}
-    PutIsBuiltInErrorPageEnabled*: proc (self: ptr ICoreWebView2Settings;
-        enabled: bool): HRESULT {.stdcall.}
-  ICoreWebView2Settings* {.pure.} = object
-    lpVtbl*: ptr ICoreWebView2SettingsVTBL
+

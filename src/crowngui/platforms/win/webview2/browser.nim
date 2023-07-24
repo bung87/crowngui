@@ -142,6 +142,7 @@ proc navigate*(b: Browser; url: string) =
   discard b.ctx.view.lpVtbl.Navigate(b.ctx.view, +$(url))
 
 proc AddScriptToExecuteOnDocumentCreated*(b: Browser; script: string) =
+  echo script
   var script = T(script)
   discard b.ctx.view.lpVtbl.AddScriptToExecuteOnDocumentCreated(b.ctx.view, &script, NULL)
 
