@@ -3,6 +3,7 @@ import winim
 import winim/inc/winuser
 import winim/[utils]
 import std/[os, pathnorm]
+import ./dpi_util
 export types,dialog
 
 
@@ -86,6 +87,7 @@ proc  webview_init*(w: Webview): cint =
   rect.left = left
   rect.bottom = rect.bottom - rect.top + top
   rect.top = top
+  setDpiAwareness(DPI_AWARENESS_CONTEXT_SYSTEM_AWARE)
   w.priv.windowHandle = CreateWindowW(classname, w.title, style, rect.left, rect.top,
     rect.right - rect.left, rect.bottom - rect.top,
     HWND_DESKTOP, cast[HMENU](NULL), hInstance, cast[LPVOID](w))
@@ -96,7 +98,6 @@ proc  webview_init*(w: Webview): cint =
   # SetWindowLongPtr(w.priv.windowHandle, GWLP_USERDATA, cast[LONG_PTR](w))
   # webviewContext.set(w.priv.windowHandle, w)
   # discard DisplayHTMLPage(w)
-
   SetWindowText(w.priv.windowHandle, w.title)
   ShowWindow(w.priv.windowHandle, SW_SHOW)
   UpdateWindow(w.priv.windowHandle)
