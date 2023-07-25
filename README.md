@@ -8,7 +8,37 @@ Notice: I mainly work on macOS, also it has well document of Cocoa/WebKit,
  contribute to Linux and Windows are welcome, the windows binding will change to Edge and webview2 api in the future.
 
 CLI tool:  
-[crowncli](https://github.com/bung87/crowncli) for build application.   
+[crowncli](https://github.com/bung87/crowncli) for build application. 
+
+## Architecture
+
+### how bindProcs works?  
+
+figure generated via asciiflow  
+
+```
+
+┌─────────────┐         ┌──────────────────────────────┐       ┌─────────────────────────┐
+│             │         │                              │       │                         │
+│             │         │store hook function           │       │when trigger js function │
+│             │         │hook accept one string param  │       │internally it use browser│
+│  bindProcs  ├────────►│and returns string that wraps ├──────►│postMessage api send     │
+│             │         │nim proc call                 │       │json string with scope,  │
+│             │         │gen rate js function call and │       │name,argument            │
+│             │         │dispatch to main queue        │       │                         │
+└─────────────┘         └──────────────────────────────┘       └────────────┬────────────┘
+                                                                            │
+                                                                            ▼
+                        ┌────────────────────────────────────────────────────┐
+                        │browser add callback when received message          │
+                        │it calls Webview's invokeCb which implements        │
+                        │as generalExternalInvokeCallback                    │
+                        │it parse argument as json retrieve scope,           │
+                        │name,argument,then call the hook stored             │
+                        │                                                    │
+                        └────────────────────────────────────────────────────┘
+
+```
 
 ## Usage  
 file: yourexecutable.nim  
