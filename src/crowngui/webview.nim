@@ -201,7 +201,7 @@ proc webView(title = ""; url = ""; width: Positive = 1000; height: Positive = 70
   if callback != nil: result.externalInvokeCB = callback
   if result.webview_init() != 0: return nil
 
-proc newWebView*(path: static[string] = ""; title = ""; width: Positive = 1000; height: Positive = 700;
+proc newWebView*(path: string = ""; title = ""; width: Positive = 1000; height: Positive = 700;
     resizable: static[bool] = true; debug: static[bool] = not defined(release); callback: ExternalInvokeCb = nil;
         cssPath: static[string] = ""; ): Webview =
   ## Create a new Window with given attributes, all arguments are optional.
@@ -241,12 +241,12 @@ proc newWebView*(path: static[string] = ""; title = ""; width: Positive = 1000; 
       let filepath = paramStr(1)
       if filepath.len > 0 and webview.onOpenFile != nil:
         discard webview.onOpenFile(webview, filepath)
-
-  when path.endsWith".js": result.eval(readFile(path))
-  when path.endsWith".nim":
-    const compi = gorgeEx("nim js --out:" & path & ".js " & path & (when defined(release): " -d:release" else: "") & (
-        when defined(danger): " -d:danger" else: ""))
-    const jotaese = when compi.exitCode == 0: staticRead(path & ".js").strip else: ""
-    when not defined(release): echo jotaese
-    when compi.exitCode == 0: result.eval(jotaese)
+  when path is static[string]:
+    when path.endsWith".js": result.eval(readFile(path))
+    when path.endsWith".nim":
+      const compi = gorgeEx("nim js --out:" & path & ".js " & path & (when defined(release): " -d:release" else: "") & (
+          when defined(danger): " -d:danger" else: ""))
+      const jotaese = when compi.exitCode == 0: staticRead(path & ".js").strip else: ""
+      when not defined(release): echo jotaese
+      when compi.exitCode == 0: result.eval(jotaese)
   return webview

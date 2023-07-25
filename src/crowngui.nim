@@ -55,7 +55,7 @@ proc newApplication*(entry: static[string]): ApplicationRef =
   when defined(bundle):
     const data = staticRead bundle
     var serverthr: Thread[string]
-    createThread(serverthr, server, (data, port ))
+    createThread(serverthr, server, (data, port))
   result.entryType = entryType
   when defined(bundle):
     port = findAvailablePort()
