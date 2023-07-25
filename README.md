@@ -2,13 +2,14 @@
 
 Web Technologies based Crossplatform GUI Framework  
 
-It uses Cocoa/WebKit on macOS, gtk-webkit2 on Linux and IE on Windows  
+It uses Cocoa/WebKit on macOS, gtk-webkit2 on Linux and webview2 on Windows  
 
-Notice: I mainly work on macOS, also it has well document of Cocoa/WebKit,
- contribute to Linux and Windows are welcome, the windows binding will change to Edge and webview2 api in the future.
+crowngui contains managed code only, no native code.
+
+crowngui provide CLI tool for bundling application easier.
 
 CLI tool:  
-[crowncli](https://github.com/bung87/crowncli) for build application. 
+[crowncli](https://github.com/bung87/crowncli). 
 
 ## Architecture
 
@@ -111,3 +112,9 @@ Ubuntu: apt install mingw-w64
 CentOS: yum install mingw32-gcc | mingw64-gcc - requires EPEL
 OSX: brew install mingw-w64
 ```
+
+## References  
+
+[Distribute your app and the WebView2 Runtime](https://learn.microsoft.com/en-us/microsoft-edge/webview2/concepts/distribution)
+
+[WebView2 Win32 Reference](https://learn.microsoft.com/en-us/microsoft-edge/webview2/reference/win32/)  
