@@ -1,5 +1,5 @@
 
-import os, strutils, crowngui/webview
+import os, strutils, crowngui/ [webview, net_utils]
 import static_server, mimetypes, asyncdispatch
 import finder
 
@@ -15,16 +15,16 @@ type
   ApplicationRef* = ref Application
 
 
-proc server(data: string) {.thread.} =
+proc server(ctx: tuple[data: string, port: int ]) {.thread.} =
   var settings: NimHttpSettings
   var finder = Finder(fType: FinderType.zip2mem)
-  initFinder(finder, data)
+  initFinder(finder, ctx.data)
   when not defined(release):
     settings.logging = true
   settings.finder = finder
   settings.mimes = newMimeTypes()
   settings.address = ""
-  settings.port = Port(8000)
+  settings.port = Port(ctx.port)
   serve(settings)
   runForever()
   quit(0)
@@ -35,9 +35,10 @@ proc newApplication*(entry: static[string]): ApplicationRef =
   ## when entry specific to nim file it will compile to js as script of bootstrap html
   ## when run command specific `--wwwroot` parameter it will bundle directory as http server root
   result = new ApplicationRef
+  when defined(bundle):
+    var port: int
   const entryType =
     when defined(bundle):
-      const url = "http://localhost:8000"
       EntryType.url
     elif entry.startsWith"http":
       const url = entry
@@ -54,8 +55,11 @@ proc newApplication*(entry: static[string]): ApplicationRef =
   when defined(bundle):
     const data = staticRead bundle
     var serverthr: Thread[string]
-    createThread(serverthr, server, data)
+    createThread(serverthr, server, (data, port ))
   result.entryType = entryType
+  when defined(bundle):
+    port = findAvailablePort()
+    let url = "http://localhost:" & $port
   result.webview = newWebView(url)
 
 
