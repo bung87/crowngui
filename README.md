@@ -20,21 +20,21 @@ figure generated via asciiflow
 
 ┌─────────────┐         ┌──────────────────────────────┐       ┌─────────────────────────┐
 │             │         │                              │       │                         │
-│             │         │store hook function           │       │when trigger js function │
+│             │         │store hook function in `eps`  │       │when trigger js function │
 │             │         │hook accept one string param  │       │internally it use browser│
-│  bindProcs  ├────────►│and returns string that wraps ├──────►│postMessage api send     │
-│             │         │nim proc call                 │       │json string with scope,  │
-│             │         │gen rate js function call and │       │name,argument            │
-│             │         │dispatch to main queue        │       │                         │
+│  bindProcs  ├────────►│and returns string that wraps ├──────►│`postMessage` api send   │
+│             │         │nim proc call.                │       │json string with scope,  │
+│             │         │And generate js function and  │       │name, argument.          │
+│             │         │dispatch to main queue.       │       │                         │
 └─────────────┘         └──────────────────────────────┘       └────────────┬────────────┘
                                                                             │
                                                                             ▼
                         ┌────────────────────────────────────────────────────┐
                         │browser add callback when received message          │
-                        │it calls Webview's invokeCb which implements        │
-                        │as generalExternalInvokeCallback                    │
+                        │it calls Webview's `invokeCb` which implements      │
+                        │as `generalExternalInvokeCallback`                  │
                         │it parse argument as json retrieve scope,           │
-                        │name,argument,then call the hook stored             │
+                        │name, argument,then call the hook stored.           │
                         │                                                    │
                         └────────────────────────────────────────────────────┘
 
