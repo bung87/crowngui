@@ -47,7 +47,7 @@ proc newApplication*(entry: static[string]): ApplicationRef =
       const url = fileLocalHeader & entry
       EntryType.file
     elif entry.endsWith".js" or entry.endsWith".nim":
-      const url = dataUriHtmlHeader "<!DOCTYPE html><html><head><meta content='width=device-width,initial-scale=1' name=viewport></head><body id=body ><div id=ROOT ><div></body></html>" # Copied from Karax
+      const url = entry
       EntryType.file
     else:
       const url = dataUriHtmlHeader entry.strip
@@ -61,6 +61,8 @@ proc newApplication*(entry: static[string]): ApplicationRef =
     port = findAvailablePort()
     let url = "http://localhost:" & $port
   result.webview = newWebView(url)
+  when defined(bundle):
+    result.webview.url = url
 
 
 proc run*(app: ApplicationRef) = app.webview.run
