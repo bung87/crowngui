@@ -1,6 +1,7 @@
 import strutils, base64
 import objc_runtime
 import darwin / [app_kit, foundation, objc/runtime, objc/blocks, core_graphics/cggeometry]
+import ./internal_dialogs
 import menu
 import types
 export types

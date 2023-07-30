@@ -1,5 +1,5 @@
 
-import os, strutils, crowngui/ [webview, net_utils]
+import os, strutils, crowngui / [webview, net_utils]
 import static_server, mimetypes, asyncdispatch
 import finder
 
