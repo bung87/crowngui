@@ -104,7 +104,6 @@ proc bindProcNoArg(w: Webview; scope, name: string; p: proc()): string {.used.} 
   return jsTemplateNoArg % [name, scope]
 
 proc bindProc[P](w: Webview; scope, name: string; p: proc(arg: P)): string {.used.} =
-  ## Do NOT use directly, see `bindProcs` macro.
   assert name.len > 0, "Name must not be empty string"
   proc hook(hookParam: string): string =
     var paramVal: P
@@ -121,11 +120,6 @@ proc bindProc[P](w: Webview; scope, name: string; p: proc(arg: P)): string {.use
   return jsTemplateOnlyArg % [name, scope]
 
 macro bindProcs*(w: Webview; scope: string; n: untyped): untyped =
-  ## * Functions must be `proc` or `func`; No `template` nor `macro`.
-  ## * Functions must NOT have return Type, must NOT return anything, use the API.
-  ## * To pass return data to the Frontend use the JavaScript API and WebGui API.
-  ## * Functions do NOT need the `*` Star to work. Functions must NOT have Pragmas.
-  ##
   ## You can bind functions with the signature like:
   ##
   ## .. code-block:: nim
@@ -202,8 +196,8 @@ proc webView(title = ""; url = ""; width: Positive = 1000; height: Positive = 70
   if result.webview_init() != 0: return nil
 
 proc newWebView*(path: static[string] = ""; title = ""; width: Positive = 1000; height: Positive = 700;
-    resizable: static[bool] = true; debug: static[bool] = not defined(release); callback: ExternalInvokeCb = nil;
-        cssPath: static[string] = ""; ): Webview =
+    resizable: static[bool] = true; debug: static[bool] = not defined(release); callback: ExternalInvokeCb = nil; 
+    ): Webview =
   ## Create a new Window with given attributes, all arguments are optional.
   ## * `path` is the URL or Full Path to 1 HTML file, index of the Web GUI App.
   ## * `title` is the Title of the Window.
@@ -211,11 +205,7 @@ proc newWebView*(path: static[string] = ""; title = ""; width: Positive = 1000; 
   ## * `height` is the Height of the Window.
   ## * `resizable` set to `true` to allow Resize of the Window, defaults to `true`.
   ## * `debug` Debug mode, Debug is `true` when not built for Release.
-  ## * `cssPath` Full Path or URL of a CSS file to use as Style, defaults to `"dark.css"` for Dark theme, can be `"light.css"` for Light theme.
-  ## * If `--light-theme` on `commandLineParams()` then it will use Light Theme automatically.
-  ## * CSS is embedded, if your app is used Offline, it will display Ok.
-  ## * For templates that do CSS, remember that CSS must be injected *after DOM Ready*.
-  ## * Is up to the developer to guarantee access to the HTML URL or File of the GUI.
+
   var entry = path
   when path.endsWith".js" or path.endsWith".nim":
     entry = dataUriHtmlHeader "<!DOCTYPE html><html><head><meta content='width=device-width,initial-scale=1' name=viewport></head><body id=body ><div id=ROOT ><div></body></html>" # Copied from Karax

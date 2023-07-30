@@ -17,11 +17,11 @@ const WKNavigationResponsePolicyAllow = 1
 const WKUserScriptInjectionTimeAtDocumentStart = 0
 const WKUserScriptInjectionTimeAtDocumentEnd = 1
 
-proc webview_window_will_close*(self: Id; cmd: SEL; notification: Id) =
+proc webview_window_will_close(self: Id; cmd: SEL; notification: Id) =
   var w = getAssociatedObject(self, cast[pointer]($$"webview"))
   # webview_terminate(cast[Webview](w))
 
-proc webview_external_invoke*(self: ID; cmd: SEL; contentController: Id;
+proc webview_external_invoke(self: ID; cmd: SEL; contentController: Id;
                                     message: Id) =
   var w = cast[Webview](getAssociatedObject(contentController, cast[pointer]($$"webview")))
   if (cast[pointer](w) == nil or w.invokeCb == nil):
@@ -31,10 +31,8 @@ proc webview_external_invoke*(self: ID; cmd: SEL; contentController: Id;
     var msg = [[message body]UTF8String]
     cast[proc (w: Webview; arg: cstring) {.stdcall.}](w.invokeCb)(w, cast[cstring](msg))
 
-type CompletionHandler4 = proc (): void
-# type CompletionHandler5 = proc (c: cint): void
 proc make_nav_policy_decision(self: Id; cmd: SEL; webView: Id; response: Id;
-                                     decisionHandler: Block[CompletionHandler4]) =
+                                     decisionHandler: Block[proc (): void]) =
   objcr:
     if [response canShowMIMEType] == cast[Id](0):
       objc_msgSend(cast[Id](decisionHandler), $$"invoke", WKNavigationActionPolicyDownload)
