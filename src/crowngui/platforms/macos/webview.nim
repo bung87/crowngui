@@ -40,7 +40,7 @@ proc make_nav_policy_decision(self: Id; cmd: SEL; webView: Id; response: Id;
       objc_msgSend(cast[Id](decisionHandler), $$"invoke", WKNavigationResponsePolicyAllow)
 
 proc setHtml*(w: Webview; html: string) =
-  objcr: [w.priv.webview, loadHTMLString: @html, baseURL: nil]
+  objcr: [w.priv.webview loadHTMLString: @html, baseURL: nil]
 
 proc navigate*(w: Webview; url: string) =
   objcr:
@@ -58,9 +58,8 @@ proc setSize*(w: Webview; width: int; height: int) =
     frame.size.height = height.CGFloat
     [w.priv.window setFrame: frame, display: true]
 
-proc webview_init*(w: Webview): cint =
-  objcr:
-    w.priv.pool = [NSAutoreleasePool new]
+proc webview_init*(w: Webview): cint {.objcr.} =
+  w.priv.pool = [NSAutoreleasePool new]
 
   # objcr: [NSEvent addLocalMonitorForEventsMatchingMask: NSKeyDown, handler: toBlock(handler)]
   var PrivWKScriptMessageHandler = allocateClassPair(getClass("NSObject"), "PrivWKScriptMessageHandler", 0)
@@ -82,31 +81,30 @@ proc webview_init*(w: Webview): cint =
   var ownership = objc_property_attribute_t(name: "N".cstring, value: "".cstring)
   replaceProperty(PrivWKPreferences, "developerExtrasEnabled", [typ, ownership])
   registerClassPair(PrivWKPreferences)
-  
-  objcr:
-    var config = [WKWebViewConfiguration new]
-    # var wkPref = objc_msgSend(ID(getClass("PrivWKPreferences")), $$"new")
-    # [wkPref setValue: [NSNumber numberWithBool: w.debug], forKey: "developerExtrasEnabled"]
-    # [config setPreferences: wkPref]
-    [[config preferences] setValue: [NSNumber numberWithBool: w.debug], forKey: @"developerExtrasEnabled"]
-    # [[config preferences] setValue: [NSNumber numberWithBool: YES], forKey: @"fullScreenEnabled"]
-    [[config preferences] setValue: [NSNumber numberWithBool: YES], forKey: @"javaScriptCanAccessClipboard"]
-    [[config preferences] setValue: [NSNumber numberWithBool: YES], forKey: @"DOMPasteAllowed"]
-    var userController = [WKUserContentController new]
-    setAssociatedObject(userController, cast[pointer]($$("webview")), (Id)(w),
-                            OBJC_ASSOCIATION_ASSIGN)
-    [userController addScriptMessageHandler: scriptMessageHandler, name: "invoke"]
-    var windowExternalOverrideScript = [WKUserScript alloc]
-    const source = """window.external = this; invoke = function(arg){ 
-                   webkit.messageHandlers.invoke.postMessage(arg); };"""
-    [windowExternalOverrideScript initWithSource: @source, injectionTime: WKUserScriptInjectionTimeAtDocumentStart,
-        forMainFrameOnly: 0]
-    [userController addUserScript: windowExternalOverrideScript]
-    [config setUserContentController: userController]
 
-    var processPool = [config processPool]
-    [processPool "_setDownloadDelegate": downloadDelegate]
-    [config setProcessPool: processPool]
+  var config = [WKWebViewConfiguration new]
+  # var wkPref = objc_msgSend(ID(getClass("PrivWKPreferences")), $$"new")
+  # [wkPref setValue: [NSNumber numberWithBool: w.debug], forKey: "developerExtrasEnabled"]
+  # [config setPreferences: wkPref]
+  [[config preferences] setValue: [NSNumber numberWithBool: w.debug], forKey: @"developerExtrasEnabled"]
+  # [[config preferences] setValue: [NSNumber numberWithBool: YES], forKey: @"fullScreenEnabled"]
+  [[config preferences] setValue: [NSNumber numberWithBool: YES], forKey: @"javaScriptCanAccessClipboard"]
+  [[config preferences] setValue: [NSNumber numberWithBool: YES], forKey: @"DOMPasteAllowed"]
+  var userController = [WKUserContentController new]
+  setAssociatedObject(userController, cast[pointer]($$("webview")), (Id)(w),
+                          OBJC_ASSOCIATION_ASSIGN)
+  [userController addScriptMessageHandler: scriptMessageHandler, name: "invoke"]
+  var windowExternalOverrideScript = [WKUserScript alloc]
+  const source = """window.external = this; invoke = function(arg){ 
+                  webkit.messageHandlers.invoke.postMessage(arg); };"""
+  [windowExternalOverrideScript initWithSource: @source, injectionTime: WKUserScriptInjectionTimeAtDocumentStart,
+      forMainFrameOnly: 0]
+  [userController addUserScript: windowExternalOverrideScript]
+  [config setUserContentController: userController]
+
+  var processPool = [config processPool]
+  [processPool "_setDownloadDelegate": downloadDelegate]
+  [config setProcessPool: processPool]
 
   # var PrivNSWindowDelegate = allocateClassPair(getClass("NSObject"),
   #                                                   "PrivNSWindowDelegate", 0)
@@ -121,19 +119,19 @@ proc webview_init*(w: Webview): cint =
 
   proc CGRectMake(x, y, w, h: SomeNumber): CGRect =
     result = CGRect(origin: CGPoint(x: x.CGFloat, y: y.CGFloat), size: CGSize(width: w.CGFloat, height: h.CGFloat))
-  objcr:
-    var nsTitle = @($w.title)
-    var r: CGRect = CGRectMake(0, 0, w.width, w.height)
-    var style = NSWindowStyleMaskTitled or NSWindowStyleMaskClosable or
-                       NSWindowStyleMaskMiniaturizable;
-    if w.resizable:
-      style = style or NSWindowStyleMaskResizable
-    w.priv.window = [NSWindow alloc]
-    [w.priv.window initWithContentRect: r, styleMask: style, backing: NSBackingStoreBuffered, `defer`: 0]
-    [w.priv.window autorelease]
-    [w.priv.window setTitle: nsTitle]
-    # [w.priv.window setDelegate: w.priv.windowDelegate]
-    [w.priv.window center]
+
+  var nsTitle = @($w.title)
+  var r: CGRect = CGRectMake(0, 0, w.width, w.height)
+  var style = NSWindowStyleMaskTitled or NSWindowStyleMaskClosable or
+                      NSWindowStyleMaskMiniaturizable;
+  if w.resizable:
+    style = style or NSWindowStyleMaskResizable
+  w.priv.window = [NSWindow alloc]
+  [w.priv.window initWithContentRect: r, styleMask: style, backing: NSBackingStoreBuffered, `defer`: 0]
+  [w.priv.window autorelease]
+  [w.priv.window setTitle: nsTitle]
+  # [w.priv.window setDelegate: w.priv.windowDelegate]
+  [w.priv.window center]
     
 
   var PrivWKUIDelegate = allocateClassPair(getClass("NSObject"), "PrivWKUIDelegate", 0)
@@ -184,18 +182,16 @@ proc webview_init*(w: Webview): cint =
 
   return 0
 
-proc run*(w: Webview) =
-  objcr:
-    var app = [NSApplication sharedApplication]
-    [app run]
+proc run*(w: Webview) {.objcr.} =
+  var app = [NSApplication sharedApplication]
+  [app run]
 
-proc addUserScript(w: Webview, js: string; location: int): void =
-  objcr:
-    var userScript = [WKUserScript alloc]
-    [userScript initWithSource: @js, injectionTime: location, forMainFrameOnly: 0]
-    var config = [w.priv.webview valueForKey: "configuration"]
-    var userContentController  = [config valueForKey: "userContentController"]
-    [userContentController addUserScript: userScript]
+proc addUserScript(w: Webview, js: string; location: int): void {.objcr.} =
+  var userScript = [WKUserScript alloc]
+  [userScript initWithSource: @js, injectionTime: location, forMainFrameOnly: 0]
+  var config = [w.priv.webview valueForKey: "configuration"]
+  var userContentController  = [config valueForKey: "userContentController"]
+  [userContentController addUserScript: userScript]
 
 proc addUserScriptAtDocumentStart*(w: Webview, js: string): void =
   w.addUserScript(js, WKUserScriptInjectionTimeAtDocumentStart)
@@ -203,12 +199,11 @@ proc addUserScriptAtDocumentStart*(w: Webview, js: string): void =
 proc addUserScriptAtDocumentEnd*(w: Webview, js: string): void =
   w.addUserScript(js, WKUserScriptInjectionTimeAtDocumentEnd)
 
-proc eval*(w: Webview, js: string): void =
-  objcr:
-    [w.priv.webview evaluateJavaScript: @js, completionHandler: nil]
+proc eval*(w: Webview, js: string): void {.objcr.} =
+  [w.priv.webview evaluateJavaScript: @js, completionHandler: nil]
 
-proc setTitle*(w: Webview; title: string) =
-  objcr: [w.priv.window setTitle: @title]
+proc setTitle*(w: Webview; title: string) {.objcr.} =
+  [w.priv.window setTitle: @title]
 
 type WebviewDispatchCtx {.pure.} = object
   w: Webview
@@ -234,10 +229,9 @@ proc webview_dispatch*(w: Webview; fn: pointer; arg: pointer) {.stdcall.} =
   context.arg = arg
   dispatch_async_f(dispatch_get_main_queue(), context, cast[pointer](webview_dispatch_cb))
 
-proc terminate*(w: Webview): void =
-  objcr:
-    var app: Id = [NSApplication sharedApplication]
-    [app terminate: app]
+proc terminate*(w: Webview): void {.objcr.} =
+  var app: Id = [NSApplication sharedApplication]
+  [app terminate: app]
 
 proc destroy*(w: Webview) =
   w.terminate()

@@ -15,7 +15,7 @@ requires "nim >= 1.1.1"
 requires "regex"
 requires "static_server >= 2.2.1"
 requires "jsonschema"
-requires "objc_runtime >= 0.1.5"
+requires "objc_runtime >= 0.7.1"
 requires "darwin"
 requires "winim"
 
