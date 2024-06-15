@@ -21,3 +21,4 @@ type
     windowDelegate*: ID
 
   OnOpenFile* = proc (w: Webview; filePath: string; name = ""):bool
+  

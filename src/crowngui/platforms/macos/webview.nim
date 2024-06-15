@@ -1,6 +1,6 @@
 import strutils, base64
 import objc_runtime
-import darwin / [app_kit, foundation, objc/runtime, objc/blocks, core_graphics/cggeometry]
+import darwin / [app_kit,web_kit, foundation, objc/runtime, objc/blocks, core_graphics/cggeometry]
 import ./internal_dialogs
 import menu
 import types
@@ -16,7 +16,11 @@ const WKNavigationActionPolicyDownload = 2
 const WKNavigationResponsePolicyAllow = 1
 const WKUserScriptInjectionTimeAtDocumentStart = 0
 const WKUserScriptInjectionTimeAtDocumentEnd = 1
-
+type 
+  NSAutoreleasePool = ptr object of NSObject
+  WKUserScript = ptr object of NSObject
+  WKWebViewConfiguration  = ptr object of NSObject
+proc initWithSource*(self: WKUserScript, source: NSString, injectionTime: static[int], forMainFrameOnly: BOOL) {.objc: "initWithSource:injectionTime:forMainFrameOnly:".}
 proc webview_window_will_close(self: Id; cmd: SEL; notification: Id) =
   var w = getAssociatedObject(self, cast[pointer]($$"webview"))
   # webview_terminate(cast[Webview](w))
@@ -76,35 +80,40 @@ proc webview_init*(w: Webview): cint {.objcr.} =
   registerClassPair(PrivWKDownloadDelegate)
   var downloadDelegate: Id = objcr: [PrivWKDownloadDelegate new]
 
-  var PrivWKPreferences = allocateClassPair(getClass("WKPreferences"), "PrivWKPreferences", 0)
-  var typ = objc_property_attribute_t(name: "T".cstring, value: "c".cstring)
-  var ownership = objc_property_attribute_t(name: "N".cstring, value: "".cstring)
-  replaceProperty(PrivWKPreferences, "developerExtrasEnabled", [typ, ownership])
-  registerClassPair(PrivWKPreferences)
-
+  when false:
+    var PrivWKPreferences = allocateClassPair(getClass("WKPreferences"), "PrivWKPreferences", 0)
+    var typ = objc_property_attribute_t(name: "T".cstring, value: "c".cstring)
+    var ownership = objc_property_attribute_t(name: "N".cstring, value: "".cstring)
+    replaceProperty(PrivWKPreferences, "developerExtrasEnabled", [typ, ownership])
+    registerClassPair(PrivWKPreferences)
   var config = [WKWebViewConfiguration new]
-  # var wkPref = objc_msgSend(ID(getClass("PrivWKPreferences")), $$"new")
-  # [wkPref setValue: [NSNumber numberWithBool: w.debug], forKey: "developerExtrasEnabled"]
-  # [config setPreferences: wkPref]
-  [[config preferences] setValue: [NSNumber numberWithBool: w.debug], forKey: @"developerExtrasEnabled"]
-  # [[config preferences] setValue: [NSNumber numberWithBool: YES], forKey: @"fullScreenEnabled"]
-  [[config preferences] setValue: [NSNumber numberWithBool: YES], forKey: @"javaScriptCanAccessClipboard"]
-  [[config preferences] setValue: [NSNumber numberWithBool: YES], forKey: @"DOMPasteAllowed"]
-  var userController = [WKUserContentController new]
-  setAssociatedObject(userController, cast[pointer]($$("webview")), (Id)(w),
-                          OBJC_ASSOCIATION_ASSIGN)
-  [userController addScriptMessageHandler: scriptMessageHandler, name: "invoke"]
-  var windowExternalOverrideScript = [WKUserScript alloc]
-  const source = """window.external = this; invoke = function(arg){ 
-                  webkit.messageHandlers.invoke.postMessage(arg); };"""
-  [windowExternalOverrideScript initWithSource: @source, injectionTime: WKUserScriptInjectionTimeAtDocumentStart,
-      forMainFrameOnly: 0]
-  [userController addUserScript: windowExternalOverrideScript]
-  [config setUserContentController: userController]
 
-  var processPool = [config processPool]
-  [processPool "_setDownloadDelegate": downloadDelegate]
-  [config setProcessPool: processPool]
+  when false:
+    
+    # var wkPref = objc_msgSend(ID(getClass("PrivWKPreferences")), $$"new")
+    # [wkPref setValue: [NSNumber numberWithBool: w.debug], forKey: "developerExtrasEnabled"]
+    # [config setPreferences: wkPref]
+    [[config preferences] setValue: [NSNumber numberWithBool: w.debug], forKey: @"developerExtrasEnabled"]
+    # [[config preferences] setValue: [NSNumber numberWithBool: YES], forKey: @"fullScreenEnabled"]
+    [[config preferences] setValue: [NSNumber numberWithBool: YES], forKey: @"javaScriptCanAccessClipboard"]
+    [[config preferences] setValue: [NSNumber numberWithBool: YES], forKey: @"DOMPasteAllowed"]
+
+
+    var userController = [WKUserContentController new]
+    setAssociatedObject(userController, cast[pointer]($$("webview")), (Id)(w),
+                            OBJC_ASSOCIATION_ASSIGN)
+    [userController addScriptMessageHandler: scriptMessageHandler, name: "invoke"]
+    var windowExternalOverrideScript = [WKUserScript alloc]
+    const source = """window.external = this; invoke = function(arg){ 
+                    webkit.messageHandlers.invoke.postMessage(arg); };"""
+    [windowExternalOverrideScript initWithSource: @source, injectionTime: WKUserScriptInjectionTimeAtDocumentStart,
+        forMainFrameOnly: 0]
+    [userController addUserScript: windowExternalOverrideScript]
+    [config setUserContentController: userController]
+
+    var processPool = [config processPool]
+    [processPool "_setDownloadDelegate": downloadDelegate]
+    [config setProcessPool: processPool]
 
   # var PrivNSWindowDelegate = allocateClassPair(getClass("NSObject"),
   #                                                   "PrivNSWindowDelegate", 0)
@@ -129,7 +138,7 @@ proc webview_init*(w: Webview): cint {.objcr.} =
   w.priv.window = [NSWindow alloc]
   [w.priv.window initWithContentRect: r, styleMask: style, backing: NSBackingStoreBuffered, `defer`: 0]
   [w.priv.window autorelease]
-  [w.priv.window setTitle: nsTitle]
+  # [w.priv.window setTitle: nsTitle]
   # [w.priv.window setDelegate: w.priv.windowDelegate]
   [w.priv.window center]
     

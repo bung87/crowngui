@@ -7,3 +7,9 @@ type SaveCompletionHandler* = proc (allowOverwrite: int; destination: Id): void
 type ConfirmCompletionHandler* = proc (b: bool): void
 
 type AlertCompletionHandler* = proc (): void
+
+type
+  NSSavePanel* {.importobjc: "NSSavePanel*", header: "<AppKit/AppKit.h>",
+        incompleteStruct.} = object
+  NSOpenPanel* {.importobjc: "NSOpenPanel*", header: "<AppKit/AppKit.h>",
+    incompleteStruct.} = object
