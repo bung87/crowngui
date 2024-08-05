@@ -1,7 +1,6 @@
 import strutils, base64
 import objc_runtime
 import darwin / [app_kit,web_kit, foundation, objc/runtime, objc/blocks, core_graphics/cggeometry]
-import ./internal_dialogs
 import menu
 import types
 export types
@@ -9,39 +8,27 @@ import dialog
 export dialog
 import event
 import bundle
+import ./message_handler
+import ./download_delegate
+import ./ui_delegate
+import ./wkpreferences
+import ./navigation_delegate
+import ./utils
 
 {.passl: "-framework Cocoa -framework WebKit".}
 
-const WKNavigationActionPolicyDownload = 2
-const WKNavigationResponsePolicyAllow = 1
+
 const WKUserScriptInjectionTimeAtDocumentStart = 0
 const WKUserScriptInjectionTimeAtDocumentEnd = 1
 type 
   NSAutoreleasePool = ptr object of NSObject
   WKUserScript = ptr object of NSObject
   WKWebViewConfiguration  = ptr object of NSObject
+  WKUserContentController = ptr object of NSObject
 proc initWithSource*(self: WKUserScript, source: NSString, injectionTime: static[int], forMainFrameOnly: BOOL) {.objc: "initWithSource:injectionTime:forMainFrameOnly:".}
 proc webview_window_will_close(self: Id; cmd: SEL; notification: Id) =
   var w = getAssociatedObject(self, cast[pointer]($$"webview"))
   # webview_terminate(cast[Webview](w))
-
-proc webview_external_invoke(self: ID; cmd: SEL; contentController: Id;
-                                    message: Id) =
-  var w = cast[Webview](getAssociatedObject(contentController, cast[pointer]($$"webview")))
-  if (cast[pointer](w) == nil or w.invokeCb == nil):
-    return
-
-  objcr:
-    var msg = [[message body]UTF8String]
-    cast[proc (w: Webview; arg: cstring) {.stdcall.}](w.invokeCb)(w, cast[cstring](msg))
-
-proc make_nav_policy_decision(self: Id; cmd: SEL; webView: Id; response: Id;
-                                     decisionHandler: Block[proc (): void]) =
-  objcr:
-    if [response canShowMIMEType] == cast[Id](0):
-      objc_msgSend(cast[Id](decisionHandler), $$"invoke", WKNavigationActionPolicyDownload)
-    else:
-      objc_msgSend(cast[Id](decisionHandler), $$"invoke", WKNavigationResponsePolicyAllow)
 
 proc setHtml*(w: Webview; html: string) =
   objcr: [w.priv.webview loadHTMLString: @html, baseURL: nil]
@@ -62,54 +49,40 @@ proc setSize*(w: Webview; width: int; height: int) =
     frame.size.height = height.CGFloat
     [w.priv.window setFrame: frame, display: true]
 
-proc webview_init*(w: Webview): cint {.objcr.} =
-  w.priv.pool = [NSAutoreleasePool new]
-
+proc webview_init*(w: Webview): cint =
+  # w.priv.pool = objcr: [NSAutoreleasePool new]
   # objcr: [NSEvent addLocalMonitorForEventsMatchingMask: NSKeyDown, handler: toBlock(handler)]
-  var PrivWKScriptMessageHandler = allocateClassPair(getClass("NSObject"), "PrivWKScriptMessageHandler", 0)
-  discard  addMethod(PrivWKScriptMessageHandler, $$"userContentController:didReceiveScriptMessage:", webview_external_invoke)
-  registerClassPair(PrivWKScriptMessageHandler)
-  var scriptMessageHandler: Id = objcr: [PrivWKScriptMessageHandler new]
 
-  var PrivWKDownloadDelegate = allocateClassPair(getClass("NSObject"), "PrivWKDownloadDelegate", 0)
-  discard addMethod(
-      PrivWKDownloadDelegate,
-      $$"_download:decideDestinationWithSuggestedFilename:completionHandler:",
-      run_save_panel)
-  # discard addMethod(PrivWKDownloadDelegate,registerName("_download:didFailWithError:"),cast[IMP](download_failed), "v@:@@")
-  registerClassPair(PrivWKDownloadDelegate)
-  var downloadDelegate: Id = objcr: [PrivWKDownloadDelegate new]
-
-  when false:
-    var PrivWKPreferences = allocateClassPair(getClass("WKPreferences"), "PrivWKPreferences", 0)
-    var typ = objc_property_attribute_t(name: "T".cstring, value: "c".cstring)
-    var ownership = objc_property_attribute_t(name: "N".cstring, value: "".cstring)
-    replaceProperty(PrivWKPreferences, "developerExtrasEnabled", [typ, ownership])
-    registerClassPair(PrivWKPreferences)
-  var config = [WKWebViewConfiguration new]
-
-  when false:
-    
+  objcr:
+    var config = [WKWebViewConfiguration new]
+    # var PrivWKPreferences = registerWKPreferences()
     # var wkPref = objc_msgSend(ID(getClass("PrivWKPreferences")), $$"new")
     # [wkPref setValue: [NSNumber numberWithBool: w.debug], forKey: "developerExtrasEnabled"]
     # [config setPreferences: wkPref]
-    [[config preferences] setValue: [NSNumber numberWithBool: w.debug], forKey: @"developerExtrasEnabled"]
+
+    # [[config preferences] setValue: [NSNumber numberWithBool: w.debug], forKey: @"developerExtrasEnabled"]
     # [[config preferences] setValue: [NSNumber numberWithBool: YES], forKey: @"fullScreenEnabled"]
     [[config preferences] setValue: [NSNumber numberWithBool: YES], forKey: @"javaScriptCanAccessClipboard"]
     [[config preferences] setValue: [NSNumber numberWithBool: YES], forKey: @"DOMPasteAllowed"]
-
-
     var userController = [WKUserContentController new]
     setAssociatedObject(userController, cast[pointer]($$("webview")), (Id)(w),
                             OBJC_ASSOCIATION_ASSIGN)
+    var PrivWKScriptMessageHandler = registerScriptMessageHandler()
+    var scriptMessageHandler: Id = objcr: [PrivWKScriptMessageHandler new]
+
     [userController addScriptMessageHandler: scriptMessageHandler, name: "invoke"]
+
     var windowExternalOverrideScript = [WKUserScript alloc]
     const source = """window.external = this; invoke = function(arg){ 
-                    webkit.messageHandlers.invoke.postMessage(arg); };"""
+                   webkit.messageHandlers.invoke.postMessage(arg); };"""
     [windowExternalOverrideScript initWithSource: @source, injectionTime: WKUserScriptInjectionTimeAtDocumentStart,
         forMainFrameOnly: 0]
     [userController addUserScript: windowExternalOverrideScript]
+
     [config setUserContentController: userController]
+
+    var PrivWKDownloadDelegate = registerDownloadDelegate()
+    var downloadDelegate: Id = objcr: [PrivWKDownloadDelegate new]
 
     var processPool = [config processPool]
     [processPool "_setDownloadDelegate": downloadDelegate]
@@ -126,50 +99,31 @@ proc webview_init*(w: Webview): cint {.objcr.} =
   # setAssociatedObject(w.priv.windowDelegate, cast[pointer]($$"webview"), (Id)(w),
   #                          OBJC_ASSOCIATION_ASSIGN)
 
-  proc CGRectMake(x, y, w, h: SomeNumber): CGRect =
-    result = CGRect(origin: CGPoint(x: x.CGFloat, y: y.CGFloat), size: CGSize(width: w.CGFloat, height: h.CGFloat))
 
   var nsTitle = @($w.title)
-  var r: CGRect = CGRectMake(0, 0, w.width, w.height)
+ 
+  var frame: CGRect = CGRectMake(0, 0, w.width, w.height)
   var style = NSWindowStyleMaskTitled or NSWindowStyleMaskClosable or
                       NSWindowStyleMaskMiniaturizable;
   if w.resizable:
     style = style or NSWindowStyleMaskResizable
-  w.priv.window = [NSWindow alloc]
-  [w.priv.window initWithContentRect: r, styleMask: style, backing: NSBackingStoreBuffered, `defer`: 0]
-  [w.priv.window autorelease]
-  # [w.priv.window setTitle: nsTitle]
-  # [w.priv.window setDelegate: w.priv.windowDelegate]
-  [w.priv.window center]
-    
+  objcr: 
+    w.priv.window = [NSWindow alloc]
+    [w.priv.window initWithContentRect: frame, styleMask: style, backing: NSBackingStoreBuffered, `defer`: 0]
+    [w.priv.window autorelease]
+    [w.priv.window setTitle: nsTitle]
+    # [w.priv.window setDelegate: w.priv.windowDelegate]
+    [w.priv.window center]
 
-  var PrivWKUIDelegate = allocateClassPair(getClass("NSObject"), "PrivWKUIDelegate", 0)
-  discard addProtocol(PrivWKUIDelegate, getProtocol("WKUIDelegate"))
-  discard addMethod(PrivWKUIDelegate,
-                  $$"webView:runOpenPanelWithParameters:initiatedByFrame:completionHandler:",
-                  run_open_panel)
-  discard addMethod(PrivWKUIDelegate,
-                  $$"webView:runJavaScriptAlertPanelWithMessage:initiatedByFrame:completionHandler:",
-                  run_alert_panel)
-  discard addMethod(
-      PrivWKUIDelegate,
-      $$"webView:runJavaScriptConfirmPanelWithMessage:initiatedByFrame:completionHandler:",
-      run_confirmation_panel)
-  registerClassPair(PrivWKUIDelegate)
+  var PrivWKUIDelegate = registerUIDelegate()
   var uiDel = objcr: [PrivWKUIDelegate new]
 
-  var PrivWKNavigationDelegate = allocateClassPair(
-      getClass("NSObject"), "PrivWKNavigationDelegate", 0)
-  discard addProtocol(PrivWKNavigationDelegate, getProtocol("WKNavigationDelegate"))
-  discard addMethod(
-      PrivWKNavigationDelegate,
-      $$"webView:decidePolicyForNavigationResponse:decisionHandler:",
-      make_nav_policy_decision)
-  registerClassPair(PrivWKNavigationDelegate)
+  var PrivWKNavigationDelegate = registerWKNavigationDelegate()
   objcr:
     var navDel = [PrivWKNavigationDelegate new]
     w.priv.webview = [WKWebView alloc]
-    [w.priv.webview initWithFrame: r, configuration: config]
+
+    [w.priv.webview initWithFrame: frame, configuration: config]
     [w.priv.webview setUIDelegate: uiDel]
     [w.priv.webview setNavigationDelegate: navDel]
     let url = $(w.url)
