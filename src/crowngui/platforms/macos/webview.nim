@@ -11,16 +11,19 @@ import bundle
 import ./message_handler
 import ./download_delegate
 import ./ui_delegate
-# import ./wkpreferences
+import ./wkpreferences
 import ./navigation_delegate
 # import ./window_delegate
 import ./utils
+import std/[macros]
 
 {.passl: "-framework Cocoa -framework WebKit".}
 
 
 const WKUserScriptInjectionTimeAtDocumentStart = 0
 const WKUserScriptInjectionTimeAtDocumentEnd = 1
+const DefaultWindowStyle = NSWindowStyleMaskTitled or NSWindowStyleMaskClosable or
+                      NSWindowStyleMaskMiniaturizable;
 type 
   NSAutoreleasePool = ptr object of NSObject
   WKUserScript = ptr object of NSObject
@@ -51,25 +54,30 @@ proc webview_init*(w: Webview): cint =
   # w.priv.pool = objcr: [NSAutoreleasePool new]
   # objcr: [NSEvent addLocalMonitorForEventsMatchingMask: NSKeyDown, handler: toBlock(handler)]
   objcr:
-    var config = [[WKWebViewConfiguration alloc] init]
-    # var PrivWKPreferences = registerWKPreferences()
-    # var wkPref = objc_msgSend(ID(getClass("PrivWKPreferences")), $$"new")
-    # [wkPref setValue: [NSNumber numberWithBool: w.debug], forKey: "developerExtrasEnabled"]
-    # [config setPreferences: wkPref]
+    var config = [WKWebViewConfiguration new]
+    var PrivWKPreferences = registerWKPreferences()
+    var wkPref = [PrivWKPreferences new]
+    var nsyes = [NSNumber numberWithBool: w.debug]
 
+    [wkPref setValue: nsyes, forKey: "developerExtrasEnabled"]
+    [config setPreferences: wkPref]
+    echo 1
     # [[config preferences] setValue: [NSNumber numberWithBool: w.debug], forKey: @"developerExtrasEnabled"]
     # [[config preferences] setValue: [NSNumber numberWithBool: YES], forKey: @"fullScreenEnabled"]
-    var pref = [config preferences]
-    [pref setValue: [NSNumber numberWithBool: YES], forKey: @"javaScriptCanAccessClipboard"]
-    [pref setValue: [NSNumber numberWithBool: YES], forKey: @"DOMPasteAllowed"]
-
+    # var pref = [config preferences]
+    # var nyes = [NSNumber numberWithBool: YES]
+    # echo 3
+    # expandMacros:
+    #   [pref setValue: nyes, forKey: @"javaScriptCanAccessClipboard"]
+    #   [pref setValue: nyes, forKey: @"DOMPasteAllowed"]
+    # echo 2
     var userController = [[WKUserContentController alloc] init]
     setAssociatedObject(userController, cast[pointer]($$("webview")), (Id)(w),
                             OBJC_ASSOCIATION_ASSIGN)
     var PrivWKScriptMessageHandler = registerScriptMessageHandler()
     var scriptMessageHandler = [PrivWKScriptMessageHandler new]
 
-    [userController addScriptMessageHandler: scriptMessageHandler, name: @"invoke"]
+    [userController addScriptMessageHandler: scriptMessageHandler, name: "invoke"]
 
     var windowExternalOverrideScript = [WKUserScript alloc]
     const source = """window.external = this; invoke = function(arg){ 
@@ -85,7 +93,7 @@ proc webview_init*(w: Webview): cint =
 
     var processPool = [config processPool]
     [processPool "_setDownloadDelegate": downloadDelegate]
-    [config setProcessPool: processPool]
+    # [config setProcessPool: processPool]
 
   # var PrivNSWindowDelegate = registerWindowDelegate()
   # w.priv.windowDelegate = objcr: [PrivNSWindowDelegate new]
@@ -95,8 +103,7 @@ proc webview_init*(w: Webview): cint =
   var nsTitle = @($w.title)
 
   var frame: CGRect = CGRectMake(0, 0, w.width, w.height)
-  var style = NSWindowStyleMaskTitled or NSWindowStyleMaskClosable or
-                      NSWindowStyleMaskMiniaturizable;
+  var style = DefaultWindowStyle
   if w.resizable:
     style = style or NSWindowStyleMaskResizable
   objcr: 
