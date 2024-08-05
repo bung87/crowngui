@@ -1,6 +1,5 @@
-import std/[math]
 import objc_runtime
-import darwin / [objc/blocks, objc/runtime]
+import darwin / [objc/blocks]
 
 const WKNavigationActionPolicyDownload = 2
 const WKNavigationResponsePolicyAllow = 1

@@ -1,17 +1,17 @@
 import strutils, base64
 import objc_runtime
-import darwin / [app_kit,web_kit, foundation, objc/runtime, objc/blocks, core_graphics/cggeometry]
-import menu
+import darwin / [app_kit,web_kit, foundation, objc/runtime, core_graphics/cggeometry]
+# import menu
 import types
 export types
 import dialog
 export dialog
-import event
+# import event
 import bundle
 import ./message_handler
 import ./download_delegate
 import ./ui_delegate
-import ./wkpreferences
+# import ./wkpreferences
 import ./navigation_delegate
 import ./utils
 

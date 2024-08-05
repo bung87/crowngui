@@ -1,11 +1,9 @@
-import std/[math]
 import objc_runtime
-import darwin / [app_kit, foundation, objc/runtime]
-import types
+import darwin / [foundation, objc/runtime]
 import ./internal_dialogs
 
 proc registerDownloadDelegate*(): ObjcClass =
-  var result = allocateClassPair(getClass("NSObject"), "PrivWKDownloadDelegate", 0)
+  result = allocateClassPair(getClass("NSObject"), "PrivWKDownloadDelegate", 0)
   discard addMethod(
       result,
       $$"_download:decideDestinationWithSuggestedFilename:completionHandler:",

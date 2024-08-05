@@ -1,7 +1,6 @@
 
 import objc_runtime
 import darwin / [app_kit, foundation, objc/runtime]
-import types
 
 when false:
   proc awakeFromNib(self: ID; cmd: SEL; ): void {.cdecl.} =

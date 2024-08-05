@@ -1,7 +1,5 @@
-import std/[math]
 import objc_runtime
 import darwin / [ objc/runtime]
-
 
 proc registerWKPreferences*(): ObjcClass =
   result = allocateClassPair(getClass("WKPreferences"), "PrivWKPreferences", 0)
