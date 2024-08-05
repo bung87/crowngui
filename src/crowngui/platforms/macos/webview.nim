@@ -13,6 +13,7 @@ import ./download_delegate
 import ./ui_delegate
 # import ./wkpreferences
 import ./navigation_delegate
+# import ./window_delegate
 import ./utils
 
 {.passl: "-framework Cocoa -framework WebKit".}
@@ -25,10 +26,7 @@ type
   WKUserScript = ptr object of NSObject
   WKWebViewConfiguration  = ptr object of NSObject
   WKUserContentController = ptr object of NSObject
-proc initWithSource*(self: WKUserScript, source: NSString, injectionTime: static[int], forMainFrameOnly: BOOL) {.objc: "initWithSource:injectionTime:forMainFrameOnly:".}
-proc webview_window_will_close(self: Id; cmd: SEL; notification: Id) =
-  var w = getAssociatedObject(self, cast[pointer]($$"webview"))
-  # webview_terminate(cast[Webview](w))
+# proc initWithSource*(self: WKUserScript, source: NSString, injectionTime: static[int], forMainFrameOnly: BOOL) {.objc: "initWithSource:injectionTime:forMainFrameOnly:".}
 
 proc setHtml*(w: Webview; html: string) =
   objcr: [w.priv.webview loadHTMLString: @html, baseURL: nil]
@@ -88,17 +86,10 @@ proc webview_init*(w: Webview): cint =
     [processPool "_setDownloadDelegate": downloadDelegate]
     [config setProcessPool: processPool]
 
-  # var PrivNSWindowDelegate = allocateClassPair(getClass("NSObject"),
-  #                                                   "PrivNSWindowDelegate", 0)
-  # discard addProtocol(PrivNSWindowDelegate, getProtocol("NSWindowDelegate"))
-  # discard replaceMethod(PrivNSWindowDelegate, $$"windowWillClose:", webview_window_will_close)
-  # registerClassPair(PrivNSWindowDelegate)
-
+  # var PrivNSWindowDelegate = registerWindowDelegate()
   # w.priv.windowDelegate = objcr: [PrivNSWindowDelegate new]
-
   # setAssociatedObject(w.priv.windowDelegate, cast[pointer]($$"webview"), (Id)(w),
   #                          OBJC_ASSOCIATION_ASSIGN)
-
 
   var nsTitle = @($w.title)
  
