@@ -217,8 +217,10 @@ proc newWebView*(path: static[string] = ""; title = ""; width: Positive = 1000; 
     let WindowControllerClass = initWindowControlelr()
     WindowControllerClass.registerClassPair()
     objcr:
-      var appDel = [MyAppDelegateClass new]
-      var windowController = [WindowControllerClass new]
+      var appDel = [MyAppDelegateClass alloc]
+      [appDel init]
+      # var windowController = [WindowControllerClass new]
+      var windowController = [[WindowControllerClass alloc] init]
       [webview.priv.window setDelegate: windowController]
       [NSApplication sharedApplication]
       [NSApp setDelegate: appDel]

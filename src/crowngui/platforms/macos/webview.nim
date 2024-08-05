@@ -50,9 +50,8 @@ proc setSize*(w: Webview; width: int; height: int) =
 proc webview_init*(w: Webview): cint =
   # w.priv.pool = objcr: [NSAutoreleasePool new]
   # objcr: [NSEvent addLocalMonitorForEventsMatchingMask: NSKeyDown, handler: toBlock(handler)]
-
   objcr:
-    var config = [WKWebViewConfiguration new]
+    var config = [[WKWebViewConfiguration alloc] init]
     # var PrivWKPreferences = registerWKPreferences()
     # var wkPref = objc_msgSend(ID(getClass("PrivWKPreferences")), $$"new")
     # [wkPref setValue: [NSNumber numberWithBool: w.debug], forKey: "developerExtrasEnabled"]
@@ -60,15 +59,17 @@ proc webview_init*(w: Webview): cint =
 
     # [[config preferences] setValue: [NSNumber numberWithBool: w.debug], forKey: @"developerExtrasEnabled"]
     # [[config preferences] setValue: [NSNumber numberWithBool: YES], forKey: @"fullScreenEnabled"]
-    [[config preferences] setValue: [NSNumber numberWithBool: YES], forKey: @"javaScriptCanAccessClipboard"]
-    [[config preferences] setValue: [NSNumber numberWithBool: YES], forKey: @"DOMPasteAllowed"]
-    var userController = [WKUserContentController new]
+    var pref = [config preferences]
+    [pref setValue: [NSNumber numberWithBool: YES], forKey: @"javaScriptCanAccessClipboard"]
+    [pref setValue: [NSNumber numberWithBool: YES], forKey: @"DOMPasteAllowed"]
+
+    var userController = [[WKUserContentController alloc] init]
     setAssociatedObject(userController, cast[pointer]($$("webview")), (Id)(w),
                             OBJC_ASSOCIATION_ASSIGN)
     var PrivWKScriptMessageHandler = registerScriptMessageHandler()
-    var scriptMessageHandler: Id = objcr: [PrivWKScriptMessageHandler new]
+    var scriptMessageHandler = [PrivWKScriptMessageHandler new]
 
-    [userController addScriptMessageHandler: scriptMessageHandler, name: "invoke"]
+    [userController addScriptMessageHandler: scriptMessageHandler, name: @"invoke"]
 
     var windowExternalOverrideScript = [WKUserScript alloc]
     const source = """window.external = this; invoke = function(arg){ 
@@ -80,7 +81,7 @@ proc webview_init*(w: Webview): cint =
     [config setUserContentController: userController]
 
     var PrivWKDownloadDelegate = registerDownloadDelegate()
-    var downloadDelegate: Id = objcr: [PrivWKDownloadDelegate new]
+    var downloadDelegate: Id = [PrivWKDownloadDelegate new]
 
     var processPool = [config processPool]
     [processPool "_setDownloadDelegate": downloadDelegate]
@@ -92,7 +93,7 @@ proc webview_init*(w: Webview): cint =
   #                          OBJC_ASSOCIATION_ASSIGN)
 
   var nsTitle = @($w.title)
- 
+
   var frame: CGRect = CGRectMake(0, 0, w.width, w.height)
   var style = NSWindowStyleMaskTitled or NSWindowStyleMaskClosable or
                       NSWindowStyleMaskMiniaturizable;
@@ -105,13 +106,11 @@ proc webview_init*(w: Webview): cint =
     [w.priv.window setTitle: nsTitle]
     # [w.priv.window setDelegate: w.priv.windowDelegate]
     [w.priv.window center]
+    var PrivWKUIDelegate = registerUIDelegate()
+    var uiDel = [[PrivWKUIDelegate alloc] init]
 
-  var PrivWKUIDelegate = registerUIDelegate()
-  var uiDel = objcr: [PrivWKUIDelegate new]
-
-  var PrivWKNavigationDelegate = registerWKNavigationDelegate()
-  objcr:
-    var navDel = [PrivWKNavigationDelegate new]
+    var PrivWKNavigationDelegate = registerWKNavigationDelegate()
+    var navDel = [[PrivWKNavigationDelegate alloc] init]
     w.priv.webview = [WKWebView alloc]
 
     [w.priv.webview initWithFrame: frame, configuration: config]
