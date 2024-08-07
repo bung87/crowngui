@@ -1,6 +1,5 @@
 import objc_runtime
 import darwin / [app_kit, objc/runtime, core_graphics/cggeometry]
-import ./types
 
 proc stopRunLoop*() {.objcr.} =
   var app = [NSApplication sharedApplication]

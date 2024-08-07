@@ -3,7 +3,6 @@ import objc_runtime
 import darwin / [app_kit, foundation, objc/runtime]
 import ./types
 import ./bundle
-import ./app_utils
 
 proc applicationOpenFile(self: ID; cmd: SEL; sender: NSApplication; openFile: NSString): Bool {.cdecl.} =
   let path = cast[cstring](objc_msgSend(cast[ID](openFile), $$"UTF8String"))

@@ -15,7 +15,6 @@ import ./navigation_delegate
 import ./window_delegate
 import ./utils
 import ./app_utils
-import std/[macros]
 
 {.passl: "-framework Cocoa -framework WebKit".}
 
@@ -62,7 +61,7 @@ proc webview_init*(w: Webview): cint =
     [wkPref setValue: nsYes, forKey: "javaScriptCanAccessClipboard"]
     [wkPref setValue: nsYes, forKey: "DOMPasteAllowed"]
 
-    var userController = [[WKUserContentController alloc] init]
+    var userController = [WKUserContentController new]
     setAssociatedObject(userController, cast[pointer]($$("webview")), (Id)(w),
                             OBJC_ASSOCIATION_ASSIGN)
     var PrivWKScriptMessageHandler = registerScriptMessageHandler()
@@ -86,10 +85,10 @@ proc webview_init*(w: Webview): cint =
     [processPool "_setDownloadDelegate": downloadDelegate]
     [config setProcessPool: processPool]
 
-  var PrivNSWindowDelegate = registerWindowDelegate()
-  w.priv.windowDelegate = objcr: [PrivNSWindowDelegate new]
-  setAssociatedObject(w.priv.windowDelegate, cast[pointer]($$"webview"), (Id)(w),
-                           OBJC_ASSOCIATION_ASSIGN)
+    var PrivNSWindowDelegate = registerWindowDelegate()
+    w.priv.windowDelegate = [PrivNSWindowDelegate new]
+    setAssociatedObject(w.priv.windowDelegate, cast[pointer]($$"webview"), (Id)(w),
+                            OBJC_ASSOCIATION_ASSIGN)
 
   var nsTitle = @($w.title)
 
