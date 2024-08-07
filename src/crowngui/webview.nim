@@ -222,13 +222,13 @@ proc newWebView*(path: static[string] = ""; title = ""; width: Positive = 1000; 
       # var windowController = [WindowControllerClass new]
       var windowController = [[WindowControllerClass alloc] init]
       [webview.priv.window setDelegate: windowController]
-      [NSApplication sharedApplication]
-      [NSApp setDelegate: appDel]
+      var app = [NSApplication sharedApplication]
+      [app setDelegate: appDel]
       let ivar: Ivar = getIvar(MyAppDelegateClass, "webview")
       setIvar(appDel, ivar, cast[ID](webview))
       createMenu()
-      [NSApp finishLaunching]
-      [NSApp activateIgnoringOtherApps: true]
+      # [NSApp finishLaunching]
+      # [NSApp activateIgnoringOtherApps: true]
 
   when not defined(macosx):
     if paramCount() > 0:

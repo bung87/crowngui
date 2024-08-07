@@ -14,6 +14,7 @@ import ./ui_delegate
 import ./navigation_delegate
 import ./window_delegate
 import ./utils
+import ./app_utils
 import std/[macros]
 
 {.passl: "-framework Cocoa -framework WebKit".}
@@ -60,7 +61,6 @@ proc webview_init*(w: Webview): cint =
     [wkPref setValue: nsYes, forKey: "fullScreenEnabled"]
     [wkPref setValue: nsYes, forKey: "javaScriptCanAccessClipboard"]
     [wkPref setValue: nsYes, forKey: "DOMPasteAllowed"]
-    [config setPreferences: wkPref]
 
     var userController = [[WKUserContentController alloc] init]
     setAssociatedObject(userController, cast[pointer]($$("webview")), (Id)(w),
@@ -179,8 +179,7 @@ proc webview_dispatch*(w: Webview; fn: pointer; arg: pointer) {.stdcall.} =
   dispatch_async_f(dispatch_get_main_queue(), context, cast[pointer](webview_dispatch_cb))
 
 proc terminate*(w: Webview): void {.objcr.} =
-  var app: Id = [NSApplication sharedApplication]
-  [app terminate: app]
+  stopRunLoop()
 
 proc destroy*(w: Webview) =
   w.terminate()
