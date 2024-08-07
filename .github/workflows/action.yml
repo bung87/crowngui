@@ -1,0 +1,48 @@
+name: build
+
+on:
+  push:
+    paths-ignore: 
+      - README.md
+  pull_request:
+    paths-ignore: 
+      - README.md
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macOS-12
+        version:
+          # - version-2-1
+          - devel
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Cache choosenim
+      id: cache-choosenim
+      uses: actions/cache@v4
+      with:
+        path: ~/.choosenim
+        key: ${{ runner.os }}-choosenim-${{ matrix.nim-version}}
+
+    - name: Cache nimble
+      id: cache-nimble
+      uses: actions/cache@v4
+      with:
+        path: ~/.nimble
+        key: ${{ runner.os }}-nimble-${{ matrix.version}}-${{ hashFiles('*.nimble') }}
+
+    - uses: alaviss/setup-nim@0.1.1
+      with:
+        path: 'nim'
+        version: ${{ matrix.version }}
+    - name: Test
+      continue-on-error: ${{ matrix.version == 'devel' }}
+      run: |
+        nimble c src/crowngui.nim

@@ -1,4 +1,4 @@
-# crowngui  
+# crowngui  ![Build Status](https://github.com/bung87/crowngui/workflows/build/badge.svg)  
 
 Web Technologies based Crossplatform GUI Framework  
 
