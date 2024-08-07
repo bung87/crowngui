@@ -16,7 +16,7 @@ elif defined(macosx):
   import darwin / [app_kit, foundation]
   import platforms/macos/menu
   import platforms/macos/webview
-  import platforms/macos/appdelegate
+  import platforms/macos/app_delegate
   import platforms/macos/windowcontroller
   export webview
 
