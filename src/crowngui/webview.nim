@@ -211,20 +211,16 @@ proc newWebView*(path: static[string] = ""; title = ""; width: Positive = 1000; 
     entry = dataUriHtmlHeader "<!DOCTYPE html><html><head><meta content='width=device-width,initial-scale=1' name=viewport></head><body id=body ><div id=ROOT ><div></body></html>" # Copied from Karax
   var webview = webView(title, entry, width, height, resizable, debug, callback)
   when defined(macosx):
-    let MyAppDelegateClass = initAppDelegate()
-    MyAppDelegateClass.registerClassPair()
-
-    let WindowControllerClass = initWindowControlelr()
-    WindowControllerClass.registerClassPair()
+    let MyAppDelegate = registerAppDelegate()
+    let WindowController = registerWindowController()
+    
     objcr:
-      var appDel = [MyAppDelegateClass alloc]
-      [appDel init]
-      # var windowController = [WindowControllerClass new]
-      var windowController = [[WindowControllerClass alloc] init]
+      var appDel = [MyAppDelegate new]
+      var windowController = [WindowController new]
       [webview.priv.window setDelegate: windowController]
       var app = [NSApplication sharedApplication]
       [app setDelegate: appDel]
-      let ivar: Ivar = getIvar(MyAppDelegateClass, "webview")
+      let ivar: Ivar = getIvar(MyAppDelegate, "webview")
       setIvar(appDel, ivar, cast[ID](webview))
       createMenu()
       # [NSApp finishLaunching]

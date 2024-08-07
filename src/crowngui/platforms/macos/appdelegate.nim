@@ -14,7 +14,7 @@ proc applicationOpenFile(self: ID; cmd: SEL; sender: NSApplication; openFile: NS
     return cast[Bool](wv.onOpenFile(wv, $path))
 
 proc applicationShouldTerminateAfterLastWindowClosed(self: ID; cmd: SEL; notification: ID): bool {.cdecl.} =
-  return true
+  return false
 
 # applicationWillFinishLaunching: -> application:openFile: -> applicationDidFinishLaunching:
 proc applicationWillFinishLaunching(self: ID; cmd: SEL; notification: ID): void {.cdecl.} =
@@ -22,7 +22,7 @@ proc applicationWillFinishLaunching(self: ID; cmd: SEL; notification: ID): void 
 
 proc on_application_did_finish_launching(delegate: ID; app: ID) {.objcr.}=
   # if m_owns_window:
-  stopRunLoop()
+  # stopRunLoop()
   if not isAppBundled():
     [app setActivationPolicy: NSApplicationActivationPolicyRegular]
     [app activateIgnoringOtherApps: YES]
@@ -40,12 +40,13 @@ proc applicationDidFinishLaunching(self: ID; cmd: SEL; notification: ID): void {
 proc applicationWillBecomeActive(self: ID; cmd: SEL; notification: ID): void {.cdecl.} =
   echo "applicationWillBecomeActive"
 
-proc initAppDelegate*(): ObjcClass =
-  result = allocateClassPair(getClass("NSObject"), "AppDelegate", 0)
+proc registerAppDelegate*(): ObjcClass =
+  result = allocateClassPair(getClass("NSResponder"), "MyAppDelegate", 0)
   discard result.addMethod($$"applicationShouldTerminateAfterLastWindowClosed:", applicationShouldTerminateAfterLastWindowClosed)
-  discard result.addMethod($$"applicationWillFinishLaunching:", applicationWillFinishLaunching)
+  # discard result.addMethod($$"applicationWillFinishLaunching:", applicationWillFinishLaunching)
   discard result.addMethod($$"applicationDidFinishLaunching:", applicationDidFinishLaunching)
-  discard result.addMethod($$"applicationWillBecomeActive:", applicationWillBecomeActive)
+  # discard result.addMethod($$"applicationWillBecomeActive:", applicationWillBecomeActive)
   discard result.addMethod($$"application:openFile:", applicationOpenFile)
 
   discard addIvar(result, "webview", sizeof(Webview), log2(sizeof(Webview).float64).int, "@")
+  result.registerClassPair()

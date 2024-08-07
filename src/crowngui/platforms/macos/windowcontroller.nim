@@ -25,7 +25,8 @@ when false:
 proc draggingEntered(self: ID; cmd: SEL; sender: NSDraggingInfo): NSDragOperation {.cdecl.} =
   return NSDragOperationCopy
 
-proc initWindowControlelr*(): ObjcClass =
+proc registerWindowController*(): ObjcClass =
   result = allocateClassPair(getClass("NSWindowController"), "WindowController", 0)
   # discard result.replaceMethod($$"initWithCoder:", initWithCoder)
   discard result.replaceMethod($$"draggingEntered:", draggingEntered)
+  result.registerClassPair()
