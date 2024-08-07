@@ -223,8 +223,6 @@ proc newWebView*(path: static[string] = ""; title = ""; width: Positive = 1000; 
       let ivar: Ivar = getIvar(MyAppDelegate, "webview")
       setIvar(appDel, ivar, cast[ID](webview))
       createMenu()
-      # [NSApp finishLaunching]
-      # [NSApp activateIgnoringOtherApps: true]
 
   when not defined(macosx):
     if paramCount() > 0:
