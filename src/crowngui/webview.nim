@@ -190,7 +190,7 @@ proc webView(title = ""; url = ""; width: Positive = 1000; height: Positive = 70
   result.width = width
   result.height = height
   result.resizable = resizable
-  result.debug = true
+  result.debug = debug
   result.invokeCb = generalExternalInvokeCallback
   if callback != nil: result.externalInvokeCB = callback
   if result.webview_init() != 0: return nil

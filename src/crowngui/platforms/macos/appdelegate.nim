@@ -1,7 +1,8 @@
 import std/[math]
 import objc_runtime
 import darwin / [app_kit, foundation, objc/runtime]
-import types
+import ./types
+import ./bundle
 
 proc applicationOpenFile(self: ID; cmd: SEL; sender: NSApplication; openFile: NSString): Bool {.cdecl.} =
   let path = cast[cstring](objc_msgSend(cast[ID](openFile), $$"UTF8String"))
@@ -17,11 +18,23 @@ proc applicationShouldTerminateAfterLastWindowClosed(self: ID; cmd: SEL; notific
 # applicationWillFinishLaunching: -> application:openFile: -> applicationDidFinishLaunching:
 proc applicationWillFinishLaunching(self: ID; cmd: SEL; notification: ID): void {.cdecl.} =
   echo "applicationWillFinishLaunching"
+
+proc on_application_did_finish_launching(delegate: ID; app: ID) {.objcr.}=
+  # if m_owns_window:
+    # stop_run_loop()
+  if not isAppBundled():
+    [app setActivationPolicy: NSApplicationActivationPolicyRegular]
+    [app activateIgnoringOtherApps: YES]
+  # set_up_window()
+
 proc applicationDidFinishLaunching(self: ID; cmd: SEL; notification: ID): void {.cdecl.} =
   echo "applicationDidFinishLaunching"
-  # objcr:
-  #   let app = [notification $$"object"]
-  #   [app stop: nil]
+  # var w = getAssociatedObject(self, cast[pointer]($$"webview"))
+  # var wv = cast[Webview](w)
+  
+  objcr:
+    let app = [notification $$"object"]
+    on_application_did_finish_launching(self, app)
 
 proc applicationWillBecomeActive(self: ID; cmd: SEL; notification: ID): void {.cdecl.} =
   echo "applicationWillBecomeActive"

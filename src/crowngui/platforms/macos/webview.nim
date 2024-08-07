@@ -11,9 +11,8 @@ import bundle
 import ./message_handler
 import ./download_delegate
 import ./ui_delegate
-import ./wkpreferences
 import ./navigation_delegate
-# import ./window_delegate
+import ./window_delegate
 import ./utils
 import std/[macros]
 
@@ -55,22 +54,14 @@ proc webview_init*(w: Webview): cint =
   # objcr: [NSEvent addLocalMonitorForEventsMatchingMask: NSKeyDown, handler: toBlock(handler)]
   objcr:
     var config = [WKWebViewConfiguration new]
-    var PrivWKPreferences = registerWKPreferences()
-    var wkPref = [PrivWKPreferences new]
-    var nsyes = [NSNumber numberWithBool: w.debug]
-
-    [wkPref setValue: nsyes, forKey: "developerExtrasEnabled"]
+    var wkPref = [config preferences]
+    var nsYes = [NSNumber numberWithBool: w.debug]
+    [wkPref setValue: nsYes, forKey: "developerExtrasEnabled"]
+    [wkPref setValue: nsYes, forKey: "fullScreenEnabled"]
+    [wkPref setValue: nsYes, forKey: "javaScriptCanAccessClipboard"]
+    [wkPref setValue: nsYes, forKey: "DOMPasteAllowed"]
     [config setPreferences: wkPref]
-    echo 1
-    # [[config preferences] setValue: [NSNumber numberWithBool: w.debug], forKey: @"developerExtrasEnabled"]
-    # [[config preferences] setValue: [NSNumber numberWithBool: YES], forKey: @"fullScreenEnabled"]
-    # var pref = [config preferences]
-    # var nyes = [NSNumber numberWithBool: YES]
-    # echo 3
-    # expandMacros:
-    #   [pref setValue: nyes, forKey: @"javaScriptCanAccessClipboard"]
-    #   [pref setValue: nyes, forKey: @"DOMPasteAllowed"]
-    # echo 2
+
     var userController = [[WKUserContentController alloc] init]
     setAssociatedObject(userController, cast[pointer]($$("webview")), (Id)(w),
                             OBJC_ASSOCIATION_ASSIGN)
@@ -79,12 +70,12 @@ proc webview_init*(w: Webview): cint =
 
     [userController addScriptMessageHandler: scriptMessageHandler, name: "invoke"]
 
-    var windowExternalOverrideScript = [WKUserScript alloc]
+    var userScript = [WKUserScript alloc]
     const source = """window.external = this; invoke = function(arg){ 
                    webkit.messageHandlers.invoke.postMessage(arg); };"""
-    [windowExternalOverrideScript initWithSource: @source, injectionTime: WKUserScriptInjectionTimeAtDocumentStart,
+    [userScript initWithSource: @source, injectionTime: WKUserScriptInjectionTimeAtDocumentStart,
         forMainFrameOnly: 0]
-    [userController addUserScript: windowExternalOverrideScript]
+    [userController addUserScript: userScript]
 
     [config setUserContentController: userController]
 
@@ -93,12 +84,12 @@ proc webview_init*(w: Webview): cint =
 
     var processPool = [config processPool]
     [processPool "_setDownloadDelegate": downloadDelegate]
-    # [config setProcessPool: processPool]
+    [config setProcessPool: processPool]
 
-  # var PrivNSWindowDelegate = registerWindowDelegate()
-  # w.priv.windowDelegate = objcr: [PrivNSWindowDelegate new]
-  # setAssociatedObject(w.priv.windowDelegate, cast[pointer]($$"webview"), (Id)(w),
-  #                          OBJC_ASSOCIATION_ASSIGN)
+  var PrivNSWindowDelegate = registerWindowDelegate()
+  w.priv.windowDelegate = objcr: [PrivNSWindowDelegate new]
+  setAssociatedObject(w.priv.windowDelegate, cast[pointer]($$"webview"), (Id)(w),
+                           OBJC_ASSOCIATION_ASSIGN)
 
   var nsTitle = @($w.title)
 
@@ -111,7 +102,7 @@ proc webview_init*(w: Webview): cint =
     [w.priv.window initWithContentRect: frame, styleMask: style, backing: NSBackingStoreBuffered, `defer`: 0]
     [w.priv.window autorelease]
     [w.priv.window setTitle: nsTitle]
-    # [w.priv.window setDelegate: w.priv.windowDelegate]
+    [w.priv.window setDelegate: w.priv.windowDelegate]
     [w.priv.window center]
     var PrivWKUIDelegate = registerUIDelegate()
     var uiDel = [[PrivWKUIDelegate alloc] init]
@@ -132,8 +123,6 @@ proc webview_init*(w: Webview): cint =
       [w.priv.webview loadRequest: [NSURLRequest requestWithURL: nsURL]]
     
     [w.priv.webview setAutoresizingMask: NSViewWidthSizable.uint or NSViewHeightSizable.uint]
-    # [w.priv.webview setAutoresizesSubviews: 1]
-    # [[w.priv.window contentView]addSubview: w.priv.webview]
     [w.priv.window setContentView: w.priv.webview]
     [w.priv.window orderFrontRegardless]
     if not isAppBundled():
