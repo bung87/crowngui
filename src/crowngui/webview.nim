@@ -1,6 +1,6 @@
 include js_utils
 import tables, strutils, macros, logging, json, os, base64, strformat, std/exitprocs
-
+import ./types
 var logger = newRollingFileLogger(expandTilde("~/crowngui.log"))
 addHandler(logger)
 
@@ -182,7 +182,7 @@ proc run*(w: Webview; quitProc: proc () {.noconv.}; controlCProc: proc () {.noco
   system.setControlCHook(controlCProc)
   w.run
 
-proc webView(title = ""; url = ""; width: Positive = 1000; height: Positive = 700; resizable: static[bool] = true;
+proc webView(title = ""; url = "";entryType:static[EntryType]; width: Positive = 1000; height: Positive = 700; resizable: static[bool] = true;
     debug: static[bool] = not defined(release); callback: ExternalInvokeCb = nil): Webview {.inline.} =
   result = create(WebviewObj)
   result.title = title
@@ -191,11 +191,12 @@ proc webView(title = ""; url = ""; width: Positive = 1000; height: Positive = 70
   result.height = height
   result.resizable = resizable
   result.debug = debug
+  result.entryType = entryType
   result.invokeCb = generalExternalInvokeCallback
   if callback != nil: result.externalInvokeCB = callback
   if result.webview_init() != 0: return nil
 
-proc newWebView*(path: static[string] = ""; title = ""; width: Positive = 1000; height: Positive = 700;
+proc newWebView*(path: static[string] = ""; entryType:static[EntryType]; title = ""; width: Positive = 1000; height: Positive = 700;
     resizable: static[bool] = true; debug: static[bool] = not defined(release); callback: ExternalInvokeCb = nil; 
     ): Webview =
   ## Create a new Window with given attributes, all arguments are optional.
@@ -209,7 +210,7 @@ proc newWebView*(path: static[string] = ""; title = ""; width: Positive = 1000; 
   var entry = path
   when path.endsWith".js" or path.endsWith".nim":
     entry = dataUriHtmlHeader "<!DOCTYPE html><html><head><meta content='width=device-width,initial-scale=1' name=viewport></head><body id=body ><div id=ROOT ><div></body></html>" # Copied from Karax
-  var webview = webView(title, entry, width, height, resizable, debug, callback)
+  var webview = webView(title, entry, entryType, width, height, resizable, debug, callback)
   when defined(macosx):
     let MyAppDelegate = registerAppDelegate()
     let WindowController = registerWindowController()

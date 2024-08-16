@@ -1,13 +1,10 @@
 
-import os, strutils, crowngui / [webview, net_utils]
+import os, strutils, crowngui / [webview, net_utils, types]
 import static_server, mimetypes, asyncdispatch
 import finder
-
 export webview
 
 type
-  EntryType = enum
-    url, file, html, dir
   Application* = object
     entry: string
     entryType: EntryType
@@ -50,7 +47,7 @@ proc newApplication*(entry: static[string]): ApplicationRef =
       const url = entry
       EntryType.file
     else:
-      const url = dataUriHtmlHeader entry.strip
+      const url =  entry.strip
       EntryType.html
   when defined(bundle):
     const data = staticRead bundle
@@ -60,7 +57,7 @@ proc newApplication*(entry: static[string]): ApplicationRef =
   when defined(bundle):
     port = findAvailablePort()
     let url = "http://localhost:" & $port
-  result.webview = newWebView(url)
+  result.webview = newWebView(url, entryType)
   when defined(bundle):
     result.webview.url = url
 

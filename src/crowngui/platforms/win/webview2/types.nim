@@ -1,6 +1,7 @@
 import winim
 import com
 # import std/[atomics]
+import ../../../types
 
 type
   WebView* = ptr WebViewObj
@@ -16,6 +17,7 @@ type
     priv*: WebviewPrivObj
     created*: bool
     onOpenFile*: OnOpenFile
+    entryType*: EntryType
   WebviewPrivObj* = object
     windowHandle*: HWND
     view*: ptr ICoreWebView2
