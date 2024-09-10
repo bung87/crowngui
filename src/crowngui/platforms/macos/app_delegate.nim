@@ -1,7 +1,7 @@
 import std/[math]
 import objc_runtime
 import darwin / [app_kit, foundation, objc/runtime]
-import ./types
+import crowngui/types
 import ./bundle
 
 proc applicationOpenFile(self: ID; cmd: SEL; sender: NSApplication; openFile: NSString): Bool {.cdecl.} =
@@ -28,7 +28,8 @@ proc on_application_did_finish_launching(delegate: ID; app: ID) {.objcr.}=
   # set_up_window()
 
 proc applicationDidFinishLaunching(self: ID; cmd: SEL; notification: ID): void {.cdecl.} =
-  echo "applicationDidFinishLaunching"
+  when not defined(release):
+    echo "applicationDidFinishLaunching"
   # var w = getAssociatedObject(self, cast[pointer]($$"webview"))
   # var wv = cast[Webview](w)
   
@@ -37,7 +38,8 @@ proc applicationDidFinishLaunching(self: ID; cmd: SEL; notification: ID): void {
     on_application_did_finish_launching(self, app)
 
 proc applicationWillBecomeActive(self: ID; cmd: SEL; notification: ID): void {.cdecl.} =
-  echo "applicationWillBecomeActive"
+  when not defined(release):
+    echo "applicationWillBecomeActive"
 
 proc registerAppDelegate*(): ObjcClass =
   result = allocateClassPair(getClass("NSResponder"), "MyAppDelegate", 0)

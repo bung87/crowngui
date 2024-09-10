@@ -1,6 +1,6 @@
 import objc_runtime
 import darwin / [app_kit, foundation, objc/runtime, objc/blocks]
-import types
+import crowngui/types
 import ./dialog_types
 
 const WEBVIEW_DIALOG_FLAG_FILE = (0 shl 0)

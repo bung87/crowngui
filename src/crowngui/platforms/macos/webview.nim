@@ -1,4 +1,4 @@
-import strutils, base64
+# import strutils, base64
 import objc_runtime
 import darwin / [app_kit,web_kit, foundation, objc/runtime, core_graphics/cggeometry]
 # import menu
@@ -15,6 +15,7 @@ import ./navigation_delegate
 import ./window_delegate
 import ./utils
 import ./app_utils
+import ../../types
 
 {.passl: "-framework Cocoa -framework WebKit".}
 
@@ -109,9 +110,11 @@ proc webview_init*(w: Webview): cint {.objcr.} =
   [w.priv.webview setUIDelegate: uiDel]
   [w.priv.webview setNavigationDelegate: navDel]
   let url = $(w.url)
-  if "data:text/html;charset=utf-8;base64," in url:
-    let html = base64.decode(url.split(",")[1])
-    [w.priv.webview loadHTMLString: @html, baseURL: nil]
+  case w.entryType
+  of EntryType.html:
+  # if "data:text/html;charset=utf-8;base64," in url:
+    # let html = base64.decode(url.split(",")[1])
+    [w.priv.webview loadHTMLString: @url, baseURL: nil]
   else:
     var nsURL = [NSURL URLWithString: @url]
     [w.priv.webview loadRequest: [NSURLRequest requestWithURL: nsURL]]

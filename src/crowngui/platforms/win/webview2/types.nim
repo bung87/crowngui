@@ -1,23 +1,9 @@
 import winim
 import com
 # import std/[atomics]
-import ../../../types
 
 type
-  WebView* = ptr WebViewObj
-  OnOpenFile* = proc (w: Webview; filePath: string; name = ""):bool
-  WebViewObj* = object
-    url* : string
-    title* : string
-    width* : int
-    height* : int
-    resizable*: bool
-    debug* : bool
-    invokeCb* : pointer
-    priv*: WebviewPrivObj
-    created*: bool
-    onOpenFile*: OnOpenFile
-    entryType*: EntryType
+
   WebviewPrivObj* = object
     windowHandle*: HWND
     view*: ptr ICoreWebView2

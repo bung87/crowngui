@@ -1,6 +1,7 @@
 include js_utils
 import tables, strutils, macros, logging, json, os, base64, strformat, std/exitprocs
 import ./types
+
 var logger = newRollingFileLogger(expandTilde("~/crowngui.log"))
 addHandler(logger)
 
@@ -182,7 +183,7 @@ proc run*(w: Webview; quitProc: proc () {.noconv.}; controlCProc: proc () {.noco
   system.setControlCHook(controlCProc)
   w.run
 
-proc webView(title = ""; url = "";entryType:static[EntryType]; width: Positive = 1000; height: Positive = 700; resizable: static[bool] = true;
+proc webView(title = ""; url = "";entryType:EntryType; width: Positive = 1000; height: Positive = 700; resizable: static[bool] = true;
     debug: static[bool] = not defined(release); callback: ExternalInvokeCb = nil): Webview {.inline.} =
   result = create(WebviewObj)
   result.title = title
@@ -208,9 +209,11 @@ proc newWebView*(path: static[string] = ""; entryType:static[EntryType]; title =
   ## * `debug` Debug mode, Debug is `true` when not built for Release.
 
   var entry = path
+  var entryType1 = entryType
   when path.endsWith".js" or path.endsWith".nim":
-    entry = dataUriHtmlHeader "<!DOCTYPE html><html><head><meta content='width=device-width,initial-scale=1' name=viewport></head><body id=body ><div id=ROOT ><div></body></html>" # Copied from Karax
-  var webview = webView(title, entry, entryType, width, height, resizable, debug, callback)
+    entry =  "<!DOCTYPE html><html><head><meta content='width=device-width,initial-scale=1' name=viewport></head><body id=body ><div id=ROOT ><div></body></html>" # Copied from Karax
+    entryType1 = EntryType.html
+  var webview = webView(title, entry, entryType1, width, height, resizable, debug, callback)
   when defined(macosx):
     let MyAppDelegate = registerAppDelegate()
     let WindowController = registerWindowController()
