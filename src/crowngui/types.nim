@@ -17,7 +17,7 @@ type
     created*: bool
     onOpenFile*: OnOpenFile
     entryType*: EntryType
-  EntryType* = enum
+  EntryType* {.pure.} = enum
     url, file, html, dir
   OnOpenFile* = proc (w: Webview; filePath: string; name = ""):bool
   

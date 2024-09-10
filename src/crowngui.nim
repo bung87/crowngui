@@ -16,21 +16,21 @@ proc newApplication*(entry: static[string]): ApplicationRef =
   ## when entry specific to nim file it will compile to js as script of bootstrap html
 
   result = new ApplicationRef
-  const entryType =
-    when entry.startsWith"http":
-      const url = entry
-      EntryType.url
-    elif entry.endsWith".html" and not entry.startsWith"http":
-      const url = fileLocalHeader & entry
-      EntryType.file
-    elif entry.endsWith".js" or entry.endsWith".nim":
-      const url = entry
-      EntryType.file
-    else:
-      const url =  entry.strip
-      EntryType.html
+  
+  when entry.startsWith"http":
+    const url1 = entry
+    const entryType = EntryType.url
+  elif entry.endsWith".html" and not entry.startsWith"http":
+    const url1 = fileLocalHeader & entry
+    const entryType = EntryType.file
+  elif entry.endsWith".js" or entry.endsWith".nim":
+    const url1 = entry
+    const entryType = EntryType.file
+  else:
+    const url1 =  entry.strip
+    const entryType = EntryType.html
   result.entryType = entryType
-  result.webview = newWebView(url, entryType)
+  result.webview = newWebView(url1, entryType)
 
 
 proc run*(app: ApplicationRef) = app.webview.run
