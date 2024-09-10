@@ -1,6 +1,6 @@
 # Package
 
-version       = "0.2.19"
+version       = "0.3.0"
 author        = "bung87"
 description   = "Web Technologies based Crossplatform GUI Framework"
 license       = "MIT"
@@ -13,7 +13,6 @@ requires "nim >= 1.1.1"
 # requires "nimble >= 0.11.4"
 
 requires "regex"
-requires "static_server >= 2.2.1"
 requires "jsonschema"
 requires "objc_runtime >= 0.1.9"
 requires "darwin"

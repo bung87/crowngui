@@ -1,7 +1,6 @@
 
-import os, strutils, crowngui / [webview, net_utils, types]
-import static_server, mimetypes, asyncdispatch
-import finder
+import std/[strutils]
+import crowngui / [webview, types]
 export webview
 
 type
@@ -12,32 +11,13 @@ type
   ApplicationRef* = ref Application
 
 
-proc server(ctx: tuple[data: string, port: int ]) {.thread.} =
-  var settings: NimHttpSettings
-  var finder = Finder(fType: FinderType.zip2mem)
-  initFinder(finder, ctx.data)
-  when not defined(release):
-    settings.logging = true
-  settings.finder = finder
-  settings.mimes = newMimeTypes()
-  settings.address = ""
-  settings.port = Port(ctx.port)
-  serve(settings)
-  runForever()
-  quit(0)
-
-const bundle {.strdefine.} = ""
 proc newApplication*(entry: static[string]): ApplicationRef =
   ## entry could be `html` file, `url` , `js` file or `nim` file
   ## when entry specific to nim file it will compile to js as script of bootstrap html
-  ## when run command specific `--wwwroot` parameter it will bundle directory as http server root
+
   result = new ApplicationRef
-  when defined(bundle):
-    var port: int
   const entryType =
-    when defined(bundle):
-      EntryType.url
-    elif entry.startsWith"http":
+    when entry.startsWith"http":
       const url = entry
       EntryType.url
     elif entry.endsWith".html" and not entry.startsWith"http":
@@ -49,17 +29,8 @@ proc newApplication*(entry: static[string]): ApplicationRef =
     else:
       const url =  entry.strip
       EntryType.html
-  when defined(bundle):
-    const data = staticRead bundle
-    var serverthr: Thread[string]
-    createThread(serverthr, server, (data, port))
   result.entryType = entryType
-  when defined(bundle):
-    port = findAvailablePort()
-    let url = "http://localhost:" & $port
   result.webview = newWebView(url, entryType)
-  when defined(bundle):
-    result.webview.url = url
 
 
 proc run*(app: ApplicationRef) = app.webview.run

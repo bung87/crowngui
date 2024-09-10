@@ -52,9 +52,8 @@ when isMainModule:
     cssLight = staticRead"assets/light.css".strip.unindent.cstring
 
   let app = newApplication( staticRead("assets/demo.html") )
-  when not defined(bundle):
-    let theme = if "--light-theme" in commandLineParams(): cssLight else: cssDark
-    app.css(theme)
+  let theme = if "--light-theme" in commandLineParams(): cssLight else: cssDark
+  app.css(theme)
   app.run()
   app.exit()
 ```
@@ -77,7 +76,6 @@ Options:
   -h, --help                         print this cligen-erated help
   --help-syntax                      advanced: prepend,plurals,..
   -t=, --target=   string  REQUIRED  set target
-  -w=, --wwwroot=  string  ""        set wwwroot
   -r, --release    bool    false     set release
 
 ```
