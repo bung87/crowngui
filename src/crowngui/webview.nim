@@ -1,6 +1,7 @@
 include js_utils
 import tables, strutils, macros, logging, json, os, base64, strformat, std/exitprocs
 import ./types
+export types
 
 var logger = newRollingFileLogger(expandTilde("~/crowngui.log"))
 addHandler(logger)
