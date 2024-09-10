@@ -42,7 +42,10 @@ var
   dispatchTable = newTable[int, DispatchFn]()                                   # for dispatch
 
 proc css*(w:Webview, css: string): void =
-  w.addUserScriptAtDocumentStart(cssInjectFunction & "(\"" & css.jsEncode & "\")")
+  when defined(windows): # FIXME: `addUserScriptAtDocumentStart` doesn't work with `NavigateToString`
+    w.addUserScriptAtDocumentEnd(cssInjectFunction & "(\"" & css.jsEncode & "\")")
+  else:
+    w.addUserScriptAtDocumentStart(cssInjectFunction & "(\"" & css.jsEncode & "\")")
 
 proc generalExternalInvokeCallback(w: Webview; arg: cstring) {.exportc.} =
   # assign to webview.external_invoke_cb using eps,cbs store user defined proc
