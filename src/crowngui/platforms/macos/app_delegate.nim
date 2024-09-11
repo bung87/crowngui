@@ -13,11 +13,13 @@ proc applicationOpenFile(self: ID; cmd: SEL; sender: NSApplication; openFile: NS
     return cast[Bool](wv.onOpenFile(wv, $path))
 
 proc applicationShouldTerminateAfterLastWindowClosed(self: ID; cmd: SEL; notification: ID): bool {.cdecl.} =
-  return false
+  # return true, so will not stay in dock and wait for reactivation
+  return true
 
 # applicationWillFinishLaunching: -> application:openFile: -> applicationDidFinishLaunching:
 proc applicationWillFinishLaunching(self: ID; cmd: SEL; notification: ID): void {.cdecl.} =
-  echo "applicationWillFinishLaunching"
+  when not defined(release):
+    echo "applicationWillFinishLaunching"
 
 proc on_application_did_finish_launching(delegate: ID; app: ID) {.objcr.}=
   # if m_owns_window:
@@ -38,15 +40,19 @@ proc applicationDidFinishLaunching(self: ID; cmd: SEL; notification: ID): void {
     on_application_did_finish_launching(self, app)
 
 proc applicationWillBecomeActive(self: ID; cmd: SEL; notification: ID): void {.cdecl.} =
+  # close button pressed, stay in dock. then press from dock to activate app.
   when not defined(release):
     echo "applicationWillBecomeActive"
+  # var w = getAssociatedObject(self, cast[pointer]($$"webview"))
+  # var wv = cast[Webview](w)
+  # wv.webview_init()
 
 proc registerAppDelegate*(): ObjcClass =
   result = allocateClassPair(getClass("NSResponder"), "MyAppDelegate", 0)
   discard result.addMethod($$"applicationShouldTerminateAfterLastWindowClosed:", applicationShouldTerminateAfterLastWindowClosed)
-  # discard result.addMethod($$"applicationWillFinishLaunching:", applicationWillFinishLaunching)
+  discard result.addMethod($$"applicationWillFinishLaunching:", applicationWillFinishLaunching)
   discard result.addMethod($$"applicationDidFinishLaunching:", applicationDidFinishLaunching)
-  # discard result.addMethod($$"applicationWillBecomeActive:", applicationWillBecomeActive)
+  discard result.addMethod($$"applicationWillBecomeActive:", applicationWillBecomeActive)
   discard result.addMethod($$"application:openFile:", applicationOpenFile)
 
   discard addIvar(result, "webview", sizeof(Webview), log2(sizeof(Webview).float64).int, "@")
