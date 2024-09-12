@@ -6,10 +6,8 @@ It uses Cocoa/WebKit on macOS, gtk-webkit2 on Linux and webview2 on Windows
 
 crowngui contains managed code only, no native code.
 
-crowngui provide CLI tool for bundling application easier.
+crowngui uses [nimpacker](https://github.com/nimpacker/nimpacker) for bundling application easier.
 
-CLI tool:  
-[crowncli](https://github.com/bung87/crowncli). 
 
 ## Architecture
 
@@ -62,12 +60,12 @@ Your project `.nimble` file
 bin           = @["yourexecutable"]
 ```
 
-`crowncli` will bundle your executable to `exe` on windows, `.app` on mac  
+`nimpacker` will bundle your executable to `exe` on windows, `.app` on mac  
 
 Your project root can have `"logo.png"` which will generate as icon of application.  
 
 ### CLI usage  
-`crowncli [build,run] --help`  
+`nimpacker [build,run] --help`  
 
 ```
 Usage:
@@ -86,17 +84,13 @@ Options:
 
 [gamode](https://github.com/bung87/gamode) windows optimization tool for game  
 
-## Prerequires  
-  
-`rcedit` for windows exe icon on non-windows platform requires `wine`  
-
 ## Development  
 
 run  
-`crowncli run --target macos`  
+`nimpacker run --target macos`  
 
 build  
-`crowncli build --target macos`
+`nimpacker build --target macos`
 
 
 ## Cross compilation for Windows  
