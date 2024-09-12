@@ -29,11 +29,6 @@ type
     scope, name, args: string
   ExternalInvokeCb* = proc (w: Webview; arg: cstring) ## External CallBack Proc
 
-template dataUriHtmlHeader*(s: string): string =
-  ## Data URI for HTML UTF-8 header string. For Mac uses Base64, `import base64` to use.
-  when defined(osx): "data:text/html;charset=utf-8;base64," & base64.encode(s)
-  else: "data:text/html," & s
-
 const
   fileLocalHeader* = "file:///" ## Use Local File as URL
 
