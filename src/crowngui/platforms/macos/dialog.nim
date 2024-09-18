@@ -39,15 +39,21 @@ proc error*(title: string; description: string) =
 
 proc chooseFile*(root: string = ""; completionHandler: Block[OpenCompletionHandler] = nil) =
   objcr:
-    var openPanel = [NSOpenPanel openPanel]
-    # [openPanel setAllowsMultipleSelection, [parameters allowsMultipleSelection]]
-    [openPanel setCanChooseFiles: 1]
+    var openPanel1 = [NSOpenPanel openPanel]
+    [cast[Id](openPanel1) setAllowsMultipleSelection:NO]
+    [cast[Id](openPanel1) setCanChooseFiles: YES]
     let b2 = toBlock() do(r: Id):
       if r == cast[Id](NSModalResponseOK):
-        objc_msgSend(cast[Id](completionHandler), $$"invoke", objc_msgSend(openPanel, $$"URLs"))
+        let urls = [cast[Id](openPanel1) valueForKey: "URLs"]
+        var newUrls = newSeq[string]()
+        let urls2 = cast[NSArray[NSURL]](urls)
+        for one in urls2:
+          let path = [one valueForKey: "path"]
+          newUrls.add $(cast[NSString](path))
+        objc_msgSend(cast[Id](completionHandler), $$"invoke", newUrls)
       else:
         objc_msgSend(cast[Id](completionHandler), $$"invoke", nil)
-    [openPanel beginWithCompletionHandler: b2]
+    [cast[ID](openPanel1) beginWithCompletionHandler: b2]
 
 proc saveFile*(root: string = ""; completionHandler: Block[SaveCompletionHandler] = nil) =
   objcr:

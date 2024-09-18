@@ -1,6 +1,6 @@
 import darwin / [objc/runtime]
 
-type OpenCompletionHandler* = proc (Id: Id): void
+type OpenCompletionHandler* = proc (self: ID;urls: seq[string];): void
 
 type SaveCompletionHandler* = proc (allowOverwrite: int; destination: Id): void
 
