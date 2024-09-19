@@ -1,4 +1,4 @@
-import crowngui/types
+import ../../types
 import webview2/[types,controllers,context,dialog,com,environment_options,loader]
 import winim
 import winim/inc/winuser

@@ -1,6 +1,6 @@
 import std/[locks, tables]
 import winim
-import crowngui/types
+import ../../../types
 
 type
   WebviewContextStoreObj = object
