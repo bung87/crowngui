@@ -1,7 +1,7 @@
 import std/[math]
 import objc_runtime
 import darwin / [app_kit, foundation, objc/runtime]
-import crowngui/types
+import ../../types
 import ./bundle
 
 proc applicationOpenFile(self: ID; cmd: SEL; sender: NSApplication; openFile: NSString): Bool {.cdecl.} =

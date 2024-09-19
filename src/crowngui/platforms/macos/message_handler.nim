@@ -1,6 +1,6 @@
 import objc_runtime
 import darwin / [app_kit, foundation, objc/runtime]
-import crowngui/types
+import ../../types
 
 proc webview_external_invoke(self: ID; cmd: SEL; contentController: Id;
                                     message: Id) =
