@@ -2,11 +2,11 @@ import darwin / [objc/runtime]
 
 type OpenCompletionHandler* = proc (self: ID;urls: seq[string];): void
 
-type SaveCompletionHandler* = proc (allowOverwrite: int; destination: Id): void
+type SaveCompletionHandler* = proc (self: ID;allowOverwrite: int; destination: Id): void
 
-type ConfirmCompletionHandler* = proc (b: bool): void
+type ConfirmCompletionHandler* = proc (self: ID;b: bool): void
 
-type AlertCompletionHandler* = proc (): void
+type AlertCompletionHandler* = proc (self: ID;): void
 
 type
   NSSavePanel* {.importobjc: "NSSavePanel*", header: "<AppKit/AppKit.h>",
