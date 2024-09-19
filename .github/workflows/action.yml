@@ -43,6 +43,6 @@ jobs:
         path: 'nim'
         version: ${{ matrix.version }}
     - name: Test
-      continue-on-error: ${{ matrix.version == 'devel' }}
+      # continue-on-error: ${{ matrix.version == 'devel' }}
       run: |
         nimble c src/crowngui.nim
