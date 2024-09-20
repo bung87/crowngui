@@ -178,6 +178,7 @@ proc eval*[T](w: Webview, js: string, cb: proc(res: T): void): void {.objcr.} =
   [w.priv.webview evaluateJavaScript: @js, completionHandler: toBlock(bl)]
 
 proc setTitle*(w: Webview; title: string) {.objcr.} =
+  w.title = title
   [w.priv.window setTitle: @title]
 
 type WebviewDispatchCtx {.pure.} = object
