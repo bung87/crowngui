@@ -55,11 +55,12 @@ proc chooseFile*(root: string = ""; completionHandler: Block[OpenCompletionHandl
         objc_msgSend(cast[Id](completionHandler), $$"invoke", nil)
     [cast[ID](openPanel1) beginWithCompletionHandler: b2]
 
-proc saveFile*(root: string = ""; completionHandler: Block[SaveCompletionHandler] = nil) =
+proc saveFile*(root = ""; filename = "", completionHandler: Block[SaveCompletionHandler] = nil) =
   objcr:
     var savePanel = [NSSavePanel savePanel]
     [savePanel setCanCreateDirectories: 1]
-    # [savePanel setNameFieldStringValue: filename]
+    if filename.len > 0:
+      [savePanel setNameFieldStringValue: NSString(filename)]
     let blk = toBlock() do(r: Id):
       if r == cast[Id](NSModalResponseOK):
         var url: Id = objc_msgSend(savePanel, $$"URL")
