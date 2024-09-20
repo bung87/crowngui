@@ -1,6 +1,6 @@
 # import strutils, base64
 import objc_runtime
-import darwin / [app_kit,web_kit, foundation, objc/runtime, core_graphics/cggeometry]
+import darwin / [app_kit,web_kit, foundation, objc/runtime, objc/blocks, core_graphics/cggeometry]
 # import menu
 import types
 export types
@@ -16,6 +16,7 @@ import ./window_delegate
 import ./utils
 import ./app_utils
 import ../../types
+
 
 {.passl: "-framework Cocoa -framework WebKit".}
 
@@ -144,6 +145,37 @@ proc addUserScriptAtDocumentEnd*(w: Webview, js: string): void =
 
 proc eval*(w: Webview, js: string): void {.objcr.} =
   [w.priv.webview evaluateJavaScript: @js, completionHandler: nil]
+
+proc eval*[T](w: Webview, js: string, cb: proc(res: T): void): void {.objcr.} =
+  let bl = proc (res:ID; err:ID) =
+    let isString = cast[bool]([res isKindOfClass:[NSString class]])
+    let isNumber = cast[bool]([res isKindOfClass:[NSNumber class]])
+    let isArray = cast[bool]([res isKindOfClass:[NSArray class]])
+    let isObj = cast[bool]([res isKindOfClass:[NSDictionary class]])
+    let isNil = res == nil
+    if err != nil:
+      let localStr = cast[NSString]([err valueForKey: "localizedDescription"])
+      raise newException(CatchableError, $localStr) 
+    when T is string:
+      if isString:
+        let str = $cast[NSString](res)
+        cb(str)
+      else:
+        raise newException(ValueError, "type mismatched")
+    elif T is bool:
+      if isNumber:
+        if strcmp([res objCType], @encode(BOOL)) == 0:
+          let v = cast[bool]([res boolValue])
+          cb(v)
+        else:
+          raise newException(ValueError, "type mismatched")
+      else:
+        raise newException(ValueError, "type mismatched")
+    else:
+      # TODO: 
+      discard
+
+  [w.priv.webview evaluateJavaScript: @js, completionHandler: toBlock(bl)]
 
 proc setTitle*(w: Webview; title: string) {.objcr.} =
   [w.priv.window setTitle: @title]
