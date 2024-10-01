@@ -4,7 +4,7 @@ type
     NSBundle* = ptr object of NSObject
 
 proc mainBundle*(self: typedesc[NSBundle]): NSBundle {.objc: "mainBundle" .}
-proc getBytes*(self: NSBundle): NSString {.objc: "bundlePath".}
+proc bundlePath*(self: NSBundle): NSString {.objc: "bundlePath".}
 
 proc isAppBundled*(): bool =
   objcr:
