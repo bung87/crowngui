@@ -21,30 +21,20 @@ import ../../types
 
 {.passl: "-framework Cocoa -framework WebKit".}
 
-type WKUserScriptInjectionTime {.size: sizeof(uint32).} = enum
-  AtDocumentStart = 0
-  AtDocumentEnd = 1
-
 const DefaultWindowStyle = NSWindowStyleMaskTitled or NSWindowStyleMaskClosable or
                       NSWindowStyleMaskMiniaturizable;
 type 
   NSAutoreleasePool = ptr object of NSObject
-  WKUserScript = ptr object of NSObject
-  WKWebViewConfiguration  = ptr object of NSObject
-  WKUserContentController = ptr object of NSObject
-  WKPreferences = ptr object of NSObject
-# proc initWithSource*(self: WKUserScript, source: NSString, injectionTime: static[int], forMainFrameOnly: BOOL) {.objc: "initWithSource:injectionTime:forMainFrameOnly:".}
-proc preferences(self: WKWebViewConfiguration;): WKPreferences {.objc.}
 
-proc setHtml*(w: Webview; html: string) {.objcr.} =
-  [w.priv.webview loadHTMLString: @html, baseURL: nil]
+proc setHtml*(w: Webview; html: string) =
+  loadHTMLString(w.priv.webview, @html, nil)
 
 proc navigate*(w: Webview; url: string) {.objcr.} =
-  var requestURL = [NSURL URLWithString: @url]
+  var requestURL = NSURL.URLWithString(@url)
   [requestURL autorelease]
-  var request = [NSURLRequest requestWithURL: requestURL]
+  var request = NSURLRequest.requestWithURL(requestURL)
   [request autorelease]
-  [w.priv.webview loadRequest: request]
+  loadRequest(w.priv.webview, request)
 
 proc setSize*(w: Webview; width: int; height: int) {.objcr.} =
   let f = [w.priv.window frame]
@@ -53,96 +43,80 @@ proc setSize*(w: Webview; width: int; height: int) {.objcr.} =
   frameRect.size.height = height.CGFloat
   [w.priv.window setFrame: frameRect, display: true]
 
-proc alloc*[T](o: typedesc[T]): T {.objc: "alloc".}
-
 proc webview_init*(w: Webview): cint {.objcr.} =
   # w.priv.pool = objcr: [NSAutoreleasePool new]
   # objcr: [NSEvent addLocalMonitorForEventsMatchingMask: NSKeyDown, handler: toBlock(handler)]
-  # expandMacros:
-  var config = [WKWebViewConfiguration new]
-  var wkPref = cast[WKWebViewConfiguration](config).preferences
+  var config = WKWebViewConfiguration.alloc().init()#newWKWebViewConfiguration(WKWebViewConfiguration)
+  var wkPref = config.preferences
   var nsYes = NSNumber.withBool(w.debug) # [NSNumber numberWithBool: w.debug]
-  # [wkPref setValue: nsYes, forKey: "developerExtrasEnabled"]
-  # [wkPref setValue: nsYes, forKey: "fullScreenEnabled"]
-  # [wkPref setValue: nsYes, forKey: "javaScriptCanAccessClipboard"]
-  # [wkPref setValue: nsYes, forKey: "DOMPasteAllowed"]
+  wkPref.setDeveloperExtrasEnabled(YES)
+  wkPref.setFullScreenEnabled(YES)
+  wkPref.setJavaScriptCanAccessClipboard(YES)
+  wkPref.setDOMPasteAllowed(YES)
 
-  var userController = [WKUserContentController new]
+  var userController = WKUserContentController.alloc().init()
   setAssociatedObject(userController, cast[pointer]($$("webview")), (Id)(w),
                           OBJC_ASSOCIATION_ASSIGN)
   var PrivWKScriptMessageHandler = registerScriptMessageHandler()
   var scriptMessageHandler = [PrivWKScriptMessageHandler new]
   assert scriptMessageHandler != nil
   assert userController != nil
-  # [userController addScriptMessageHandler: scriptMessageHandler, name: "invoke"]
-
-  var userScript = [WKUserScript alloc]
+  let send3 = cast[proc(self:ID; sel: SEL; c: ID, b: NSString){.cdecl,gcsafe.}](objc_msgSend)
+  send3(cast[ID](userController), $$"addScriptMessageHandler:name:", scriptMessageHandler, @"invoke")
   const source = """window.external = this; invoke = function(arg){ 
                   webkit.messageHandlers.invoke.postMessage(arg); };"""
-  # [userScript initWithSource: NSString.withUTF8String(source.cstring), injectionTime: AtDocumentStart,
-  #     forMainFrameOnly: NO]
-  # [userController addUserScript: userScript]
-
-  [config setUserContentController: userController]
+  var userScript = WKUserScript.alloc()
+  userScript.initWithSource(@source, AtDocumentStart, NO)
+  userController.addUserScript(userScript)
+  config.setUserContentController(userController)
 
   var PrivWKDownloadDelegate = registerDownloadDelegate()
   var downloadDelegate: Id = [PrivWKDownloadDelegate new]
 
   var processPool = [config processPool]
   # [processPool "_setDownloadDelegate": downloadDelegate]
-  [config setProcessPool: processPool]
+  # [config setProcessPool: processPool]
 
   var PrivNSWindowDelegate = registerWindowDelegate()
   w.priv.windowDelegate = [PrivNSWindowDelegate new]
   setAssociatedObject(w.priv.windowDelegate, cast[pointer]($$"webview"), (Id)(w),
                           OBJC_ASSOCIATION_ASSIGN)
 
-  var frameRect = CGRectMake(0, 0, w.width, w.height)
+  var frameRect = CGRectMake(0.float, 0.float, w.width.float, w.height.float)
   var style = DefaultWindowStyle
   if w.resizable:
     style = style or NSWindowStyleMaskResizable
-  w.priv.window = [NSWindow alloc]
-  [w.priv.window initWithContentRect: frameRect, styleMask: style, backing: NSBackingStoreBuffered, `defer`: 0]
+  w.priv.window = NSWindow.alloc()
+  w.priv.window.initWithContentRect(frameRect, cast[NSWindowStyleMask](style), NSBackingStoreBuffered, NO)
   [w.priv.window autorelease]
-  let setTitle = cast[proc(self:ID; sel: SEL; t: NSString){.cdecl,gcsafe.}](objc_msgSend)
-  setTitle(w.priv.window, $$"setTitle:", @($w.title))
-  let setDelegate = cast[proc(self:ID; sel: SEL; t: ID){.cdecl,gcsafe.}](objc_msgSend)
-  setDelegate(w.priv.window, $$"setDelegate:", w.priv.windowDelegate)
-  [w.priv.window center]
+  w.priv.window.setTitle(@($w.title))
+  let send = cast[proc(self:ID; sel: SEL; t: ID){.cdecl,gcsafe.}](objc_msgSend)
+  send(w.priv.window, $$"setDelegate:", w.priv.windowDelegate)
+  w.priv.window.center()
   var PrivWKUIDelegate = registerUIDelegate()
   var uiDel = [PrivWKUIDelegate new]
 
   var PrivWKNavigationDelegate = registerWKNavigationDelegate()
   var navDel = [PrivWKNavigationDelegate new]
 
-  w.priv.webview = cast[ID](WKWebView.alloc())
-  
-  # let initWithFrame = cast[proc(self:ID; sel: SEL; rect: ID; c: ID){.cdecl,gcsafe.}](objc_msgSend)
+  w.priv.webview = WKWebView.alloc()
 
-  # [w.priv.webview initWithFrame: frameRect, configuration: config]
-  
-  # initWithFrame(cast[ID](w.priv.webview), $$"initWithFrame:configuration:", cast[ID](frameRect.addr), config)
-  let performSend = cast[proc (self: WKWebView; selector: SEL; frame: CGRect;
-                                 conf: WKWebViewConfiguration): WKWebView {.
-        cdecl, gcsafe.}](objc_msgSend)
-  discard performSend(cast[WKWebView](w.priv.webview), $$("initWithFrame:configuration:"), frameRect, cast[WKWebViewConfiguration](config))
-  # discard initWithFrameAndConfiguration(cast[WKWebView](w.priv.webview), frameRect, cast[WKWebViewConfiguration](config))
-  
-  [w.priv.webview setUIDelegate: uiDel]
-  [w.priv.webview setNavigationDelegate: navDel]
+  discard initWithFrameAndConfiguration(w.priv.webview, frameRect, config)
+  send(w.priv.webview, $$"setUIDelegate:", uiDel)
+  send(w.priv.webview, $$"setNavigationDelegate:", navDel)
+  # [w.priv.webview setUIDelegate: uiDel]
+  # [w.priv.webview setNavigationDelegate: navDel]
   let url = $(w.url)
   case w.entryType
   of EntryType.html:
-  # if "data:text/html;charset=utf-8;base64," in url:
-    # let html = base64.decode(url.split(",")[1])
-    [w.priv.webview loadHTMLString: @url, baseURL: nil]
+    loadHTMLString(w.priv.webview, @url, nil)
   else:
-    var nsURL = [NSURL URLWithString: @url]
-    [w.priv.webview loadRequest: [NSURLRequest requestWithURL: nsURL]]
+    var nsURL = NSURL.URLWithString(@url)
+    loadRequest(w.priv.webview, NSURLRequest.requestWithURL(nsURL))
   
   [w.priv.webview setAutoresizingMask: NSViewWidthSizable.uint or NSViewHeightSizable.uint]
-  [w.priv.window setContentView: w.priv.webview]
-  [w.priv.window orderFrontRegardless]
+  w.priv.window.setContentView(cast[NSView](w.priv.webview))
+  w.priv.window.orderFrontRegardless()
 
   return 0
 
@@ -150,12 +124,12 @@ proc run*(w: Webview) {.objcr.} =
   var app = [NSApplication sharedApplication]
   [app run]
 
-proc addUserScript(w: Webview, js: string; location: WKUserScriptInjectionTime): void {.objcr.} =
-  var userScript = [WKUserScript alloc]
-  [userScript initWithSource: @js, injectionTime: location, forMainFrameOnly: 0]
-  var config = [w.priv.webview valueForKey: "configuration"]
-  var userContentController  = [config valueForKey: "userContentController"]
-  [userContentController addUserScript: userScript]
+proc addUserScript(w: Webview, js: string; location: WKUserScriptInjectionTime): void =
+  var userScript = WKUserScript.alloc()
+  userScript.initWithSource(@js, location, NO)
+  var config = w.priv.webview.configuration
+  var userContentController = config.userContentController
+  userContentController.addUserScript(userScript)
 
 proc addUserScriptAtDocumentStart*(w: Webview, js: string): void =
   w.addUserScript(js, AtDocumentStart)
@@ -199,7 +173,7 @@ proc eval*[T](w: Webview, js: string, cb: proc(res: T): void): void {.objcr.} =
 
 proc setTitle*(w: Webview; title: string) {.objcr.} =
   w.title = title
-  [w.priv.window setTitle: @title]
+  w.priv.window.setTitle(@title)
 
 type WebviewDispatchCtx {.pure.} = object
   w: Webview
