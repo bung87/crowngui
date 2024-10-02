@@ -5,22 +5,30 @@ proc createMenuItem*(title: NSString, action: string, key: string): NSMenuItem =
   result = NSMenuItem.alloc()
   result.initWithTitle(title, if action != "": registerName(action) else: cast[SEL](nil), @key)
   objc_msgSend(result, registerName("autorelease"))
+  # result.autorelease()
 
 proc createMenu*() =
   let menubar = NSMenu.alloc()
-  initWithTitle(menubar, @"")
-  # let appName = [[NSProcessInfo processInfo]processName]
-  let appName = @"aaa"
+  menubar.initWithTitle(@"")
+  objcr: [menubar autorelease]
+  let appName = NSProcessInfo.processInfo.processName
+
   let appMenuItem = NSMenuItem.alloc()
-  initWithTitle(appMenuItem, @"aaa", cast[SEL](nil), @"")
+  appMenuItem.initWithTitle(appName, cast[SEL](nil), @"")
+
   let appMenu = NSMenu.alloc()
-  initWithTitle(appMenu, appName )
-  # [appMenu autorelease]
+  appMenu.initWithTitle(appName)
+  objcr: [appMenu autorelease]
+  
+  var hideTitle = @"Hide ".stringByAppendingString(appName)
+  appMenu.addItem(createMenuItem(hideTitle, "hide:", "h"))
+  
   appMenuItem.setSubmenu(appMenu)
   menubar.addItem(appMenuItem)
-  var hideTitle = @"Hide".stringByAppendingString(appName)
-  appMenu.addItem(createMenuItem(hideTitle, "hide:", "h"))
-  objcr:
+
+  cast[NSApplication](NSApp).setMainMenu(menubar)
+  # send(cast[NSApplication](NSApp), $$"setMainMenu:", menubar)
+  # objcr:
     # var item = createMenuItem(@"Hide Others", "hideOtherApplications:", "h")
     # [item setKeyEquivalentModifierMask: (NSEventModifierFlagOption.uint or NSEventModifierFlagCommand.uint)]
     # [appMenu addItem: item]
@@ -48,4 +56,4 @@ proc createMenu*() =
     # [editMenu addItem: createMenuItem(@"Select All", "selectAll:", "a")]
     # [editMenuItem setSubmenu: editMenu]
     # [menubar addItem: editMenuItem]
-    [[NSApplication sharedApplication]setMainMenu: menubar]
+    # [[NSApplication sharedApplication]setMainMenu: menubar]

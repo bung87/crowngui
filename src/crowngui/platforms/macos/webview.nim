@@ -27,28 +27,27 @@ type
   NSAutoreleasePool = ptr object of NSObject
 
 proc setHtml*(w: Webview; html: string) =
-  loadHTMLString(w.priv.webview, @html, nil)
+  w.priv.webview.loadHTMLString(@html, nil)
 
 proc navigate*(w: Webview; url: string) {.objcr.} =
   var requestURL = NSURL.URLWithString(@url)
   [requestURL autorelease]
   var request = NSURLRequest.requestWithURL(requestURL)
   [request autorelease]
-  loadRequest(w.priv.webview, request)
+  w.priv.webview.loadRequest(request)
 
 proc setSize*(w: Webview; width: int; height: int) {.objcr.} =
-  let f = [w.priv.window frame]
+  let f = w.priv.window.frame
   var frameRect = cast[CGRect](f)
   frameRect.size.width = width.CGFloat
   frameRect.size.height = height.CGFloat
-  [w.priv.window setFrame: frameRect, display: true]
+  w.priv.window.setFrame(frameRect, YES)
 
 proc webview_init*(w: Webview): cint {.objcr.} =
   # w.priv.pool = objcr: [NSAutoreleasePool new]
   # objcr: [NSEvent addLocalMonitorForEventsMatchingMask: NSKeyDown, handler: toBlock(handler)]
   var config = WKWebViewConfiguration.alloc().init()#newWKWebViewConfiguration(WKWebViewConfiguration)
   var wkPref = config.preferences
-  var nsYes = NSNumber.withBool(w.debug) # [NSNumber numberWithBool: w.debug]
   wkPref.setDeveloperExtrasEnabled(YES)
   wkPref.setFullScreenEnabled(YES)
   wkPref.setJavaScriptCanAccessClipboard(YES)
@@ -70,10 +69,10 @@ proc webview_init*(w: Webview): cint {.objcr.} =
   userController.addUserScript(userScript)
   config.setUserContentController(userController)
 
-  var PrivWKDownloadDelegate = registerDownloadDelegate()
-  var downloadDelegate: Id = [PrivWKDownloadDelegate new]
+  # var PrivWKDownloadDelegate = registerDownloadDelegate()
+  # var downloadDelegate: Id = [PrivWKDownloadDelegate new]
 
-  var processPool = [config processPool]
+  # var processPool = [config processPool]
   # [processPool "_setDownloadDelegate": downloadDelegate]
   # [config setProcessPool: processPool]
 
@@ -104,8 +103,6 @@ proc webview_init*(w: Webview): cint {.objcr.} =
   discard initWithFrameAndConfiguration(w.priv.webview, frameRect, config)
   send(w.priv.webview, $$"setUIDelegate:", uiDel)
   send(w.priv.webview, $$"setNavigationDelegate:", navDel)
-  # [w.priv.webview setUIDelegate: uiDel]
-  # [w.priv.webview setNavigationDelegate: navDel]
   let url = $(w.url)
   case w.entryType
   of EntryType.html:
@@ -114,7 +111,7 @@ proc webview_init*(w: Webview): cint {.objcr.} =
     var nsURL = NSURL.URLWithString(@url)
     loadRequest(w.priv.webview, NSURLRequest.requestWithURL(nsURL))
   
-  [w.priv.webview setAutoresizingMask: NSViewWidthSizable.uint or NSViewHeightSizable.uint]
+  w.priv.webview.setAutoresizingMask(cast[NSAutoresizingMaskOptions](NSViewWidthSizable.uint or NSViewHeightSizable.uint))
   w.priv.window.setContentView(cast[NSView](w.priv.webview))
   w.priv.window.orderFrontRegardless()
 

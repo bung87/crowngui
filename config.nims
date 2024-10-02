@@ -1,5 +1,5 @@
 when defined(macosx):
-  switch("passC", "-Wno-incompatible-function-pointer-types")
+  # switch("passC", "-Wno-incompatible-function-pointer-types")
   when defined(arm64):
     switch("passC", "-arch arm64")
     switch("passL", "-arch arm64")

@@ -216,16 +216,16 @@ proc newWebView*(path: static[string] = ""; entryType:static[EntryType]; title =
   when defined(macosx):
     let MyAppDelegate = registerAppDelegate()
     let WindowController = registerWindowController()
-    let send = cast[proc(self:ID; sel: SEL;  c: ID){.cdecl,gcsafe.}](objc_msgSend)
+    let send1 = cast[proc(self: NSWindow; sel: SEL;  c: ID){.cdecl,gcsafe.}](objc_msgSend)
+    let send2 = cast[proc(self: NSApplication; sel: SEL;  c: ID){.cdecl,gcsafe.}](objc_msgSend)
 
     objcr:
       var appDel = [MyAppDelegate new]
       var windowController = [WindowController new]
       # [webview.priv.window setDelegate: windowController]
-      send(webview.priv.window, $$"setDelegate:", windowController)
-      var app = [NSApplication sharedApplication]
+      send1(webview.priv.window, $$"setDelegate:", windowController)
       # [app setDelegate: appDel]
-      send(app, $$"setDelegate:", appDel)
+      send2(cast[NSApplication](NSApp), $$"setDelegate:", appDel)
       let ivar: Ivar = getIvar(MyAppDelegate, "webview")
       setIvar(appDel, ivar, cast[ID](webview))
       createMenu()
