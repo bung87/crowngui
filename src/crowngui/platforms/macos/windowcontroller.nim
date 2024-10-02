@@ -2,6 +2,10 @@
 import objc_runtime
 import darwin / [app_kit, foundation, objc/runtime]
 
+type MyWindowController* = ptr object of NSObject
+
+proc setDelegate*(s: NSWindow, d: NSObject) {.objc: "setDelegate:".}
+
 when false:
   proc awakeFromNib(self: ID; cmd: SEL; ): void {.cdecl.} =
     objcr:
@@ -22,7 +26,7 @@ when false:
       [self registerForDraggedTypes: tid]
       return self
 
-proc draggingEntered(self: ID; cmd: SEL; sender: NSDraggingInfo): NSDragOperation {.cdecl.} =
+proc draggingEntered(self: MyWindowController; cmd: SEL; sender: NSDraggingInfo): NSDragOperation {.cdecl.} =
   return NSDragOperationCopy
 
 proc registerWindowController*(): ObjcClass =

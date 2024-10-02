@@ -76,8 +76,8 @@ proc webview_init*(w: Webview): cint {.objcr.} =
   # [processPool "_setDownloadDelegate": downloadDelegate]
   # [config setProcessPool: processPool]
 
-  var PrivNSWindowDelegate = registerWindowDelegate()
-  w.priv.windowDelegate = [PrivNSWindowDelegate new]
+  var MyNSWindowDelegateClass = registerWindowDelegate()
+  w.priv.windowDelegate = cast[MyNSWindowDelegate](createInstance(MyNSWindowDelegateClass, 0))
   setAssociatedObject(w.priv.windowDelegate, cast[pointer]($$"webview"), (Id)(w),
                           OBJC_ASSOCIATION_ASSIGN)
 
@@ -89,20 +89,22 @@ proc webview_init*(w: Webview): cint {.objcr.} =
   w.priv.window.initWithContentRect(frameRect, cast[NSWindowStyleMask](style), NSBackingStoreBuffered, NO)
   [w.priv.window autorelease]
   w.priv.window.setTitle(@($w.title))
-  let send = cast[proc(self:ID; sel: SEL; t: ID){.cdecl,gcsafe.}](objc_msgSend)
-  send(w.priv.window, $$"setDelegate:", w.priv.windowDelegate)
-  w.priv.window.center()
-  var PrivWKUIDelegate = registerUIDelegate()
-  var uiDel = [PrivWKUIDelegate new]
 
-  var PrivWKNavigationDelegate = registerWKNavigationDelegate()
-  var navDel = [PrivWKNavigationDelegate new]
+  w.priv.window.setDelegate(w.priv.windowDelegate)
+  w.priv.window.center()
+  var MyWKUIDelegateClass = registerUIDelegate()
+  var uiDel = cast[MyUIDelegate](createInstance(MyWKUIDelegateClass, 0))
+
+  var MyWKNavigationDelegateClass = registerWKNavigationDelegate()
+  var navDel = cast[MyWKNavigationDelegate](createInstance(MyWKNavigationDelegateClass, 0))
 
   w.priv.webview = WKWebView.alloc()
 
   discard initWithFrameAndConfiguration(w.priv.webview, frameRect, config)
-  send(w.priv.webview, $$"setUIDelegate:", uiDel)
-  send(w.priv.webview, $$"setNavigationDelegate:", navDel)
+
+  w.priv.webview.setUIDelegate(uiDel)
+  w.priv.webview.setNavigationDelegate(navDel)
+
   let url = $(w.url)
   case w.entryType
   of EntryType.html:

@@ -2,6 +2,9 @@ import objc_runtime
 import darwin / [app_kit, objc/runtime]
 import ../../types
 
+
+proc setDelegate*(s: NSWindow, d: NSObject) {.objc: "setDelegate:".}
+
 proc webview_window_will_close(self: Id; cmd: SEL; notification: Id) =
   var w = getAssociatedObject(self, cast[pointer]($$"webview"))
   var wv = cast[Webview](w)

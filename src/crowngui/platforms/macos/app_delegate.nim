@@ -4,7 +4,11 @@ import darwin / [app_kit, foundation, objc/runtime]
 import ../../types
 import ./bundle
 
-proc applicationOpenFile(self: ID; cmd: SEL; sender: NSApplication; openFile: NSString): Bool {.cdecl.} =
+type MyAppDelegate* = ptr object of NSObject
+
+proc setDelegate*(s: NSApplication, d: NSObject) {.objc: "setDelegate:".}
+
+proc applicationOpenFile(self: MyAppDelegate; cmd: SEL; sender: NSApplication; openFile: NSString): Bool {.cdecl.} =
   let path = cast[cstring](objc_msgSend(cast[ID](openFile), $$"UTF8String"))
   var cls = self.getClass()
   var ivar = cls.getIvar("webview")
@@ -12,12 +16,12 @@ proc applicationOpenFile(self: ID; cmd: SEL; sender: NSApplication; openFile: NS
   if wv.onOpenFile != nil:
     return cast[Bool](wv.onOpenFile(wv, $path))
 
-proc applicationShouldTerminateAfterLastWindowClosed(self: ID; cmd: SEL; notification: ID): bool {.cdecl.} =
+proc applicationShouldTerminateAfterLastWindowClosed(self: MyAppDelegate; cmd: SEL; notification: ID): bool {.cdecl.} =
   # return true, so will not stay in dock and wait for reactivation
   return true
 
 # applicationWillFinishLaunching: -> application:openFile: -> applicationDidFinishLaunching:
-proc applicationWillFinishLaunching(self: ID; cmd: SEL; notification: ID): void {.cdecl.} =
+proc applicationWillFinishLaunching(self: MyAppDelegate; cmd: SEL; notification: ID): void {.cdecl.} =
   when not defined(release):
     echo "applicationWillFinishLaunching"
 
@@ -29,7 +33,7 @@ proc on_application_did_finish_launching(delegate: ID; app: ID) {.objcr.}=
     [app activateIgnoringOtherApps: YES]
   # set_up_window()
 
-proc applicationDidFinishLaunching(self: ID; cmd: SEL; notification: ID): void {.cdecl.} =
+proc applicationDidFinishLaunching(self: MyAppDelegate; cmd: SEL; notification: ID): void {.cdecl.} =
   when not defined(release):
     echo "applicationDidFinishLaunching"
   # var w = getAssociatedObject(self, cast[pointer]($$"webview"))
@@ -39,7 +43,7 @@ proc applicationDidFinishLaunching(self: ID; cmd: SEL; notification: ID): void {
     let app = [notification $$"object"]
     on_application_did_finish_launching(self, app)
 
-proc applicationWillBecomeActive(self: ID; cmd: SEL; notification: ID): void {.cdecl.} =
+proc applicationWillBecomeActive(self: MyAppDelegate; cmd: SEL; notification: ID): void {.cdecl.} =
   # close button pressed, stay in dock. then press from dock to activate app.
   when not defined(release):
     echo "applicationWillBecomeActive"
