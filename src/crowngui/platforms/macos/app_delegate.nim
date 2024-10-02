@@ -3,6 +3,7 @@ import objc_runtime
 import darwin / [app_kit, foundation, objc/runtime]
 import ../../types
 import ./bundle
+import ./menu
 
 type MyAppDelegate* = ptr object of NSObject
 
@@ -25,23 +26,23 @@ proc applicationWillFinishLaunching(self: MyAppDelegate; cmd: SEL; notification:
   when not defined(release):
     echo "applicationWillFinishLaunching"
 
-proc on_application_did_finish_launching(delegate: ID; app: ID) {.objcr.}=
+proc on_application_did_finish_launching(delegate: ID; app: NSApplication) =
   # if m_owns_window:
   # stopRunLoop()
+  # createMenu()
   if not isAppBundled():
-    [app setActivationPolicy: NSApplicationActivationPolicyRegular]
-    [app activateIgnoringOtherApps: YES]
+    app.setActivationPolicy(NSApplicationActivationPolicyRegular)
+    app.activate()
+    # app.activateIgnoringOtherApps(YES)
   # set_up_window()
 
-proc applicationDidFinishLaunching(self: MyAppDelegate; cmd: SEL; notification: ID): void {.cdecl.} =
+proc applicationDidFinishLaunching(self: MyAppDelegate; cmd: SEL; notification: NSNotification): void {.cdecl.} =
   when not defined(release):
     echo "applicationDidFinishLaunching"
   # var w = getAssociatedObject(self, cast[pointer]($$"webview"))
   # var wv = cast[Webview](w)
-  
-  objcr:
-    let app = [notification $$"object"]
-    on_application_did_finish_launching(self, app)
+  let app = cast[NSApplication](notification.`object`)
+  on_application_did_finish_launching(self, app)
 
 proc applicationWillBecomeActive(self: MyAppDelegate; cmd: SEL; notification: ID): void {.cdecl.} =
   # close button pressed, stay in dock. then press from dock to activate app.

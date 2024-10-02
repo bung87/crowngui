@@ -224,7 +224,7 @@ proc newWebView*(path: static[string] = ""; entryType:static[EntryType]; title =
       cast[NSApplication](NSApp).setDelegate(appDel)
       let ivar: Ivar = getIvar(MyAppDelegateClass, "webview")
       setIvar(appDel, ivar, cast[ID](webview))
-      createMenu()
+      # createMenu()
 
   when not defined(macosx):
     if paramCount() > 0:
