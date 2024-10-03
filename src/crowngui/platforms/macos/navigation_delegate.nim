@@ -1,20 +1,17 @@
 import objc_runtime
 import darwin / [objc/blocks, web_kit]
 
-const WKNavigationActionPolicyDownload = 2
-const WKNavigationResponsePolicyAllow = 1
-
 type MyWKNavigationDelegate* = ptr object of NSObject
 
 proc setNavigationDelegate*(s: WKWebview, d: NSObject) {.objc: "setNavigationDelegate:".}
 
-proc make_nav_policy_decision(self: Id; cmd: SEL; webView: Id; response: Id;
-                                     decisionHandler: Block[proc (): void]) =
-  objcr:
-    if [response canShowMIMEType] == cast[Id](0):
-      objc_msgSend(cast[Id](decisionHandler), $$"invoke", WKNavigationActionPolicyDownload)
-    else:
-      objc_msgSend(cast[Id](decisionHandler), $$"invoke", WKNavigationResponsePolicyAllow)
+proc make_nav_policy_decision(self: Id; cmd: SEL; webView: WKWebView; response: WKNavigationResponse;
+                                     decisionHandler: Block[proc (a: WKNavigationActionPolicy): void]) =
+  let send = cast[proc(a: ID, b: SEL, c: WKNavigationActionPolicy){.cdecl,gcsafe.}](objc_msgSend)
+  if response.canShowMIMEType == NO:
+    send(cast[Id](decisionHandler), $$"invoke", WKNavigationActionPolicy.WKNavigationActionPolicyDownload)
+  else:
+    send(cast[Id](decisionHandler), $$"invoke", WKNavigationActionPolicy.WKNavigationActionPolicyAllow)
 
 proc registerWKNavigationDelegate*(): ObjcClass =
   result = allocateClassPair(

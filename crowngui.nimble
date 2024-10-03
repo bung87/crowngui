@@ -12,8 +12,6 @@ installExt    = @["nim"]
 requires "nim >= 1.1.1"
 # requires "nimble >= 0.11.4"
 
-requires "regex"
-requires "jsonschema"
 requires "objc_runtime >= 0.1.9"
 requires "darwin"
 requires "winim"

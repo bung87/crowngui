@@ -29,21 +29,21 @@ type
 proc setHtml*(w: Webview; html: string) =
   w.priv.webview.loadHTMLString(@html, nil)
 
-proc navigate*(w: Webview; url: string) {.objcr.} =
+proc navigate*(w: Webview; url: string)  =
   var requestURL = NSURL.URLWithString(@url)
-  [requestURL autorelease]
+  requestURL.autorelease()
   var request = NSURLRequest.requestWithURL(requestURL)
-  [request autorelease]
+  request.autorelease()
   w.priv.webview.loadRequest(request)
 
-proc setSize*(w: Webview; width: int; height: int) {.objcr.} =
+proc setSize*(w: Webview; width: int; height: int) =
   let f = w.priv.window.frame
   var frameRect = cast[CGRect](f)
   frameRect.size.width = width.CGFloat
   frameRect.size.height = height.CGFloat
   w.priv.window.setFrame(frameRect, YES)
 
-proc webview_init*(w: Webview): cint {.objcr.} =
+proc webview_init*(w: Webview): cint =
   # w.priv.pool = objcr: [NSAutoreleasePool new]
   # objcr: [NSEvent addLocalMonitorForEventsMatchingMask: NSKeyDown, handler: toBlock(handler)]
   var config = WKWebViewConfiguration.alloc().init()#newWKWebViewConfiguration(WKWebViewConfiguration)
@@ -57,7 +57,7 @@ proc webview_init*(w: Webview): cint {.objcr.} =
   setAssociatedObject(userController, cast[pointer]($$("webview")), (Id)(w),
                           OBJC_ASSOCIATION_ASSIGN)
   var PrivWKScriptMessageHandler = registerScriptMessageHandler()
-  var scriptMessageHandler = [PrivWKScriptMessageHandler new]
+  var scriptMessageHandler = createInstance(PrivWKScriptMessageHandler, 0)
   assert scriptMessageHandler != nil
   assert userController != nil
   let send3 = cast[proc(self:ID; sel: SEL; c: ID, b: NSString){.cdecl,gcsafe.}](objc_msgSend)
@@ -87,7 +87,7 @@ proc webview_init*(w: Webview): cint {.objcr.} =
     style = style or NSWindowStyleMaskResizable
   w.priv.window = NSWindow.alloc()
   w.priv.window.initWithContentRect(frameRect, cast[NSWindowStyleMask](style), NSBackingStoreBuffered, NO)
-  [w.priv.window autorelease]
+  w.priv.window.autorelease()
   w.priv.window.setTitle(@($w.title))
 
   w.priv.window.setDelegate(w.priv.windowDelegate)
@@ -119,9 +119,9 @@ proc webview_init*(w: Webview): cint {.objcr.} =
 
   return 0
 
-proc run*(w: Webview) {.objcr.} =
-  var app = [NSApplication sharedApplication]
-  [app run]
+proc run*(w: Webview) =
+  var app = NSApplication.sharedApplication
+  app.run()
 
 proc addUserScript(w: Webview, js: string; location: WKUserScriptInjectionTime): void =
   var userScript = WKUserScript.alloc()
@@ -136,19 +136,20 @@ proc addUserScriptAtDocumentStart*(w: Webview, js: string): void =
 proc addUserScriptAtDocumentEnd*(w: Webview, js: string): void =
   w.addUserScript(js, AtDocumentEnd)
 
-proc eval*(w: Webview, js: string): void {.objcr.} =
-  [w.priv.webview evaluateJavaScript: @js, completionHandler: nil]
+proc eval*(w: Webview, js: string): void =
+  w.priv.webview.evaluateJavaScript(@js, nil)
 
-proc eval*[T](w: Webview, js: string, cb: proc(res: T): void): void {.objcr.} =
-  let bl = proc (res:ID; err:ID) =
-    let isString = cast[bool]([res isKindOfClass:[NSString class]])
-    let isNumber = cast[bool]([res isKindOfClass:[NSNumber class]])
-    let isArray = cast[bool]([res isKindOfClass:[NSArray class]])
-    let isObj = cast[bool]([res isKindOfClass:[NSDictionary class]])
+proc eval*[T](w: Webview, js: string, cb: proc(res: T): void): void =
+  let bl = proc (res: ID; err: NSError) =
+    let isString = cast[NSObject](res).isKindOfClass(NSString)
+    let isNumber = cast[NSObject](res).isKindOfClass(NSNumber) #cast[bool]([res isKindOfClass:[NSNumber class]])
+    let isArray = cast[NSObject](res).isKindOfClass(NSArray)#cast[bool]([res isKindOfClass:[NSArray class]])
+    let isObj = cast[NSObject](res).isKindOfClass(NSDictionary)#cast[bool]([res isKindOfClass:[NSDictionary class]])
     let isNil = res == nil
     if err != nil:
-      let localStr = cast[NSString]([err valueForKey: "localizedDescription"])
-      raise newException(CatchableError, $localStr) 
+      let localStr = err.localizedDescription
+      error("error", $localStr)
+      # raise newException(CatchableError, $localStr) 
     when T is string:
       if isString:
         let str = $cast[NSString](res)
@@ -157,8 +158,8 @@ proc eval*[T](w: Webview, js: string, cb: proc(res: T): void): void {.objcr.} =
         raise newException(ValueError, "type mismatched")
     elif T is bool:
       if isNumber:
-        if strcmp([res objCType], @encode(BOOL)) == 0:
-          let v = cast[bool]([res boolValue])
+        if strcmp(cast[NSNumber](res).objCType, @encode(BOOL)) == 0:
+          let v = cast[bool](cast[NSNumber](res).boolValue)
           cb(v)
         else:
           raise newException(ValueError, "type mismatched")
@@ -166,11 +167,13 @@ proc eval*[T](w: Webview, js: string, cb: proc(res: T): void): void {.objcr.} =
         raise newException(ValueError, "type mismatched")
     else:
       # TODO: 
+      when not defined(release):
+        echo "result type unknown"
       discard
 
-  [w.priv.webview evaluateJavaScript: @js, completionHandler: toBlock(bl)]
+  w.priv.webview.evaluateJavaScript(@js, toBlock(bl))
 
-proc setTitle*(w: Webview; title: string) {.objcr.} =
+proc setTitle*(w: Webview; title: string) =
   w.title = title
   w.priv.window.setTitle(@title)
 
@@ -198,7 +201,7 @@ proc webview_dispatch*(w: Webview; fn: pointer; arg: pointer) {.stdcall.} =
   context.arg = arg
   dispatch_async_f(dispatch_get_main_queue(), context, cast[pointer](webview_dispatch_cb))
 
-proc terminate*(w: Webview): void {.objcr.} =
+proc terminate*(w: Webview): void =
   stopRunLoop()
 
 proc destroy*(w: Webview) =

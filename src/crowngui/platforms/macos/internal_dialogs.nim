@@ -1,7 +1,9 @@
-import objc_runtime
-import darwin / [app_kit, foundation, objc/runtime, objc/blocks]
-import ../../types
+import darwin/objc/[runtime, blocks]
+import darwin/foundation/[nsstring, nsurl]
+import darwin/app_kit
+import darwin/web_kit
 import ./dialog_types
+import ../../types
 
 const WEBVIEW_DIALOG_FLAG_FILE = (0 shl 0)
 const WEBVIEW_DIALOG_FLAG_DIRECTORY = (1 shl 0)
@@ -16,116 +18,114 @@ type WebviewDialogType = enum
   WEBVIEW_DIALOG_TYPE_SAVE = 1,
   WEBVIEW_DIALOG_TYPE_ALERT = 2
 
+# Run the open panel dialog
+proc run_open_panel*(self: Id; cmd: SEL; webView: Id; parameters: WKOpenPanelParameters;
+                           frame: WKFrameInfo; completionHandler: Block[OpenCompletionHandler]) =
+  var openPanel = NSOpenPanel.openPanel()
+  openPanel.setAllowsMultipleSelection(parameters.allowsMultipleSelection())
+  openPanel.setCanChooseFiles(true)
+  let b2 = toBlock() do (r: int):
+    if r == NSModalResponseOK:
+      let urls = openPanel.URLs()
+      objc_msgSend(cast[Id](completionHandler), $$"invoke", urls)
+    else:
+      objc_msgSend(cast[Id](completionHandler), $$"invoke", nil)
+  openPanel.beginWithCompletionHandler(b2)
 
-proc run_open_panel*(self: Id; cmd: SEL; webView: Id; parameters: Id;
-                           frame: Id; completionHandler: Block[OpenCompletionHandler]) =
-  objcr:
-    var openPanel = [NSOpenPanel openPanel]
-    [openPanel setAllowsMultipleSelection, [parameters allowsMultipleSelection]]
-    [openPanel setCanChooseFiles: 1]
-    let b2 = toBlock() do(r: Id):
-      if r == cast[Id](NSModalResponseOK):
-        objc_msgSend(cast[Id](completionHandler), $$"invoke", objc_msgSend(openPanel, $$"URLs"))
-      else:
-        objc_msgSend(cast[Id](completionHandler), $$"invoke", nil)
-    [openPanel beginWithCompletionHandler: b2]
-
-
+# Run the save panel dialog
 proc run_save_panel*(self: Id; cmd: SEL; download: Id; filename: Id; completionHandler: Block[SaveCompletionHandler]) =
-  objcr:
-    var savePanel = [NSSavePanel savePanel]
-    [savePanel setCanCreateDirectories: 1]
-    [savePanel setNameFieldStringValue: filename]
-    let blk = toBlock() do(r: Id):
-      if r == cast[Id](NSModalResponseOK):
-        var url: Id = objc_msgSend(savePanel, $$"URL")
-        var path: Id = objc_msgSend(url, $$"path")
-        objc_msgSend(cast[Id](completionHandler), $$"invoke", 1, path)
-      else:
-        objc_msgSend(cast[Id](completionHandler), $$"invoke", No, nil)
+  var savePanel = NSSavePanel.savePanel()
+  savePanel.setCanCreateDirectories(true)
+  savePanel.setNameFieldStringValue(cast[NSString](filename))
+  let blk = toBlock() do (r: int):
+    if r == NSModalResponseOK:
+      let url = savePanel.URL()
+      let path = url.path()
+      objc_msgSend(cast[Id](completionHandler), $$"invoke", 1, path)
+    else:
+      objc_msgSend(cast[Id](completionHandler), $$"invoke", No, nil)
+  savePanel.beginWithCompletionHandler(blk)
 
-    [savePanel beginWithCompletionHandler: blk]
-
-
+# Run a confirmation panel
 proc run_confirmation_panel*(self: Id; cmd: SEL; webView: Id; message: Id;
                                    frame: Id; completionHandler: Block[ConfirmCompletionHandler]) =
-  objcr:
-    var alert: Id = [NSAlert new]
-    [alert setIcon: [NSImage imageNamed: "NSCaution"]]
-    [alert setShowsHelp: 0]
-    [alert setInformativeText: message]
-    [alert addButtonWithTitle: "OK"]
-    [alert addButtonWithTitle: "Cancel"]
-    if [alert runModal] == cast[ID](NSAlertFirstButtonReturn):
-      objc_msgSend(cast[Id](completionHandler), $$"invoke", true)
-    else:
-      objc_msgSend(cast[Id](completionHandler), $$"invoke", false)
-    [alert release]
+  var alert = NSAlert.alloc().init()
+  # alert.setIcon(NSImage.imageNamed(NSCaution))
+  alert.setShowsHelp(false)
+  alert.setInformativeText(cast[NSString](message))
+  alert.addButtonWithTitle(@"OK")
+  alert.addButtonWithTitle(@"Cancel")
+  let response = alert.runModal()
+  if response == NSAlertFirstButtonReturn:
+    objc_msgSend(cast[Id](completionHandler), $$"invoke", true)
+  else:
+    objc_msgSend(cast[Id](completionHandler), $$"invoke", false)
+  alert.release()
 
-
+# Run an alert panel
 proc run_alert_panel*(self: Id; cmd: SEL; webView: Id; message: Id; frame: Id;
                             completionHandler: Block[AlertCompletionHandler]) =
-  objcr:
-    var alert: Id = [NSAlert new]
-    [alert setIcon: [NSImage imageNamed: NSImageNameCaution]]
-    [alert setShowsHelp: 0]
-    [alert setInformativeText: message]
-    [alert addButtonWithTitle: "OK"]
-    [alert runModal]
-    [alert release]
-    objc_msgSend(cast[Id](completionHandler), $$"invoke")
+  var alert = NSAlert.alloc().init()
+  alert.setIcon(NSImage.imageNamed(NSImageNameCaution))
+  alert.setShowsHelp(false)
+  alert.setInformativeText(cast[NSString](message))
+  alert.addButtonWithTitle(@"OK")
+  alert.runModal()
+  alert.release()
+  objc_msgSend(cast[Id](completionHandler), $$"invoke")
 
+# Main webview dialog handling
 proc webview_dialog*(w: Webview; dlgtype: WebviewDialogType; flags: int;
                                 title: cstring; arg: cstring; result: var cstring; resultsz: csize_t) =
-  objcr:
-    if (dlgtype == WEBVIEW_DIALOG_TYPE_OPEN or
-        dlgtype == WEBVIEW_DIALOG_TYPE_SAVE):
-      var panel = cast[Id](getClass("NSSavePanel"))
+  if dlgtype == WEBVIEW_DIALOG_TYPE_OPEN or dlgtype == WEBVIEW_DIALOG_TYPE_SAVE:
+    var panel: NSSavePanel
 
-      if (dlgtype == WEBVIEW_DIALOG_TYPE_OPEN):
-        var openPanel = [NSOpenPanel openPanel]
-        if (flags and WEBVIEW_DIALOG_FLAG_DIRECTORY) > 0:
-          [openPanel setCanChooseFiles: 0]
-          [openPanel setCanChooseDirectories: 1]
-        else:
-          [openPanel setCanChooseFiles: 1]
-          [openPanel setCanChooseDirectories: 0]
-          [openPanel setResolvesAliases: 0]
-          [openPanel setAllowsMultipleSelection: 0]
-        panel = openPanel
+    if dlgtype == WEBVIEW_DIALOG_TYPE_OPEN:
+      var openPanel = NSOpenPanel.openPanel()
+      if (flags and WEBVIEW_DIALOG_FLAG_DIRECTORY) > 0:
+        openPanel.setCanChooseFiles(false)
+        openPanel.setCanChooseDirectories(true)
       else:
-        panel = [NSSavePanel savePanel]
-      [panel setCanCreateDirectories: 1]
-      [panel setShowsHiddenFiles: 1]
-      [panel setExtensionHidden: 0]
-      [panel setCanSelectHiddenExtension: 0]
-      [panel setTreatsFilePackagesAsDirectories: 1]
-      let blk = toBlock() do (r: Id):
-        objcr:
-          [[NSApplication sharedApplication]stopModalWithCode: r]
+        openPanel.setCanChooseFiles(true)
+        openPanel.setCanChooseDirectories(false)
+        openPanel.setResolvesAliases(false)
+        openPanel.setAllowsMultipleSelection(false)
+      panel = openPanel
+    else:
+      panel = NSSavePanel.savePanel()
 
-      [panel beginSheetModalForWindow: w.priv.window, completionHandler: blk]
-      if [[NSApplication sharedApplication]runModalForWindow: panel] == cast[Id](NSModalResponseOK):
-        var url: Id = [panel URL]
-        var path: Id = [url path]
-        var filename: cstring = cast[cstring]([path UTF8String])
-        copyMem(result, filename, resultsz)
+    panel.setCanCreateDirectories(YES)
+    panel.setShowsHiddenFiles(YES)
+    panel.setExtensionHidden(NO)
+    panel.setCanSelectHiddenExtension(NO)
+    panel.setTreatsFilePackagesAsDirectories(YES)
 
-      elif (dlgtype == WEBVIEW_DIALOG_TYPE_ALERT):
-        var a: Id = [NSAlert new]
-        case flags and WEBVIEW_DIALOG_FLAG_ALERT_MASK:
-        of WEBVIEW_DIALOG_FLAG_INFO:
-          [a setAlertStyle: NSAlertStyleInformational]
-        of WEBVIEW_DIALOG_FLAG_WARNING:
-          [a setAlertStyle: NSAlertStyleWarning]
-        of WEBVIEW_DIALOG_FLAG_ERROR:
-          [a setAlertStyle: NSAlertStyleCritical]
-        else:
-          discard
-        [a setShowsHelp: 0]
-        [a setShowsSuppressionButton: 0]
-        [a setMessageText: @($title)]
-        [a setInformativeText: @($arg)]
-        [a addButtonWithTitle: "OK"]
-        [a runModal]
-        [a release]
+    let blk = toBlock() do (r: int):
+      NSApplication.sharedApplication().stopModalWithCode(r)
+
+    panel.beginSheetModalForWindow(w.priv.window, blk)
+    
+    if NSApplication.sharedApplication().runModalForWindow(panel) == NSModalResponseOK:
+      let url = panel.URL
+      let path = url.path
+      let filename = cast[cstring](path.UTF8String())
+      copyMem(result, filename, resultsz)
+
+  elif dlgtype == WEBVIEW_DIALOG_TYPE_ALERT:
+    var alert = NSAlert.alloc().init()
+    case flags and WEBVIEW_DIALOG_FLAG_ALERT_MASK:
+    of WEBVIEW_DIALOG_FLAG_INFO:
+      alert.setAlertStyle(NSAlertStyleInformational)
+    of WEBVIEW_DIALOG_FLAG_WARNING:
+      alert.setAlertStyle(NSAlertStyleWarning)
+    of WEBVIEW_DIALOG_FLAG_ERROR:
+      alert.setAlertStyle(NSAlertStyleCritical)
+    else:
+      discard
+    alert.setShowsHelp(false)
+    alert.setShowsSuppressionButton(false)
+    alert.setMessageText(@($title))
+    alert.setInformativeText(@($arg))
+    alert.addButtonWithTitle(@"OK")
+    alert.runModal()
+    alert.release()
