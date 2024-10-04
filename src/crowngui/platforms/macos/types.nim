@@ -1,4 +1,4 @@
-import objc_runtime
+import darwin/objc/runtime
 import darwin/app_kit/nswindow
 import darwin/web_kit/wkwebview
 

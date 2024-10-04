@@ -1,4 +1,4 @@
-import objc_runtime
+import darwin/objc/runtime
 import darwin/[app_kit, foundation]
 
 proc createMenuItem*(title: NSString, action: string, key: string): NSMenuItem =
@@ -10,7 +10,7 @@ proc createMenuItem*(title: NSString, action: string, key: string): NSMenuItem =
 proc createMenu*() =
   let menubar = NSMenu.alloc()
   menubar.initWithTitle(@"")
-  objcr: [menubar autorelease]
+  menubar.autorelease
   let appName = NSProcessInfo.processInfo.processName
 
   let appMenuItem = NSMenuItem.alloc()
@@ -18,7 +18,7 @@ proc createMenu*() =
 
   let appMenu = NSMenu.alloc()
   appMenu.initWithTitle(appName)
-  objcr: [appMenu autorelease]
+  appMenu.autorelease
   
   var hideTitle = @"Hide ".stringByAppendingString(appName)
   appMenu.addItem(createMenuItem(hideTitle, "hide:", "h"))

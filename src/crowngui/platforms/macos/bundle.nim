@@ -1,4 +1,3 @@
-import objc_runtime
 import darwin / [ foundation, objc/runtime] 
 
 proc isAppBundled*(): bool =

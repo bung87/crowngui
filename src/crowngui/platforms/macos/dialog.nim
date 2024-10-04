@@ -1,4 +1,3 @@
-import objc_runtime
 import darwin / [objc/runtime, foundation, app_kit, objc/blocks]
 import ./dialog_types
 

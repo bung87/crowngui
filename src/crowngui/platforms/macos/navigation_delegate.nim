@@ -1,4 +1,4 @@
-import objc_runtime
+import darwin/objc/runtime
 import darwin / [objc/blocks, web_kit]
 
 type MyWKNavigationDelegate* = ptr object of NSObject

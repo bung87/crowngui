@@ -1,6 +1,5 @@
 # import strutils, base64
 import std/[macros]
-import objc_runtime
 import darwin / [app_kit,web_kit, foundation, objc/runtime, objc/blocks, core_graphics/cggeometry]
 # import menu
 import types
