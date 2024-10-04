@@ -1,9 +1,8 @@
 import darwin/objc/runtime
 import darwin / [objc/blocks, web_kit]
+import ./types
 
 type MyWKNavigationDelegate* = ptr object of NSObject
-
-proc setNavigationDelegate*(s: WKWebview, d: NSObject) {.objc: "setNavigationDelegate:".}
 
 proc make_nav_policy_decision(self: Id; cmd: SEL; webView: WKWebView; response: WKNavigationResponse;
                                      decisionHandler: Block[proc (a: WKNavigationActionPolicy): void]) =

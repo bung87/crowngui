@@ -1,5 +1,5 @@
 include js_utils
-import tables, strutils, macros, logging, json, os, base64, strformat, std/exitprocs
+import tables, strutils, macros, logging, json, os, strformat, std/exitprocs
 import ./types
 export types
 

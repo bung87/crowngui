@@ -4,8 +4,7 @@ import darwin/[app_kit, foundation]
 proc createMenuItem*(title: NSString, action: string, key: string): NSMenuItem =
   result = NSMenuItem.alloc()
   result.initWithTitle(title, if action != "": registerName(action) else: cast[SEL](nil), @key)
-  objc_msgSend(result, registerName("autorelease"))
-  # result.autorelease()
+  result.autorelease()
 
 proc createMenu*() =
   let menubar = NSMenu.alloc()

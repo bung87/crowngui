@@ -6,8 +6,6 @@ import ./menu
 
 type MyAppDelegate* = ptr object of NSObject
 
-proc setDelegate*(s: NSApplication, d: NSObject) {.objc: "setDelegate:".}
-
 proc applicationOpenFile(self: MyAppDelegate; cmd: SEL; sender: NSApplication; openFile: NSString): Bool {.cdecl.} =
   let path = cast[cstring](objc_msgSend(cast[ID](openFile), $$"UTF8String"))
   var cls = self.getClass()

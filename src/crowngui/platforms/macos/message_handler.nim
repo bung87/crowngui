@@ -1,12 +1,7 @@
 
-import darwin / [app_kit, foundation, objc/runtime]
+import darwin / [app_kit, web_kit, foundation, objc/runtime]
 import ../../types
-
-type
-  WKUserContentController = ptr object of NSObject
-  WKScriptMessage = ptr object of NSObject
-
-proc body*(self: WKScriptMessage): NSString {.objc.}
+import ./types
 
 proc webview_external_invoke(self: ID; cmd: SEL; contentController: WKUserContentController;
                                     message: WKScriptMessage) =
