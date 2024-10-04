@@ -1,7 +1,6 @@
 
 import darwin / [app_kit, web_kit, foundation, objc/runtime]
 import ../../types
-import ./types
 
 proc webview_external_invoke(self: ID; cmd: SEL; contentController: WKUserContentController;
                                     message: WKScriptMessage) =
@@ -9,7 +8,7 @@ proc webview_external_invoke(self: ID; cmd: SEL; contentController: WKUserConten
   if (cast[pointer](w) == nil or w.invokeCb == nil):
     return
 
-  var msg = message.body.UTF8String
+  var msg = cast[NSString](message.body).UTF8String
   cast[proc (w: Webview; arg: cstring) {.stdcall.}](w.invokeCb)(w, cast[cstring](msg))
 
 

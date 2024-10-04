@@ -1,13 +1,8 @@
-# import strutils, base64
 import std/[macros]
 import darwin / [app_kit,web_kit, foundation, objc/runtime, objc/blocks, core_graphics/cggeometry]
 # import menu
 import types
-export types
 import dialog
-export dialog
-# import event
-# import bundle
 import ./message_handler
 import ./download_delegate
 import ./ui_delegate
@@ -17,6 +12,7 @@ import ./utils
 import ./app_utils
 import ../../types
 
+export types,dialog
 
 {.passl: "-framework Cocoa -framework WebKit".}
 
