@@ -43,7 +43,7 @@ proc webview_init*(w: Webview): cint =
   # objcr: [NSEvent addLocalMonitorForEventsMatchingMask: NSKeyDown, handler: toBlock(handler)]
   var config = WKWebViewConfiguration.alloc().init()#newWKWebViewConfiguration(WKWebViewConfiguration)
   var wkPref = config.preferences
-  wkPref.setDeveloperExtrasEnabled(YES)
+  wkPref.setDeveloperExtrasEnabled(w.debug)
   wkPref.setFullScreenEnabled(YES)
   wkPref.setJavaScriptCanAccessClipboard(YES)
   wkPref.setDOMPasteAllowed(YES)
