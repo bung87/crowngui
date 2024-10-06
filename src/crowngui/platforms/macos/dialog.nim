@@ -30,7 +30,7 @@ proc basicDialog(title: string; description: string; dt: DialogType) =
   # Add button and run the modal
   alert.addButtonWithTitle(@"OK")
   alert.runModal()
-  alert.release()
+  # alert.release()
 
 proc info*(title: string; description: string) = 
   basicDialog(title, description, info)

@@ -18,10 +18,10 @@ type WebviewDialogType = enum
   WEBVIEW_DIALOG_TYPE_SAVE = 1,
   WEBVIEW_DIALOG_TYPE_ALERT = 2
 
-type OpenPanelCompletionHandler = proc (self: ID; urls: NSArray[NSURL];): void
+type OpenPanelCompletionHandler = proc (a: ID; urls: NSArray[NSURL];): void
 # Run the open panel dialog
 proc run_open_panel*(self: Id; cmd: SEL; webView: WKWebView; parameters: WKOpenPanelParameters;
-                           frame: WKFrameInfo; completionHandler: Block[OpenPanelCompletionHandler]) =
+                           frame: WKFrameInfo; completionHandler: Block[OpenPanelCompletionHandler] = nil) =
   var openPanel = NSOpenPanel.openPanel()
   openPanel.setAllowsMultipleSelection(parameters.allowsMultipleSelection())
   openPanel.setCanChooseFiles(true)
@@ -29,9 +29,9 @@ proc run_open_panel*(self: Id; cmd: SEL; webView: WKWebView; parameters: WKOpenP
   let b2 = toBlock() do (r: int):
     if r == NSModalResponseOK:
       let urls = openPanel.URLs()
-      send(cast[Id](completionHandler), $$"invoke", urls)
+      send(cast[ID](completionHandler), $$"invoke", urls)
     else:
-      send(cast[Id](completionHandler), $$"invoke", nil)
+      send(cast[ID](completionHandler), $$"invoke", nil)
   openPanel.beginWithCompletionHandler(b2)
 
 # Run the save panel dialog
