@@ -19,12 +19,13 @@ type WebviewDialogType = enum
   WEBVIEW_DIALOG_TYPE_ALERT = 2
 
 type OpenPanelCompletionHandler = proc (a: ID; urls: NSArray[NSURL];): void
+
 # Run the open panel dialog
 proc run_open_panel*(self: Id; cmd: SEL; webView: WKWebView; parameters: WKOpenPanelParameters;
                            frame: WKFrameInfo; completionHandler: Block[OpenPanelCompletionHandler] = nil) =
   var openPanel = NSOpenPanel.openPanel()
   openPanel.setAllowsMultipleSelection(parameters.allowsMultipleSelection())
-  openPanel.setCanChooseFiles(true)
+  openPanel.setCanChooseFiles(YES)
   let send = cast[proc(a: ID, b: SEL, c: NSArray[NSURL]){.cdecl, gcsafe.}](objc_msgSend)
   let b2 = toBlock() do (r: int):
     if r == NSModalResponseOK:
