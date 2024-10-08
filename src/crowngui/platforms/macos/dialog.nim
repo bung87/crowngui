@@ -42,6 +42,7 @@ proc error*(title: string; description: string) =
   basicDialog(title, description, error)
 
 proc chooseFile*(root: string = ""; completionHandler: Block[OpenCompletionHandler] = nil) =
+  # var pool = NSAutoreleasePool.alloc().init()
   var openPanel1 = NSOpenPanel.openPanel()
   openPanel1.setAllowsMultipleSelection(NO)
   openPanel1.setCanChooseFiles(YES)
@@ -53,8 +54,10 @@ proc chooseFile*(root: string = ""; completionHandler: Block[OpenCompletionHandl
     else:
       send(cast[Id](completionHandler), $$"invoke", nil)
   openPanel1.beginWithCompletionHandler(b2)
+  # pool.drain
 
 proc saveFile*(root = ""; filename = "", completionHandler: Block[SaveCompletionHandler] = nil) =
+  # var pool = NSAutoreleasePool.alloc().init()
   var savePanel = NSSavePanel.savePanel()
   savePanel.setCanCreateDirectories(YES)
   let send = cast[proc(a: ID, b: SEL, c: BOOL, d: NSString){.cdecl, gcsafe.}](objc_msgSend)
@@ -68,5 +71,5 @@ proc saveFile*(root = ""; filename = "", completionHandler: Block[SaveCompletion
       send(cast[Id](completionHandler), $$"invoke", YES, path)
     else:
       send(cast[Id](completionHandler), $$"invoke", No, nil)
-
   savePanel.beginWithCompletionHandler(blk)
+  # pool.drain
