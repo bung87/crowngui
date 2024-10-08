@@ -45,17 +45,13 @@ proc chooseFile*(root: string = ""; completionHandler: Block[OpenCompletionHandl
   var openPanel1 = NSOpenPanel.openPanel()
   openPanel1.setAllowsMultipleSelection(NO)
   openPanel1.setCanChooseFiles(YES)
-  let send = cast[proc(a: ID, b: SEL, c: seq[string]){.cdecl, gcsafe.}](objc_msgSend)
+  let send = cast[proc(a: ID, b: SEL, c: NSArray[NSURL]){.cdecl, gcsafe.}](objc_msgSend)
   let b2 = toBlock() do(r: int):
     if r == NSModalResponseOK:
       let urls = openPanel1.URLs
-      var newUrls = newSeq[string]()
-      for one in urls:
-        let path = one.path
-        newUrls.add path
-      send(cast[Id](completionHandler), $$"invoke", newUrls)
+      send(cast[Id](completionHandler), $$"invoke", urls)
     else:
-      send(cast[Id](completionHandler), $$"invoke", newSeq[string]())
+      send(cast[Id](completionHandler), $$"invoke", nil)
   openPanel1.beginWithCompletionHandler(b2)
 
 proc saveFile*(root = ""; filename = "", completionHandler: Block[SaveCompletionHandler] = nil) =
