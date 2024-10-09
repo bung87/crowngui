@@ -41,26 +41,30 @@ proc warning*(title: string; description: string) =
 proc error*(title: string; description: string) = 
   basicDialog(title, description, error)
 
-proc chooseFile*(root: string = ""; completionHandler: Block[OpenCompletionHandler] = nil) =
+proc chooseFile*(root: string = ""; completionHandler:  proc (urls: seq[string];)) =
   # var pool = NSAutoreleasePool.alloc().init()
   var openPanel1 = NSOpenPanel.openPanel()
   openPanel1.setAllowsMultipleSelection(NO)
   openPanel1.setCanChooseFiles(YES)
-  let send = cast[proc(a: ID, b: SEL, c: NSArray[NSURL]){.cdecl, gcsafe.}](objc_msgSend)
+  # let send = cast[proc(a: ID, b: SEL, c: NSArray[NSURL]){.cdecl, gcsafe.}](objc_msgSend)
   let b2 = toBlock() do(r: int):
+    var urls = newSeq[string]()
     if r == NSModalResponseOK:
-      let urls = openPanel1.URLs
-      send(cast[Id](completionHandler), $$"invoke", urls)
+      for url in openPanel1.URLs:
+        urls.add $url.path
+      # send(cast[Id](completionHandler), $$"invoke", urls)
+      completionHandler(urls)
     else:
-      send(cast[Id](completionHandler), $$"invoke", nil)
+      # send(cast[Id](completionHandler), $$"invoke", nil)
+      completionHandler(urls)
   openPanel1.beginWithCompletionHandler(b2)
   # pool.drain
 
-proc saveFile*(root = ""; filename = "", completionHandler: Block[SaveCompletionHandler] = nil) =
+proc saveFile*(root = ""; filename = "", completionHandler: proc(a: string)) =
   # var pool = NSAutoreleasePool.alloc().init()
   var savePanel = NSSavePanel.savePanel()
   savePanel.setCanCreateDirectories(YES)
-  let send = cast[proc(a: ID, b: SEL, c: BOOL, d: NSString){.cdecl, gcsafe.}](objc_msgSend)
+  # let send = cast[proc(a: ID, b: SEL, c: BOOL, d: NSString){.cdecl, gcsafe.}](objc_msgSend)
 
   if filename.len > 0:
     savePanel.setNameFieldStringValue(@filename)
@@ -68,8 +72,10 @@ proc saveFile*(root = ""; filename = "", completionHandler: Block[SaveCompletion
     if r == NSModalResponseOK:
       var url = savePanel.URL
       var path = url.path
-      send(cast[Id](completionHandler), $$"invoke", YES, path)
+      completionHandler(path)
+      # send(cast[Id](completionHandler), $$"invoke", YES, path)
     else:
-      send(cast[Id](completionHandler), $$"invoke", No, nil)
+      completionHandler("")
+      # send(cast[Id](completionHandler), $$"invoke", No, nil)
   savePanel.beginWithCompletionHandler(blk)
   # pool.drain
