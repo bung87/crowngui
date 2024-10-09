@@ -41,7 +41,7 @@ proc warning*(title: string; description: string) =
 proc error*(title: string; description: string) = 
   basicDialog(title, description, error)
 
-proc chooseFile*(root: string = ""; completionHandler:  proc (urls: seq[string];)) =
+proc chooseFile*(completionHandler:  proc (urls: seq[string];), root: string = ""; ) =
   # var pool = NSAutoreleasePool.alloc().init()
   var openPanel1 = NSOpenPanel.openPanel()
   openPanel1.setAllowsMultipleSelection(NO)
@@ -60,7 +60,7 @@ proc chooseFile*(root: string = ""; completionHandler:  proc (urls: seq[string];
   openPanel1.beginWithCompletionHandler(b2)
   # pool.drain
 
-proc saveFile*(root = ""; filename = "", completionHandler: proc(a: string)) =
+proc saveFile*(completionHandler: proc(a: string), root = ""; filename = "") =
   # var pool = NSAutoreleasePool.alloc().init()
   var savePanel = NSSavePanel.savePanel()
   savePanel.setCanCreateDirectories(YES)
