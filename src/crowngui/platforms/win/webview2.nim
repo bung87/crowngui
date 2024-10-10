@@ -248,9 +248,9 @@ proc addUserScriptAtDocumentEnd*(w: WebView; script: string) =
 
   discard w.priv.view.add_DOMContentLoaded(handler, token.addr)
 
-when isMainModule:
-  SetCurrentProcessExplicitAppUserModelID("webview2 app")
-  var v = newWebView()
-  assert v.webview_init() == 0
+# when isMainModule:
+#   SetCurrentProcessExplicitAppUserModelID("webview2 app")
+#   var v = newWebView()
+#   assert v.webview_init() == 0
 
-  v.run
+#   v.run
