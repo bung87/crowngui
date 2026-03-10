@@ -80,7 +80,6 @@ Options:
 
 ## Examples  
 
-[crown_excel](https://github.com/bung87/crown_excel) excel viewer  
 
 [gamode](https://github.com/bung87/gamode) windows optimization tool for game  
 
