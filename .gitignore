@@ -22,3 +22,4 @@ app.json
 .crowngui_cache/
 examples/
 demos/entries/nim2js.nim.js
+nimble.paths
