@@ -12,9 +12,11 @@ installExt    = @["nim"]
 requires "nim >= 1.1.1"
 # requires "nimble >= 0.11.4"
 
-requires "objc_runtime >= 0.1.9"
-requires "darwin"
-requires "winim"
+when defined(macosx):
+  requires "objc_runtime >= 0.1.9"
+  requires "darwin"
+when defined(windows):
+  requires "winim"
 
 task docs,"a":
   exec "nim doc --project src/crowngui.nim"

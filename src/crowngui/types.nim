@@ -2,6 +2,8 @@ when defined(windows):
   import ./platforms/win/webview2/types
 elif defined(macosx):
   import ./platforms/macos/types
+elif defined(linux):
+  import ./platforms/linux/types
 
 type
   WebView* = ptr WebViewObj

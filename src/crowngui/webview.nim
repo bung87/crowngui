@@ -7,8 +7,8 @@ var logger = newRollingFileLogger(expandTilde("~/crowngui.log"))
 addHandler(logger)
 
 when defined(linux):
-  {.passc: "-DWEBVIEW_GTK=1 " & staticExec"pkg-config --cflags gtk+-3.0 webkit2gtk-4.0",
-      passl: staticExec"pkg-config --libs gtk+-3.0 webkit2gtk-4.0".}
+  import platforms/linux/webview
+  export webview
 elif defined(windows):
   import platforms/win/webview2
   export webview2
